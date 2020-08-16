@@ -32,6 +32,11 @@ import           Database.PostgreSQL.Simple.ToField
 import           Database.PostgreSQL.Simple.FromField
 import           Database.PostgreSQL.Simple.SqlQQ
 import           Data.ByteString                ( ByteString )
+import           Data.List                      ( intercalate )
+import           Data.Time                      ( parseTimeOrError
+                                                , defaultTimeLocale
+                                                )
+import           Control.Exception
 
 connectionString :: ByteString
 connectionString =
@@ -99,12 +104,28 @@ fetchStatuses = do
 
   fetchServiceDetailsForService :: Service -> IO ServiceDetails
   fetchServiceDetailsForService service = do
-    let
-      url =
-        "http://status.calmac.info/?route=" <> (show $ serviceServiceID service)
+    let serviceIDString = (show $ serviceServiceID service)
+    putStrLn $ "Fetching details for serviceID: " <> serviceIDString
+    let url = "http://status.calmac.info/?route=" <> serviceIDString
     responseBody <- simpleHTTP (getRequest url) >>= getResponseBody
     let tags = parseTags responseBody
-    undefined
+    additionalInfo <-
+      try $ evaluate $ additionalInformationFromTags tags :: IO
+        (Either SomeException String)
+    reason <-
+      try $ evaluate $ reasonFromTags tags :: IO (Either SomeException String)
+    updatedDate <-
+      try $ evaluate $ updatedDateFromTags tags :: IO
+        (Either SomeException UTCTime)
+    let serviceDetails = (serviceToServiceDetails service)
+          { serviceDetailsAdditionalInfo   = rightToMaybe additionalInfo
+          , serviceDetailsDisruptionReason = rightToMaybe reason
+          , serviceDetailsLastUpdatedDate  = rightToMaybe updatedDate
+          }
+    return serviceDetails
+
+  rightToMaybe :: Either a b -> Maybe b
+  rightToMaybe = either (const Nothing) Just
 
   saveServiceDetails :: [ServiceDetails] -> IO ()
   saveServiceDetails serviceDetails = do
@@ -113,7 +134,7 @@ fetchStatuses = do
       dbConnection
       [sql| 
         INSERT INTO services (service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated) 
-        VALUES (?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?)
         ON CONFLICT (service_id) DO UPDATE 
           SET service_id = excluded.service_id, 
               sort_order = excluded.sort_order, 
@@ -151,6 +172,27 @@ fetchStatuses = do
     , serviceDetailsLastUpdatedDate  = Nothing
     }
 
+  updatedDateFromTags :: [Tag String] -> UTCTime
+  updatedDateFromTags tags =
+    let lastUpdatedTagText =
+            fromTagText $ dropWhile (~/= ("Last Updated" :: String)) tags !! 2
+        updatedText =
+            drop 1 . replace "\n" "" . replace "\t" "" $ lastUpdatedTagText
+    in  parseTimeOrError True
+                         defaultTimeLocale
+                         "%d %h %Y %H:%M %Z"
+                         (updatedText <> " GMT")
+
+  reasonFromTags :: [Tag String] -> String
+  reasonFromTags tags =
+    drop 2 . fromTagText $ dropWhile (~/= ("Reason" :: String)) tags !! 2
+
+  additionalInformationFromTags :: [Tag String] -> String
+  additionalInformationFromTags tags =
+    let tagRange = takeWhile (~/= ("<script>" :: String))
+          $ dropWhile (~/= ("<div data-role=content>" :: String)) tags
+    in  renderTags $ take (length tagRange - 5) tagRange
+
   routeURLFromTags :: [Tag String] -> String
   routeURLFromTags tags = fromAttrib "href" $ tags !! 1
 
@@ -177,19 +219,22 @@ fetchStatuses = do
     statusImage =
       last . splitOn "/" . head . splitOn "?" . fromAttrib "src" $ tags !! 3
 
+replace :: Eq a => [a] -> [a] -> [a] -> [a]
+replace old new = intercalate new . splitOn old
+
 -- Types
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
 
 instance Enum ServiceStatus where
-  toEnum 0  = Normal
-  toEnum 1  = Disrupted
-  toEnum 2  = Cancelled
-  toEnum 99 = Unknown
+  toEnum 0     = Normal
+  toEnum 1     = Disrupted
+  toEnum 2     = Cancelled
+  toEnum (-99) = Unknown
 
   fromEnum Normal    = 0
   fromEnum Disrupted = 1
   fromEnum Cancelled = 2
-  fromEnum Unknown   = 99
+  fromEnum Unknown   = -99
 
 instance ToJSON ServiceStatus where
   toJSON = toJSON . fromEnum
