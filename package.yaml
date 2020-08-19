@@ -28,22 +28,39 @@ library:
     - bytestring
     - HTTP
     - postgresql-simple
-    - scotty
     - split
-    - tagsoup
     - time
     - text
 
 executables:
   ferry-services-server-exe:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         web-server
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - aeson
+    - bytestring
+    - ferry-services-server
+    - raven-haskell
+    - scotty
+    - text
+    - unordered-containers
+    - wai
+    - warp
+
+  ferry-services-scraper-exe:
+    main:                Main.hs
+    source-dirs:         scraper
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - ferry-services-server
+    - raven-haskell
 
 tests:
   ferry-services-server-test:

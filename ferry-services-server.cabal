@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2dbb700f4c3decf1e7bb66458c478924070bd068e3920c4e2e234f79d80289ff
+-- hash: 2abdaac6b40206e08e9c133852c9d14991f4ba3bf4c94ab345727b9e249513b8
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -37,11 +37,22 @@ library
     , base >=4.7 && <5
     , bytestring
     , postgresql-simple
-    , scotty
     , split
-    , tagsoup
     , text
     , time
+  default-language: Haskell2010
+
+executable ferry-services-scraper-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_ferry_services_server
+  hs-source-dirs:
+      scraper
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , ferry-services-server
+    , raven-haskell
   default-language: Haskell2010
 
 executable ferry-services-server-exe
@@ -49,11 +60,19 @@ executable ferry-services-server-exe
   other-modules:
       Paths_ferry_services_server
   hs-source-dirs:
-      app
+      web-server
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , bytestring
     , ferry-services-server
+    , raven-haskell
+    , scotty
+    , text
+    , unordered-containers
+    , wai
+    , warp
   default-language: Haskell2010
 
 test-suite ferry-services-server-test

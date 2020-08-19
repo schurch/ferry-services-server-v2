@@ -5,7 +5,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Lib
-  ( startServer
+  ( getServiceDetails
+  , getServices
   , fetchStatuses
   )
 where
@@ -14,7 +15,6 @@ import           Data.Text.Lazy                 ( pack )
 import           Data.Maybe                     ( listToMaybe
                                                 , fromMaybe
                                                 )
-import           Web.Scotty
 import           Data.Aeson
 import           GHC.Generics
 import           Network.HTTP                   ( simpleHTTP
@@ -26,7 +26,6 @@ import           Data.Time.Clock                ( UTCTime
                                                 , getCurrentTime
                                                 )
 import           Data.Time.Clock.POSIX          ( posixSecondsToUTCTime )
-import           Control.Monad.IO.Class         ( liftIO )
 import           Database.PostgreSQL.Simple
 import           Database.PostgreSQL.Simple.ToField
 import           Database.PostgreSQL.Simple.FromField
@@ -34,47 +33,38 @@ import           Database.PostgreSQL.Simple.SqlQQ
 import           Data.ByteString                ( ByteString )
 import           Data.Char                      ( toLower )
 import           Control.Monad                  ( void )
+import           Data.String                    ( fromString )
+import           System.Environment             ( getEnv )
 
 import qualified Data.ByteString.Lazy.Char8    as C
 
-connectionString :: ByteString
-connectionString =
-  "postgres://stefanchurch@localhost:5432/ferry-services?sslmode=disable"
+connectionString :: IO ByteString
+connectionString = fromString <$> getEnv "DB_CONNECTION"
 
-startServer :: IO ()
-startServer = scotty 3000 $ do
-  get "/services" $ do
-    services <- liftIO getServices
-    Web.Scotty.json services
-  get "/services/:serviceID" $ do
-    serviceID <- param "serviceID"
-    service   <- liftIO $ getServiceDetails serviceID
-    Web.Scotty.json service
+getServiceDetails :: Int -> IO (Maybe ServiceDetails)
+getServiceDetails serviceID = do
+  dbConnection <- connectionString >>= connectPostgreSQL
+  results      <- query
+    dbConnection
+    [sql| 
+      SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated 
+      FROM services 
+      WHERE service_id = ? 
+    |]
+    (Only serviceID)
+  return $ listToMaybe results
+
+getServices :: IO [Service]
+getServices = do
+  dbConnection <- connectionString >>= connectPostgreSQL
+  results      <- query_
+    dbConnection
+    [sql| 
+      SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated 
+      FROM services 
+    |]
+  return $ serviceDetailsToService <$> results
  where
-  getServiceDetails :: Int -> IO (Maybe ServiceDetails)
-  getServiceDetails serviceID = do
-    dbConnection <- connectPostgreSQL connectionString
-    results      <- query
-      dbConnection
-      [sql| 
-        SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated 
-        FROM services 
-        WHERE service_id = ? 
-      |]
-      (Only serviceID)
-    return $ listToMaybe results
-
-  getServices :: IO [Service]
-  getServices = do
-    dbConnection <- connectPostgreSQL connectionString
-    results      <- query_
-      dbConnection
-      [sql| 
-        SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated 
-        FROM services 
-      |]
-    return $ serviceDetailsToService <$> results
-
   serviceDetailsToService :: ServiceDetails -> Service
   serviceDetailsToService ServiceDetails {..} = Service
     { serviceServiceID = serviceDetailsServiceID
@@ -139,7 +129,7 @@ fetchStatuses = do
 
   saveServiceDetails :: [ServiceDetails] -> IO ()
   saveServiceDetails serviceDetails = do
-    dbConnection <- connectPostgreSQL connectionString
+    dbConnection <- connectionString >>= connectPostgreSQL
     void $ executeMany
       dbConnection
       [sql| 
