@@ -113,8 +113,8 @@ fetchStatuses = do
       }
    where
     reasonToMaybe :: String -> Maybe String
-    reasonToMaybe "NONE" = Nothing
-    reasonToMaybe reason = Just reason
+    reasonToMaybe reason | reason == "NONE" = Nothing
+                         | otherwise        = Just reason
 
     imageToStatus :: String -> ServiceStatus
     imageToStatus image | image == "normal"    = Normal
