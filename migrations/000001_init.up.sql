@@ -10,3 +10,17 @@ CREATE TABLE services (
     updated TIMESTAMPTZ NOT NULL,
     created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE installations (
+    installation_id UUID PRIMARY KEY,
+    device_token TEXT NOT NULL,
+    device_type TEXT NOT NULL,
+    updated TIMESTAMPTZ NOT NULL,
+    created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE installation_services (
+    installation_id UUID NOT NULL REFERENCES installations (installation_id),
+    service_id INTEGER NULL REFERENCES services (service_id),
+    PRIMARY KEY(installation_id, service_id)
+);

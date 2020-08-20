@@ -5,9 +5,14 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Lib
-  ( getServiceDetails
+  ( getService
   , getServices
+  , createInstallation
+  , addServiceToInstallation
+  , deleteServiceForInstallation
+  , getServicesForInstallation
   , fetchStatuses
+  , AddServiceRequest(..)
   )
 where
 
@@ -35,14 +40,15 @@ import           Data.Char                      ( toLower )
 import           Control.Monad                  ( void )
 import           Data.String                    ( fromString )
 import           System.Environment             ( getEnv )
+import           Data.UUID                      ( UUID )
 
 import qualified Data.ByteString.Lazy.Char8    as C
 
 connectionString :: IO ByteString
 connectionString = fromString <$> getEnv "DB_CONNECTION"
 
-getServiceDetails :: Int -> IO (Maybe ServiceDetails)
-getServiceDetails serviceID = do
+getService :: Int -> IO (Maybe Service)
+getService serviceID = do
   dbConnection <- connectionString >>= connectPostgreSQL
   results      <- query
     dbConnection
@@ -57,31 +63,32 @@ getServiceDetails serviceID = do
 getServices :: IO [Service]
 getServices = do
   dbConnection <- connectionString >>= connectPostgreSQL
-  results      <- query_
+  query_
     dbConnection
     [sql| 
       SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated 
       FROM services 
     |]
-  return $ serviceDetailsToService <$> results
- where
-  serviceDetailsToService :: ServiceDetails -> Service
-  serviceDetailsToService ServiceDetails {..} = Service
-    { serviceServiceID = serviceDetailsServiceID
-    , serviceUpdated   = serviceDetailsUpdated
-    , serviceSortOrder = serviceDetailsSortOrder
-    , serviceArea      = serviceDetailsArea
-    , serviceRoute     = serviceDetailsRoute
-    , serviceStatus    = serviceDetailsStatus
-    }
+
+createInstallation :: CreateInstallationRequest -> IO [Service]
+createInstallation request = return []
+
+addServiceToInstallation :: UUID -> Int -> IO [Service]
+addServiceToInstallation installationID serviceID = undefined
+
+deleteServiceForInstallation :: UUID -> Int -> IO [Service]
+deleteServiceForInstallation installationID serviceID = undefined
+
+getServicesForInstallation :: UUID -> IO [Service]
+getServicesForInstallation installationID = undefined
 
 fetchStatuses :: IO ()
 fetchStatuses = do
-  serviceDetails <- fetchServiceDetails
-  saveServiceDetails serviceDetails
+  services <- fetchServices
+  saveServices services
  where
-  fetchServiceDetails :: IO [ServiceDetails]
-  fetchServiceDetails = do
+  fetchServices :: IO [Service]
+  fetchServices = do
     responseBody <-
       simpleHTTP (getRequest "http://status.calmac.info/?ajax=json")
         >>= getResponseBody
@@ -90,27 +97,22 @@ fetchStatuses = do
       Left  decodingError         -> error decodingError
       Right serviceDetailsResults -> do
         time <- getCurrentTime
-        return
-          $   ajaxResultToServiceDetails time
-          <$> zip [1 ..] serviceDetailsResults
+        return $ ajaxResultToService time <$> zip [1 ..] serviceDetailsResults
 
-  ajaxResultToServiceDetails
-    :: UTCTime -> (Int, AjaxServiceDetails) -> ServiceDetails
-  ajaxResultToServiceDetails time (sortOrder, AjaxServiceDetails {..}) =
-    ServiceDetails
-      { serviceDetailsServiceID        = read ajaxServiceDetailsCode
-      , serviceDetailsUpdated          = time
-      , serviceDetailsSortOrder        = sortOrder
-      , serviceDetailsArea             = ajaxServiceDetailsDestName
-      , serviceDetailsRoute            = ajaxServiceDetailsRouteName
-      , serviceDetailsStatus           = imageToStatus ajaxServiceDetailsImage
-      , serviceDetailsAdditionalInfo   = Just
-                                         $ ajaxServiceDetailsWebDetail
-                                         <> fromMaybe "" ajaxServiceDetailsInfoMsg
-      , serviceDetailsDisruptionReason = reasonToMaybe ajaxServiceDetailsReason
-      , serviceDetailsLastUpdatedDate  = Just
-        $ stringToUTCTime ajaxServiceDetailsUpdated
-      }
+  ajaxResultToService :: UTCTime -> (Int, AjaxServiceDetails) -> Service
+  ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
+    { serviceID               = read ajaxServiceDetailsCode
+    , serviceUpdated          = time
+    , serviceSortOrder        = sortOrder
+    , serviceArea             = ajaxServiceDetailsDestName
+    , serviceRoute            = ajaxServiceDetailsRouteName
+    , serviceStatus           = imageToStatus ajaxServiceDetailsImage
+    , serviceAdditionalInfo   = Just
+                                $  ajaxServiceDetailsWebDetail
+                                <> fromMaybe "" ajaxServiceDetailsInfoMsg
+    , serviceDisruptionReason = reasonToMaybe ajaxServiceDetailsReason
+    , serviceLastUpdatedDate  = Just $ stringToUTCTime ajaxServiceDetailsUpdated
+    }
    where
     reasonToMaybe :: String -> Maybe String
     reasonToMaybe reason | reason == "NONE" = Nothing
@@ -127,8 +129,8 @@ fetchStatuses = do
     stringToUTCTime time =
       posixSecondsToUTCTime $ fromInteger (read time) / 1000
 
-  saveServiceDetails :: [ServiceDetails] -> IO ()
-  saveServiceDetails serviceDetails = do
+  saveServices :: [Service] -> IO ()
+  saveServices service = do
     dbConnection <- connectionString >>= connectPostgreSQL
     void $ executeMany
       dbConnection
@@ -146,7 +148,7 @@ fetchStatuses = do
               last_updated_date = excluded.last_updated_date,
               updated = excluded.updated
       |]
-      serviceDetails
+      service
 
 -- Types
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
@@ -171,37 +173,53 @@ instance ToField ServiceStatus where
 instance FromField ServiceStatus where
   fromField field byteString = toEnum <$> fromField field byteString
 
+data DeviceType = IOS | Android deriving (Generic, Show, ToField, FromField, ToJSON, FromJSON)
+
+-- Database Types
 data Service = Service {
-      serviceServiceID :: Int
-    , serviceSortOrder :: Int
-    , serviceArea :: String
-    , serviceRoute :: String
-    , serviceStatus :: ServiceStatus
-    , serviceUpdated :: UTCTime
-} deriving (Generic, Show)
+    serviceID :: Int
+  , serviceSortOrder :: Int
+  , serviceArea :: String
+  , serviceRoute :: String
+  , serviceStatus :: ServiceStatus
+  , serviceAdditionalInfo :: Maybe String
+  , serviceDisruptionReason :: Maybe String
+  , serviceLastUpdatedDate :: Maybe UTCTime
+  , serviceUpdated :: UTCTime
+} deriving (Generic, Show, ToRow, FromRow)
 
 instance ToJSON Service where
   toJSON = genericToJSON $ jsonOptions 7
 
-data ServiceDetails = ServiceDetails {
-      serviceDetailsServiceID :: Int
-    , serviceDetailsSortOrder :: Int
-    , serviceDetailsArea :: String
-    , serviceDetailsRoute :: String
-    , serviceDetailsStatus :: ServiceStatus
-    , serviceDetailsAdditionalInfo :: Maybe String
-    , serviceDetailsDisruptionReason :: Maybe String
-    , serviceDetailsLastUpdatedDate :: Maybe UTCTime
-    , serviceDetailsUpdated :: UTCTime
+data Installation = Installation {
+    installationID :: UUID
+  , installationDeviceToken :: String
+  , installationDeviceType :: DeviceType
+  , installationpdatedDate :: UTCTime
 } deriving (Generic, Show, ToRow, FromRow)
 
-instance ToJSON ServiceDetails where
-  toJSON = genericToJSON $ jsonOptions 14
+-- API Types
+
+data CreateInstallationRequest = CreateInstallationRequest {
+    createInstallationRequestDeviceToken :: String
+  , createInstallationRequestDeviceType :: DeviceType
+} deriving (Generic, Show)
+
+instance FromJSON CreateInstallationRequest where
+  parseJSON = genericParseJSON $ jsonOptions 19
+
+data AddServiceRequest = AddServiceRequest {
+    addServiceRequestServiceID :: Int
+} deriving (Generic, Show)
+
+instance FromJSON AddServiceRequest where
+  parseJSON = genericParseJSON $ jsonOptions 17
 
 jsonOptions :: Int -> Data.Aeson.Options
 jsonOptions prefixLength =
   defaultOptions { fieldLabelModifier = camelTo2 '_' . drop prefixLength }
 
+-- Scraper Types
 data AjaxServiceDetails = AjaxServiceDetails {
     ajaxServiceDetailsReason :: String
   , ajaxServiceDetailsImage :: String
