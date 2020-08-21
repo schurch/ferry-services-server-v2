@@ -31,12 +31,18 @@ import           Data.ByteString.Char8          ( unpack )
 import           Data.Aeson                     ( Value(..) )
 import           Data.Text.Encoding             ( decodeUtf8 )
 import           System.Environment             ( getEnv )
-import           Data.UUID                      ( UUID )
+import           Data.UUID                      ( UUID
+                                                , fromText
+                                                )
+import           Data.Text.Lazy                 ( Text
+                                                , toStrict
+                                                )
 
 import qualified Data.HashMap.Strict           as HM
 
 main :: IO ()
 main = do
+  putStrLn "Listening on port 3000..."
   let settings =
         setPort 3000 . setOnException exceptionHandler $ defaultSettings
   let options = Options { verbose = 0, settings = settings }
@@ -48,9 +54,10 @@ main = do
       serviceID <- param "serviceID"
       service   <- liftIO $ getService serviceID
       json service
-    post "/api/installations" $ do
-      request  <- jsonData
-      services <- liftIO $ createInstallation request
+    post "/api/installations/:installationID" $ do
+      installationID <- param "installationID"
+      request        <- jsonData
+      services       <- liftIO $ createInstallation installationID request
       json services
     get "/api/installations/:installationID/services" $ do
       installationID <- param "installationID"
@@ -90,4 +97,8 @@ recordUpdate (Just request) exception record = record
   }
 
 instance Parsable UUID where
-  parseParam param = undefined
+  parseParam = maybeToEither "Error parsing UUID" . fromText . toStrict
+
+maybeToEither :: Text -> Maybe a -> Either Text a
+maybeToEither errorMessage Nothing      = Left errorMessage
+maybeToEither _            (Just value) = Right value

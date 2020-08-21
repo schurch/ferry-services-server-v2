@@ -70,17 +70,61 @@ getServices = do
       FROM services 
     |]
 
-createInstallation :: CreateInstallationRequest -> IO [Service]
-createInstallation request = return []
+createInstallation :: UUID -> CreateInstallationRequest -> IO [Service]
+createInstallation installationID (CreateInstallationRequest deviceToken deviceType)
+  = do
+    dbConnection <- connectionString >>= connectPostgreSQL
+    time         <- getCurrentTime
+    void $ execute
+      dbConnection
+      [sql|
+        INSERT INTO installations (installation_id, device_token, device_type, endpoint_arn, updated) 
+          VALUES (?,?,?,?,?)
+          ON CONFLICT (installation_id) DO UPDATE 
+            SET installation_id = excluded.installation_id, 
+                device_token = excluded.device_token, 
+                device_type = excluded.device_type, 
+                endpoint_arn = excluded.endpoint_arn, 
+                updated = excluded.updated
+      |]
+      (installationID, deviceToken, deviceType, "12345" :: String, time)
+    getServicesForInstallation installationID
 
 addServiceToInstallation :: UUID -> Int -> IO [Service]
-addServiceToInstallation installationID serviceID = undefined
+addServiceToInstallation installationID serviceID = do
+  dbConnection <- connectionString >>= connectPostgreSQL
+  void $ execute
+    dbConnection
+    [sql|
+        INSERT INTO installation_services (installation_id, service_id) 
+        VALUES (?,?)
+    |]
+    (installationID, serviceID)
+  getServicesForInstallation installationID
 
 deleteServiceForInstallation :: UUID -> Int -> IO [Service]
-deleteServiceForInstallation installationID serviceID = undefined
+deleteServiceForInstallation installationID serviceID = do
+  dbConnection <- connectionString >>= connectPostgreSQL
+  void $ execute
+    dbConnection
+    [sql|
+        DELETE FROM installation_services WHERE installation_id = ? AND service_id = ?
+    |]
+    (installationID, serviceID)
+  getServicesForInstallation installationID
 
 getServicesForInstallation :: UUID -> IO [Service]
-getServicesForInstallation installationID = undefined
+getServicesForInstallation installationID = do
+  dbConnection <- connectionString >>= connectPostgreSQL
+  query
+    dbConnection
+    [sql| 
+        SELECT s.service_id, s.sort_order, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.last_updated_date, s.updated 
+        FROM services s
+        JOIN installation_services i ON s.service_id = i.service_id
+        WHERE i.installation_id = ?
+      |]
+    (Only installationID)
 
 fetchStatuses :: IO ()
 fetchStatuses = do
@@ -173,7 +217,18 @@ instance ToField ServiceStatus where
 instance FromField ServiceStatus where
   fromField field byteString = toEnum <$> fromField field byteString
 
-data DeviceType = IOS | Android deriving (Generic, Show, ToField, FromField, ToJSON, FromJSON)
+
+data DeviceType = IOS | Android deriving (Eq, Show, Generic, Bounded, Enum)
+
+instance ToJSON DeviceType
+
+instance FromJSON DeviceType
+
+instance ToField DeviceType where
+  toField = toField . fromEnum
+
+instance FromField DeviceType where
+  fromField field byteString = toEnum <$> fromField field byteString
 
 -- Database Types
 data Service = Service {
@@ -206,7 +261,7 @@ data CreateInstallationRequest = CreateInstallationRequest {
 } deriving (Generic, Show)
 
 instance FromJSON CreateInstallationRequest where
-  parseJSON = genericParseJSON $ jsonOptions 19
+  parseJSON = genericParseJSON $ jsonOptions 25
 
 data AddServiceRequest = AddServiceRequest {
     addServiceRequestServiceID :: Int
