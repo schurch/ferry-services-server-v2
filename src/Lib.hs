@@ -210,11 +210,11 @@ fetchStatusesAndNotify = do
       query
         dbConnection
         [sql| 
-                  SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
-                  FROM installation_services s
-                  JOIN installations i on s.installation_id = i.installation_id
-                  WHERE s.service_id = ? 
-                |]
+          SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
+          FROM installation_services s
+          JOIN installations i on s.installation_id = i.installation_id
+          WHERE s.service_id = ? 
+        |]
         (Only $ serviceID)
 
     serviceToNotificationMessage :: Service -> String
