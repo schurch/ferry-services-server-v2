@@ -188,31 +188,35 @@ fetchStatusesAndNotify = do
   notifyForServices services = forM_ services $ \service -> do
     savedService <- getService $ serviceID service
     case savedService of
-      Just savedService ->
-        if (serviceStatus service /= serviceStatus savedService)
-           && (serviceStatus service /= Unknown)
-        then
-          do
-            let message = serviceToNotificationMessage service
-            let payload =
-                  pushPayloadWithMessageAndServiceID message (serviceID service)
-            dbConnection            <- connectionString >>= connectPostgreSQL
-            interestedInstallations <- query
-              dbConnection
-              [sql| 
-                SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
-                FROM installation_services s
-                JOIN installations i on s.installation_id = i.installation_id
-                WHERE s.service_id = ? 
-              |]
-              (Only $ serviceID service)
-            forM_ interestedInstallations
-              $ \Installation { installationEndpointARN = endpointARN } ->
-                  sendNotificationWihPayload endpointARN payload
-        else
-          return ()
+      Just savedService -> do
+        let statusesDifferent =
+              serviceStatus service /= serviceStatus savedService
+        let statusValid  = serviceStatus service /= Unknown
+        let shouldNotify = statusesDifferent && statusValid
+        when shouldNotify $ do
+          let message = serviceToNotificationMessage service
+          let payload =
+                pushPayloadWithMessageAndServiceID message (serviceID service)
+          interestedInstallations <- getIntererestedInstallationsForServiceID
+            $ serviceID service
+          forM_ interestedInstallations
+            $ \Installation { installationEndpointARN = endpointARN } ->
+                sendNotificationWihPayload endpointARN payload
       Nothing -> return ()
    where
+    getIntererestedInstallationsForServiceID :: Int -> IO [Installation]
+    getIntererestedInstallationsForServiceID serviceID = do
+      dbConnection <- connectionString >>= connectPostgreSQL
+      query
+        dbConnection
+        [sql| 
+                  SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
+                  FROM installation_services s
+                  JOIN installations i on s.installation_id = i.installation_id
+                  WHERE s.service_id = ? 
+                |]
+        (Only $ serviceID)
+
     serviceToNotificationMessage :: Service -> String
     serviceToNotificationMessage Service { serviceRoute = serviceRoute, serviceStatus = serviceStatus }
       | serviceStatus == Normal
