@@ -189,8 +189,10 @@ fetchStatusesAndNotify = do
     savedService <- getService $ serviceID service
     case savedService of
       Just savedService ->
-        if serviceStatus service /= serviceStatus savedService
-          then do
+        if (serviceStatus service /= serviceStatus savedService)
+           && (serviceStatus service /= Unknown)
+        then
+          do
             let message = serviceToNotificationMessage service
             let payload =
                   pushPayloadWithMessageAndServiceID message (serviceID service)
@@ -207,7 +209,8 @@ fetchStatusesAndNotify = do
             forM_ interestedInstallations
               $ \Installation { installationEndpointARN = endpointARN } ->
                   sendNotificationWihPayload endpointARN payload
-          else return ()
+        else
+          return ()
       Nothing -> return ()
    where
     serviceToNotificationMessage :: Service -> String
