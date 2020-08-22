@@ -3,8 +3,10 @@
 
 module AWS
   ( EndpointAttributesResult(..)
+  , PushPayload(..)
   , createPushEndpoint
   , sendNotification
+  , sendNotificationWihPayload
   , getAttributesForEndpoint
   , updateDeviceTokenForEndpoint
   )
@@ -21,6 +23,12 @@ import           Control.Monad                  ( void )
 import           Data.Maybe                     ( fromJust )
 import           Data.Text                      ( pack
                                                 , unpack
+                                                )
+import           Data.Aeson                     ( ToJSON
+                                                , toJSON
+                                                , (.=)
+                                                , encode
+                                                , object
                                                 )
 import           Data.Char                      ( toLower )
 import           Data.String                    ( fromString )
@@ -61,7 +69,33 @@ import           Network.AWS.Types              ( AWSRequest
                                                 )
 import           System.Environment             ( getEnv )
 import           System.IO                      ( stdout )
+
+import qualified Data.Text.Lazy                as T
+import qualified Data.Text.Lazy.Encoding       as TE
+
 import           Types
+
+-- { 
+--   "default": "This is the default message which must be present when publishing a message to a topic. The default message will only be used if a message is not present for 
+-- one of the notification platforms.",     
+--   "APNS": "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"} }",
+--   "GCM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}",
+--   "ADM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}" 
+-- }            
+data PushPayload = PushPayload
+  { pushPayloadDefault :: String
+  , pushPayloadApns :: Maybe String
+  , pushPayloadApnsSandbox :: Maybe String
+  , pushPayloadGcm :: Maybe String
+  } deriving (Show)
+
+instance ToJSON PushPayload where
+  toJSON (PushPayload text apns apnsSandbox gcm) = object
+    [ "default" .= text
+    , "APNS" .= apns
+    , "APNS_SANDBOX" .= apnsSandbox
+    , "GCM" .= gcm
+    ]
 
 data EndpointAttributesResult = EndpointNotFound | AttributeResults String Bool
 
@@ -92,6 +126,17 @@ updateDeviceTokenForEndpoint endpointARN deviceToken = do
   let request =
         setEndpointAttributes (pack endpointARN) & seaAttributes .~ fromList
           [("Token", pack deviceToken), ("Enabled", "True")]
+  void $ performRequest request
+
+sendNotificationWihPayload :: String -> PushPayload -> IO ()
+sendNotificationWihPayload endpointARN payload = do
+  let pushData = encode payload
+  let request =
+        publish (T.toStrict . TE.decodeUtf8 $ pushData)
+          &  pTargetARN
+          ?~ pack endpointARN
+          &  pMessageStructure
+          ?~ "json"
   void $ performRequest request
 
 sendNotification :: String -> String -> IO ()

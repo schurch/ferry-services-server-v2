@@ -22,7 +22,7 @@ main = do
   putStrLn "Starting scraper..."
   forever $ do
     putStrLn "Fetching statuses..."
-    catch fetchStatuses handleException
+    catch fetchStatusesAndNotify handleException
     threadDelay (600 * 1000 * 1000)
 
 handleException :: SomeException -> IO ()

@@ -11,15 +11,18 @@ module Lib
   , addServiceToInstallation
   , deleteServiceForInstallation
   , getServicesForInstallation
-  , fetchStatuses
+  , fetchStatusesAndNotify
   , AddServiceRequest(..)
   )
 where
 
 import           Control.Monad                  ( void
                                                 , when
+                                                , forM_
                                                 )
-import           Data.Aeson                     ( eitherDecode )
+import           Data.Aeson                     ( eitherDecode
+                                                , encode
+                                                )
 import           Data.ByteString                ( ByteString )
 import           Data.Maybe                     ( listToMaybe
                                                 , fromMaybe
@@ -72,7 +75,7 @@ getServices = do
   query_
     dbConnection
     [sql| 
-      SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated 
+      SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated
       FROM services 
     |]
 
@@ -160,7 +163,7 @@ registerDeviceToken installationID deviceToken deviceType = do
   dbConnection <- connectionString >>= connectPostgreSQL
   result       <- query
     dbConnection
-    [sql| SELECT endpoint_arn :: TEXT FROM installations WHERE installation_id = ? |]
+    [sql| SELECT endpoint_arn FROM installations WHERE installation_id = ? |]
     (Only installationID)
   let storedEndpointARN = listToMaybe result
   currentEndpointARN <- if (isNothing storedEndpointARN)
@@ -175,11 +178,59 @@ registerDeviceToken installationID deviceToken deviceType = do
         $ updateDeviceTokenForEndpoint currentEndpointARN deviceToken
       return currentEndpointARN
 
-fetchStatuses :: IO ()
-fetchStatuses = do
+fetchStatusesAndNotify :: IO ()
+fetchStatusesAndNotify = do
   services <- fetchServices
+  notifyForServices services
   saveServices services
  where
+  notifyForServices :: [Service] -> IO ()
+  notifyForServices services = forM_ services $ \service -> do
+    savedService <- getService $ serviceID service
+    case savedService of
+      Just savedService ->
+        if serviceStatus service /= serviceStatus savedService
+          then do
+            let message = serviceToNotificationMessage service
+            let payload =
+                  pushPayloadWithMessageAndServiceID message (serviceID service)
+            dbConnection            <- connectionString >>= connectPostgreSQL
+            interestedInstallations <- query
+              dbConnection
+              [sql| 
+                SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
+                FROM installation_services s
+                JOIN installations i on s.installation_id = i.installation_id
+                WHERE s.service_id = ? 
+              |]
+              (Only $ serviceID service)
+            forM_ interestedInstallations
+              $ \Installation { installationEndpointARN = endpointARN } ->
+                  sendNotificationWihPayload endpointARN payload
+          else return ()
+      Nothing -> return ()
+   where
+    serviceToNotificationMessage :: Service -> String
+    serviceToNotificationMessage Service { serviceRoute = serviceRoute, serviceStatus = serviceStatus }
+      | serviceStatus == Normal
+      = "Normal services have resumed for " <> serviceRoute
+      | serviceStatus == Disrupted
+      = "There is a disruption to the service " <> serviceRoute
+      | serviceStatus == Cancelled
+      = "Sailings have been cancelled for " <> serviceRoute
+      | serviceStatus == Unknown
+      = error "Do not message for unknow service"
+
+    pushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
+    pushPayloadWithMessageAndServiceID message serviceID =
+      let apsPayload    = (APSPayload (APSPayloadBody message) serviceID)
+          stringPayload = C.unpack . encode $ apsPayload
+      in  PushPayload { pushPayloadDefault     = message
+                      , pushPayloadApns        = Just stringPayload
+                      , pushPayloadApnsSandbox = Just stringPayload
+                      , pushPayloadGcm         = Nothing
+                      }
+
   fetchServices :: IO [Service]
   fetchServices = do
     responseBody <-

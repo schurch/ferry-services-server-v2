@@ -14,7 +14,7 @@ CREATE TABLE services (
 CREATE TABLE installations (
     installation_id UUID PRIMARY KEY,
     device_token TEXT NOT NULL,
-    device_type TEXT NOT NULL,
+    device_type INTEGER NOT NULL,
     endpoint_arn TEXT NOT NULL,
     updated TIMESTAMPTZ NOT NULL,
     created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP

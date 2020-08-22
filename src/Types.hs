@@ -13,6 +13,21 @@ import           Data.Time.Clock                ( UTCTime )
 import           Data.UUID                      ( UUID )
 import           Data.Char                      ( toLower )
 
+data APSPayload = APSPayload {
+    apsPayloadAps :: APSPayloadBody
+  , apsPayloadServiceID :: Int
+} deriving (Generic, Show)
+
+instance ToJSON APSPayload where
+  toJSON = genericToJSON $ jsonOptions 10
+
+data APSPayloadBody = APSPayloadBody {
+    apsPayloadBodyAlert :: String
+} deriving (Generic, Show)
+
+instance ToJSON APSPayloadBody where
+  toJSON = genericToJSON $ jsonOptions 14
+
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
 
 instance Enum ServiceStatus where
@@ -69,7 +84,7 @@ data Installation = Installation {
   , installationDeviceToken :: String
   , installationDeviceType :: DeviceType
   , installationEndpointARN :: String
-  , installationpdatedDate :: UTCTime
+  , installationpUpatedDate :: UTCTime
 } deriving (Generic, Show, ToRow, FromRow)
 
 -- API Types
