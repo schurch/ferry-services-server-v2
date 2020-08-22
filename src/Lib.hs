@@ -73,8 +73,11 @@ getServices = do
 createInstallation :: UUID -> CreateInstallationRequest -> IO [Service]
 createInstallation installationID (CreateInstallationRequest deviceToken deviceType)
   = do
-    dbConnection <- connectionString >>= connectPostgreSQL
-    time         <- getCurrentTime
+    dbConnection      <- connectionString >>= connectPostgreSQL
+    awsSNSEndpointARN <- registerDeviceToken installationID
+                                             deviceToken
+                                             deviceType
+    time <- getCurrentTime
     void $ execute
       dbConnection
       [sql|
@@ -87,7 +90,7 @@ createInstallation installationID (CreateInstallationRequest deviceToken deviceT
                 endpoint_arn = excluded.endpoint_arn, 
                 updated = excluded.updated
       |]
-      (installationID, deviceToken, deviceType, "12345" :: String, time)
+      (installationID, deviceToken, deviceType, awsSNSEndpointARN, time)
     getServicesForInstallation installationID
 
 addServiceToInstallation :: UUID -> Int -> IO [Service]
@@ -125,6 +128,31 @@ getServicesForInstallation installationID = do
         WHERE i.installation_id = ?
       |]
     (Only installationID)
+
+-- Pseudo code from AWS docs:
+-- retrieve the latest device token from the mobile operating system
+-- if (the platform endpoint ARN is not stored)
+--   # this is a first-time registration
+--   call create platform endpoint
+--   store the returned platform endpoint ARN
+-- endif
+
+-- call get endpoint attributes on the platform endpoint ARN 
+
+-- if (while getting the attributes a not-found exception is thrown)
+--   # the platform endpoint was deleted 
+--   call create platform endpoint with the latest device token
+--   store the returned platform endpoint ARN
+-- else 
+--   if (the device token in the endpoint does not match the latest one) or 
+--       (get endpoint attributes shows the endpoint as disabled)
+--     call set endpoint attributes to set the latest device token and then enable the platform endpoint
+--   endif
+-- endif
+registerDeviceToken :: UUID -> String -> DeviceType -> IO String
+registerDeviceToken installationID token deviceType = do
+  dbConnection <- connectionString >>= connectPostgreSQL
+  return "12345"
 
 fetchStatuses :: IO ()
 fetchStatuses = do

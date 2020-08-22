@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 18d470e67b4caaadddd2f60c6f1c94807ea0ddc6bd764b370a04639279dc51d2
+-- hash: 1fd4a2722e7ff23aa24e164ae86cf3e1107b96fc6de4937a217a4ff3c5567762
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -26,6 +26,7 @@ source-repository head
 
 library
   exposed-modules:
+      AWS
       Lib
   other-modules:
       Paths_ferry_services_server
@@ -34,8 +35,12 @@ library
   build-depends:
       HTTP
     , aeson
+    , amazonka
+    , amazonka-core
+    , amazonka-sns
     , base >=4.7 && <5
     , bytestring
+    , lens
     , postgresql-simple
     , split
     , text

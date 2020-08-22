@@ -25,8 +25,12 @@ library:
   source-dirs: src
   dependencies:
     - aeson
+    - amazonka
+    - amazonka-core
+    - amazonka-sns
     - bytestring
     - HTTP
+    - lens
     - postgresql-simple
     - split
     - time
