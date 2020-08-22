@@ -35,6 +35,7 @@ library:
     - split
     - time
     - text
+    - unordered-containers
     - uuid
 
 executables:

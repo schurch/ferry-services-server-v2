@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1fd4a2722e7ff23aa24e164ae86cf3e1107b96fc6de4937a217a4ff3c5567762
+-- hash: 2bdf65eec00e10404cbee3c4388dd7729d191f68ccc273f6abedbaa4a5c3f054
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -28,6 +28,7 @@ library
   exposed-modules:
       AWS
       Lib
+      Types
   other-modules:
       Paths_ferry_services_server
   hs-source-dirs:
@@ -45,6 +46,7 @@ library
     , split
     , text
     , time
+    , unordered-containers
     , uuid
   default-language: Haskell2010
 

@@ -16,33 +16,39 @@ module Lib
   )
 where
 
-import           Data.Text.Lazy                 ( pack )
+import           Control.Monad                  ( void
+                                                , when
+                                                )
+import           Data.Aeson                     ( eitherDecode )
+import           Data.ByteString                ( ByteString )
 import           Data.Maybe                     ( listToMaybe
                                                 , fromMaybe
+                                                , isNothing
+                                                , fromJust
                                                 )
-import           Data.Aeson
-import           GHC.Generics
-import           Network.HTTP                   ( simpleHTTP
-                                                , getRequest
-                                                , getResponseBody
+import           Data.String                    ( fromString )
+import           Data.Text.Lazy                 ( pack
+                                                , unpack
                                                 )
-import           Debug.Trace
 import           Data.Time.Clock                ( UTCTime
                                                 , getCurrentTime
                                                 )
 import           Data.Time.Clock.POSIX          ( posixSecondsToUTCTime )
-import           Database.PostgreSQL.Simple
-import           Database.PostgreSQL.Simple.ToField
-import           Database.PostgreSQL.Simple.FromField
-import           Database.PostgreSQL.Simple.SqlQQ
-import           Data.ByteString                ( ByteString )
-import           Data.Char                      ( toLower )
-import           Control.Monad                  ( void )
-import           Data.String                    ( fromString )
-import           System.Environment             ( getEnv )
 import           Data.UUID                      ( UUID )
+import           Database.PostgreSQL.Simple
+import           Database.PostgreSQL.Simple.SqlQQ
+import           Network.HTTP                   ( simpleHTTP
+                                                , getRequest
+                                                , getResponseBody
+                                                )
+import           System.Environment             ( getEnv )
+
+import           AWS
+import           Types
 
 import qualified Data.ByteString.Lazy.Char8    as C
+
+import           Debug.Trace
 
 connectionString :: IO ByteString
 connectionString = fromString <$> getEnv "DB_CONNECTION"
@@ -150,9 +156,24 @@ getServicesForInstallation installationID = do
 --   endif
 -- endif
 registerDeviceToken :: UUID -> String -> DeviceType -> IO String
-registerDeviceToken installationID token deviceType = do
+registerDeviceToken installationID deviceToken deviceType = do
   dbConnection <- connectionString >>= connectPostgreSQL
-  return "12345"
+  result       <- query
+    dbConnection
+    [sql| SELECT endpoint_arn :: TEXT FROM installations WHERE installation_id = ? |]
+    (Only installationID)
+  let storedEndpointARN = listToMaybe result
+  currentEndpointARN <- if (isNothing storedEndpointARN)
+    then createPushEndpoint deviceToken deviceType
+    else return $ fromOnly . fromJust $ storedEndpointARN
+  endpointAttributesResult <- getAttributesForEndpoint currentEndpointARN
+  case endpointAttributesResult of
+    EndpointNotFound -> createPushEndpoint deviceToken deviceType
+    AttributeResults awsDeviceToken isEnabled -> do
+      when (awsDeviceToken /= deviceToken || isEnabled == False)
+        $ void
+        $ updateDeviceTokenForEndpoint currentEndpointARN deviceToken
+      return currentEndpointARN
 
 fetchStatuses :: IO ()
 fetchStatuses = do
@@ -221,107 +242,3 @@ fetchStatuses = do
               updated = excluded.updated
       |]
       service
-
--- Types
-data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
-
-instance Enum ServiceStatus where
-  toEnum 0     = Normal
-  toEnum 1     = Disrupted
-  toEnum 2     = Cancelled
-  toEnum (-99) = Unknown
-
-  fromEnum Normal    = 0
-  fromEnum Disrupted = 1
-  fromEnum Cancelled = 2
-  fromEnum Unknown   = -99
-
-instance ToJSON ServiceStatus where
-  toJSON = toJSON . fromEnum
-
-instance ToField ServiceStatus where
-  toField = toField . fromEnum
-
-instance FromField ServiceStatus where
-  fromField field byteString = toEnum <$> fromField field byteString
-
-
-data DeviceType = IOS | Android deriving (Eq, Show, Generic, Bounded, Enum)
-
-instance ToJSON DeviceType
-
-instance FromJSON DeviceType
-
-instance ToField DeviceType where
-  toField = toField . fromEnum
-
-instance FromField DeviceType where
-  fromField field byteString = toEnum <$> fromField field byteString
-
--- Database Types
-data Service = Service {
-    serviceID :: Int
-  , serviceSortOrder :: Int
-  , serviceArea :: String
-  , serviceRoute :: String
-  , serviceStatus :: ServiceStatus
-  , serviceAdditionalInfo :: Maybe String
-  , serviceDisruptionReason :: Maybe String
-  , serviceLastUpdatedDate :: Maybe UTCTime
-  , serviceUpdated :: UTCTime
-} deriving (Generic, Show, ToRow, FromRow)
-
-instance ToJSON Service where
-  toJSON = genericToJSON $ jsonOptions 7
-
-data Installation = Installation {
-    installationID :: UUID
-  , installationDeviceToken :: String
-  , installationDeviceType :: DeviceType
-  , installationpdatedDate :: UTCTime
-} deriving (Generic, Show, ToRow, FromRow)
-
--- API Types
-
-data CreateInstallationRequest = CreateInstallationRequest {
-    createInstallationRequestDeviceToken :: String
-  , createInstallationRequestDeviceType :: DeviceType
-} deriving (Generic, Show)
-
-instance FromJSON CreateInstallationRequest where
-  parseJSON = genericParseJSON $ jsonOptions 25
-
-data AddServiceRequest = AddServiceRequest {
-    addServiceRequestServiceID :: Int
-} deriving (Generic, Show)
-
-instance FromJSON AddServiceRequest where
-  parseJSON = genericParseJSON $ jsonOptions 17
-
-jsonOptions :: Int -> Data.Aeson.Options
-jsonOptions prefixLength =
-  defaultOptions { fieldLabelModifier = camelTo2 '_' . drop prefixLength }
-
--- Scraper Types
-data AjaxServiceDetails = AjaxServiceDetails {
-    ajaxServiceDetailsReason :: String
-  , ajaxServiceDetailsImage :: String
-  , ajaxServiceDetailsDestName :: String
-  , ajaxServiceDetailsCode :: String
-  , ajaxServiceDetailsInfoIncluded :: String
-  , ajaxServiceDetailsInfoMsg :: Maybe String
-  , ajaxServiceDetailsReported :: String
-  , ajaxServiceDetailsId :: String
-  , ajaxServiceDetailsWebDetail :: String
-  , ajaxServiceDetailsUpdated :: String
-  , ajaxServiceDetailsRouteName :: String
-  , ajaxServiceDetailsStatus :: String
-} deriving (Generic, Show)
-
-instance FromJSON AjaxServiceDetails where
-  parseJSON = genericParseJSON
-    $ defaultOptions { fieldLabelModifier = toLowerFirstLetter . drop 18 }
-
-toLowerFirstLetter :: String -> String
-toLowerFirstLetter []       = []
-toLowerFirstLetter (x : xs) = toLower x : xs
