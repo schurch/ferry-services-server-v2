@@ -9,6 +9,7 @@ services:
     restart: always
     env_file:
       - envfile.docker
+    tty: true
     command: /opt/ferry-services/ferry-services-server-exe
   event-processor:
     image: stefanchurch/ferry-services-scraper:latest
@@ -17,6 +18,7 @@ services:
     restart: always
     env_file:
       - envfile.docker
+    tty: true
     command: /opt/ferry-services/ferry-services-scraper-exe
   db:
     image: "mdillon/postgis"

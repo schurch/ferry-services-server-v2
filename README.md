@@ -21,3 +21,8 @@ To run the down migrations:
 ```bash
 migrate -source file://migrations -database "postgres://stefanchurch@localhost:5432/ferry-services?sslmode=disable" down
 ```
+
+To run the migrations in the running docker instance:
+```bash
+docker run -v "$(pwd)"/migrations:/migrations --network container:ferry-services-server_db_1 migrate/migrate -path=/migrations/ -database "postgres://user:password@db:5432/ferry-services?sslmode=disable" up
+```
