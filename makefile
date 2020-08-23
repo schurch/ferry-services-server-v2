@@ -9,6 +9,16 @@ default: server
 build:
 	stack build
 
+.PHONY: build-release
+build-release:
+	echo ${DOCKER_HUB_PASSWORD} | docker login -u ${DOCKER_HUB_USERNAME} --password-stdin
+	stack docker pull
+	stack --docker build
+	docker build -f server.Dockerfile -t stefanchurch/ferry-services-server:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-server-exe/ferry-services-server-exe" .
+	docker build -f scraper.Dockerfile -t stefanchurch/ferry-services-scraper:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-scraper-exe/ferry-services-scraper-exe" .
+	docker push stefanchurch/ferry-services-server:latest
+	docker push stefanchurch/ferry-services-scraper:latest
+
 .PHONY: watch
 watch:
 	stack build --file-watch
