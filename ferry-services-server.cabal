@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2bdf65eec00e10404cbee3c4388dd7729d191f68ccc273f6abedbaa4a5c3f054
+-- hash: 88f63bc0c5a684ab8472e84b0c58fc95d2000bce758c00e0a773b5050e1f734a
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 library
   exposed-modules:
       AWS
+      Database
       Lib
       Types
   other-modules:

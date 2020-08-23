@@ -24,119 +24,62 @@ import           Data.Aeson                     ( eitherDecode
                                                 , encode
                                                 )
 import           Data.ByteString                ( ByteString )
-import           Data.Maybe                     ( listToMaybe
-                                                , fromMaybe
+import           Data.Maybe                     ( fromMaybe
                                                 , isNothing
                                                 , fromJust
                                                 )
-import           Data.String                    ( fromString )
-import           Data.Text.Lazy                 ( pack
-                                                , unpack
-                                                )
+import           Data.Text.Lazy                 ( pack )
 import           Data.Time.Clock                ( UTCTime
                                                 , getCurrentTime
                                                 )
 import           Data.Time.Clock.POSIX          ( posixSecondsToUTCTime )
 import           Data.UUID                      ( UUID )
-import           Database.PostgreSQL.Simple
-import           Database.PostgreSQL.Simple.SqlQQ
 import           Network.HTTP                   ( simpleHTTP
                                                 , getRequest
                                                 , getResponseBody
                                                 )
-import           System.Environment             ( getEnv )
 
 import           AWS
 import           Types
 
 import qualified Data.ByteString.Lazy.Char8    as C
+import qualified Database                      as DB
 
 import           Debug.Trace
 
-connectionString :: IO ByteString
-connectionString = fromString <$> getEnv "DB_CONNECTION"
-
 getService :: Int -> IO (Maybe Service)
-getService serviceID = do
-  dbConnection <- connectionString >>= connectPostgreSQL
-  results      <- query
-    dbConnection
-    [sql| 
-      SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated 
-      FROM services 
-      WHERE service_id = ? 
-    |]
-    (Only serviceID)
-  return $ listToMaybe results
+getService = DB.getService
 
 getServices :: IO [Service]
-getServices = do
-  dbConnection <- connectionString >>= connectPostgreSQL
-  query_
-    dbConnection
-    [sql| 
-      SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated
-      FROM services 
-    |]
+getServices = DB.getServices
 
 createInstallation :: UUID -> CreateInstallationRequest -> IO [Service]
 createInstallation installationID (CreateInstallationRequest deviceToken deviceType)
   = do
-    dbConnection      <- connectionString >>= connectPostgreSQL
     awsSNSEndpointARN <- registerDeviceToken installationID
                                              deviceToken
                                              deviceType
     time <- getCurrentTime
-    void $ execute
-      dbConnection
-      [sql|
-        INSERT INTO installations (installation_id, device_token, device_type, endpoint_arn, updated) 
-          VALUES (?,?,?,?,?)
-          ON CONFLICT (installation_id) DO UPDATE 
-            SET installation_id = excluded.installation_id, 
-                device_token = excluded.device_token, 
-                device_type = excluded.device_type, 
-                endpoint_arn = excluded.endpoint_arn, 
-                updated = excluded.updated
-      |]
-      (installationID, deviceToken, deviceType, awsSNSEndpointARN, time)
+    DB.createInstallation installationID
+                          deviceToken
+                          deviceType
+                          awsSNSEndpointARN
+                          time
     getServicesForInstallation installationID
 
 addServiceToInstallation :: UUID -> Int -> IO [Service]
 addServiceToInstallation installationID serviceID = do
-  dbConnection <- connectionString >>= connectPostgreSQL
-  void $ execute
-    dbConnection
-    [sql|
-        INSERT INTO installation_services (installation_id, service_id) 
-        VALUES (?,?)
-    |]
-    (installationID, serviceID)
+  DB.addServiceToInstallation installationID serviceID
   getServicesForInstallation installationID
 
 deleteServiceForInstallation :: UUID -> Int -> IO [Service]
 deleteServiceForInstallation installationID serviceID = do
-  dbConnection <- connectionString >>= connectPostgreSQL
-  void $ execute
-    dbConnection
-    [sql|
-        DELETE FROM installation_services WHERE installation_id = ? AND service_id = ?
-    |]
-    (installationID, serviceID)
+  DB.deleteServiceForInstallation installationID serviceID
   getServicesForInstallation installationID
 
 getServicesForInstallation :: UUID -> IO [Service]
-getServicesForInstallation installationID = do
-  dbConnection <- connectionString >>= connectPostgreSQL
-  query
-    dbConnection
-    [sql| 
-        SELECT s.service_id, s.sort_order, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.last_updated_date, s.updated 
-        FROM services s
-        JOIN installation_services i ON s.service_id = i.service_id
-        WHERE i.installation_id = ?
-      |]
-    (Only installationID)
+getServicesForInstallation installationID =
+  DB.getServicesForInstallation installationID
 
 -- Pseudo code from AWS docs:
 -- retrieve the latest device token from the mobile operating system
@@ -160,15 +103,10 @@ getServicesForInstallation installationID = do
 -- endif
 registerDeviceToken :: UUID -> String -> DeviceType -> IO String
 registerDeviceToken installationID deviceToken deviceType = do
-  dbConnection <- connectionString >>= connectPostgreSQL
-  result       <- query
-    dbConnection
-    [sql| SELECT endpoint_arn FROM installations WHERE installation_id = ? |]
-    (Only installationID)
-  let storedEndpointARN = listToMaybe result
-  currentEndpointARN <- if (isNothing storedEndpointARN)
+  storedInstallation <- DB.getInstallationWithID installationID
+  currentEndpointARN <- if (isNothing storedInstallation)
     then createPushEndpoint deviceToken deviceType
-    else return $ fromOnly . fromJust $ storedEndpointARN
+    else return $ installationEndpointARN . fromJust $ storedInstallation
   endpointAttributesResult <- getAttributesForEndpoint currentEndpointARN
   case endpointAttributesResult of
     EndpointNotFound -> createPushEndpoint deviceToken deviceType
@@ -182,7 +120,7 @@ fetchStatusesAndNotify :: IO ()
 fetchStatusesAndNotify = do
   services <- fetchServices
   notifyForServices services
-  saveServices services
+  DB.saveServices services
  where
   notifyForServices :: [Service] -> IO ()
   notifyForServices services = forM_ services $ \service -> do
@@ -197,26 +135,13 @@ fetchStatusesAndNotify = do
           let message = serviceToNotificationMessage service
           let payload =
                 pushPayloadWithMessageAndServiceID message (serviceID service)
-          interestedInstallations <- getIntererestedInstallationsForServiceID
+          interestedInstallations <- DB.getIntererestedInstallationsForServiceID
             $ serviceID service
           forM_ interestedInstallations
             $ \Installation { installationEndpointARN = endpointARN } ->
                 sendNotificationWihPayload endpointARN payload
       Nothing -> return ()
    where
-    getIntererestedInstallationsForServiceID :: Int -> IO [Installation]
-    getIntererestedInstallationsForServiceID serviceID = do
-      dbConnection <- connectionString >>= connectPostgreSQL
-      query
-        dbConnection
-        [sql| 
-          SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
-          FROM installation_services s
-          JOIN installations i on s.installation_id = i.installation_id
-          WHERE s.service_id = ? 
-        |]
-        (Only $ serviceID)
-
     serviceToNotificationMessage :: Service -> String
     serviceToNotificationMessage Service { serviceRoute = serviceRoute, serviceStatus = serviceStatus }
       | serviceStatus == Normal
@@ -279,24 +204,3 @@ fetchStatusesAndNotify = do
     stringToUTCTime :: String -> UTCTime
     stringToUTCTime time =
       posixSecondsToUTCTime $ fromInteger (read time) / 1000
-
-  saveServices :: [Service] -> IO ()
-  saveServices service = do
-    dbConnection <- connectionString >>= connectPostgreSQL
-    void $ executeMany
-      dbConnection
-      [sql| 
-        INSERT INTO services (service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated) 
-        VALUES (?,?,?,?,?,?,?,?,?)
-        ON CONFLICT (service_id) DO UPDATE 
-          SET service_id = excluded.service_id, 
-              sort_order = excluded.sort_order, 
-              area = excluded.area, 
-              route = excluded.route, 
-              status = excluded.status, 
-              additional_info = excluded.additional_info, 
-              disruption_reason = excluded.disruption_reason,
-              last_updated_date = excluded.last_updated_date,
-              updated = excluded.updated
-      |]
-      service
