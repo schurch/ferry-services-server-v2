@@ -23,7 +23,7 @@ main = do
   forever $ do
     putStrLn "Fetching statuses..."
     catch fetchStatusesAndNotify handleException
-    threadDelay (600 * 1000 * 1000)
+    threadDelay (900 * 1000 * 1000) -- 15 mins
 
 handleException :: SomeException -> IO ()
 handleException exception = do
