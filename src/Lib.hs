@@ -31,6 +31,7 @@ import           Data.Maybe                     ( fromMaybe
 import           Data.Text.Lazy                 ( pack )
 import           Data.Time.Clock                ( UTCTime
                                                 , getCurrentTime
+                                                , diffUTCTime
                                                 )
 import           Data.Time.Clock.POSIX          ( posixSecondsToUTCTime )
 import           Data.UUID                      ( UUID )
@@ -47,13 +48,19 @@ import qualified Database                      as DB
 
 import           Debug.Trace
 
-getService :: Int -> IO (Maybe Service)
-getService = DB.getService
+getService :: Int -> IO (Maybe ServiceResponse)
+getService serviceID = do
+  service <- DB.getService serviceID
+  time    <- getCurrentTime
+  return $ serviceToServiceResponse time <$> service
 
-getServices :: IO [Service]
-getServices = DB.getServices
+getServices :: IO [ServiceResponse]
+getServices = do
+  services <- DB.getServices
+  time     <- getCurrentTime
+  return $ serviceToServiceResponse time <$> services
 
-createInstallation :: UUID -> CreateInstallationRequest -> IO [Service]
+createInstallation :: UUID -> CreateInstallationRequest -> IO [ServiceResponse]
 createInstallation installationID (CreateInstallationRequest deviceToken deviceType)
   = do
     awsSNSEndpointARN <- registerDeviceToken installationID
@@ -67,19 +74,40 @@ createInstallation installationID (CreateInstallationRequest deviceToken deviceT
                           time
     getServicesForInstallation installationID
 
-addServiceToInstallation :: UUID -> Int -> IO [Service]
+addServiceToInstallation :: UUID -> Int -> IO [ServiceResponse]
 addServiceToInstallation installationID serviceID = do
   DB.addServiceToInstallation installationID serviceID
   getServicesForInstallation installationID
 
-deleteServiceForInstallation :: UUID -> Int -> IO [Service]
+deleteServiceForInstallation :: UUID -> Int -> IO [ServiceResponse]
 deleteServiceForInstallation installationID serviceID = do
   DB.deleteServiceForInstallation installationID serviceID
   getServicesForInstallation installationID
 
-getServicesForInstallation :: UUID -> IO [Service]
-getServicesForInstallation installationID =
-  DB.getServicesForInstallation installationID
+getServicesForInstallation :: UUID -> IO [ServiceResponse]
+getServicesForInstallation installationID = do
+  services <- DB.getServicesForInstallation installationID
+  time     <- getCurrentTime
+  return $ serviceToServiceResponse time <$> services
+
+serviceToServiceResponse :: UTCTime -> Service -> ServiceResponse
+serviceToServiceResponse currentTime Service {..} = ServiceResponse
+  { serviceResponseServiceID        = serviceID
+  , serviceResponseSortOrder        = serviceSortOrder
+  , serviceResponseArea             = serviceArea
+  , serviceResponseRoute            = serviceRoute
+  , serviceResponseStatus           = status
+  , serviceResponseAdditionalInfo   = serviceAdditionalInfo
+  , serviceResponseDisruptionReason = serviceDisruptionReason
+  , serviceResponseLastUpdatedDate  = serviceLastUpdatedDate
+  , serviceResponseUpdated          = serviceUpdated
+  }
+ where
+  -- Unknown status if over 30 mins ago
+  status :: ServiceStatus
+  status =
+    let diff = diffUTCTime currentTime serviceUpdated
+    in  if diff > 1800 then Unknown else serviceStatus
 
 -- Pseudo code from AWS docs:
 -- retrieve the latest device token from the mobile operating system
@@ -124,7 +152,7 @@ fetchStatusesAndNotify = do
  where
   notifyForServices :: [Service] -> IO ()
   notifyForServices services = forM_ services $ \service -> do
-    savedService <- getService $ serviceID service
+    savedService <- DB.getService $ serviceID service
     case savedService of
       Just savedService -> do
         let statusesDifferent =

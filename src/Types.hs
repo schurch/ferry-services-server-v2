@@ -76,9 +76,6 @@ data Service = Service {
   , serviceUpdated :: UTCTime
 } deriving (Generic, Show, ToRow, FromRow)
 
-instance ToJSON Service where
-  toJSON = genericToJSON $ jsonOptions 7
-
 data Installation = Installation {
     installationID :: UUID
   , installationDeviceToken :: String
@@ -88,6 +85,20 @@ data Installation = Installation {
 } deriving (Generic, Show, ToRow, FromRow)
 
 -- API Types
+data ServiceResponse = ServiceResponse {
+    serviceResponseServiceID :: Int
+  , serviceResponseSortOrder :: Int
+  , serviceResponseArea :: String
+  , serviceResponseRoute :: String
+  , serviceResponseStatus :: ServiceStatus
+  , serviceResponseAdditionalInfo :: Maybe String
+  , serviceResponseDisruptionReason :: Maybe String
+  , serviceResponseLastUpdatedDate :: Maybe UTCTime
+  , serviceResponseUpdated :: UTCTime
+} deriving (Generic, Show)
+
+instance ToJSON ServiceResponse where
+  toJSON = genericToJSON $ jsonOptions 15
 
 data CreateInstallationRequest = CreateInstallationRequest {
     createInstallationRequestDeviceToken :: String
