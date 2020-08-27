@@ -42,9 +42,10 @@ import qualified Data.HashMap.Strict           as HM
 
 main :: IO ()
 main = do
-  putStrLn "Listening on port 3000..."
+  port <- getEnv "SERVER_PORT"
+  putStrLn $ "Listening on port " <> port <> "..."
   let settings =
-        setPort 3000 . setOnException exceptionHandler $ defaultSettings
+        setPort (read port) . setOnException exceptionHandler $ defaultSettings
   let options = Options { verbose = 0, settings = settings }
   scottyOpts options $ do
     get "/api/services" $ do

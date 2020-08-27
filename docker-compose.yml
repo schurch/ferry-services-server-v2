@@ -3,7 +3,7 @@ services:
   server:
     image: stefanchurch/ferry-services-server:latest
     ports:
-      - "3000:3000"
+      - "3008:3008"
     depends_on:
       - "db"
     restart: always

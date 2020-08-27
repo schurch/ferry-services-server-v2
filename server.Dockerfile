@@ -12,6 +12,6 @@ RUN apt-get update && \
 
 COPY $BIN_DIR .
 
-EXPOSE 3000
+EXPOSE 3008
 
 CMD ["/opt/ferry-services/ferry-services-server-exe"]

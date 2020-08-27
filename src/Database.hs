@@ -79,6 +79,7 @@ addServiceToInstallation installationID serviceID =
     [sql|
       INSERT INTO installation_services (installation_id, service_id) 
       VALUES (?,?)
+      ON CONFLICT DO NOTHING
     |]
     (installationID, serviceID)
 
@@ -96,11 +97,11 @@ getServicesForInstallation installationID = withConnection $ \connection ->
   query
     connection
     [sql| 
-          SELECT s.service_id, s.sort_order, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.last_updated_date, s.updated 
-          FROM services s
-          JOIN installation_services i ON s.service_id = i.service_id
-          WHERE i.installation_id = ?
-        |]
+      SELECT s.service_id, s.sort_order, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.last_updated_date, s.updated 
+      FROM services s
+      JOIN installation_services i ON s.service_id = i.service_id
+      WHERE i.installation_id = ?
+    |]
     (Only installationID)
 
 getInstallationWithID :: UUID -> IO (Maybe Installation)
@@ -120,10 +121,10 @@ getIntererestedInstallationsForServiceID serviceID =
   withConnection $ \connection -> query
     connection
     [sql| 
-        SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
-        FROM installation_services s
-        JOIN installations i on s.installation_id = i.installation_id
-        WHERE s.service_id = ? 
+      SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
+      FROM installation_services s
+      JOIN installations i on s.installation_id = i.installation_id
+      WHERE s.service_id = ? 
       |]
     (Only $ serviceID)
 
@@ -131,17 +132,17 @@ saveServices :: [Service] -> IO ()
 saveServices services = void $ withConnection $ \connection -> executeMany
   connection
   [sql| 
-      INSERT INTO services (service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated) 
-      VALUES (?,?,?,?,?,?,?,?,?)
-      ON CONFLICT (service_id) DO UPDATE 
-        SET service_id = excluded.service_id, 
-            sort_order = excluded.sort_order, 
-            area = excluded.area, 
-            route = excluded.route, 
-            status = excluded.status, 
-            additional_info = excluded.additional_info, 
-            disruption_reason = excluded.disruption_reason,
-            last_updated_date = excluded.last_updated_date,
-            updated = excluded.updated
+    INSERT INTO services (service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated) 
+    VALUES (?,?,?,?,?,?,?,?,?)
+    ON CONFLICT (service_id) DO UPDATE 
+      SET service_id = excluded.service_id, 
+          sort_order = excluded.sort_order, 
+          area = excluded.area, 
+          route = excluded.route, 
+          status = excluded.status, 
+          additional_info = excluded.additional_info, 
+          disruption_reason = excluded.disruption_reason,
+          last_updated_date = excluded.last_updated_date,
+          updated = excluded.updated
     |]
   services
