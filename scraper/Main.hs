@@ -29,5 +29,13 @@ handleException :: SomeException -> IO ()
 handleException exception = do
   putStrLn $ "An error occured: " <> show exception
   sentryDSN     <- getEnv "SCRAPER_SENTRY_DSN"
+  env           <- getEnv "ENVIRONMENT"
   sentryService <- initRaven sentryDSN id sendRecord silentFallback
-  register sentryService "scraper-logger" Error (show exception) id
+  register sentryService
+           "scraper-logger"
+           Error
+           (show exception)
+           (recordUpdate env)
+
+recordUpdate :: String -> SentryRecord -> SentryRecord
+recordUpdate env record = record { srEnvironment = Just env }

@@ -79,18 +79,21 @@ exceptionHandler :: Maybe Request -> SomeException -> IO ()
 exceptionHandler request exception = do
   sentryDSN     <- getEnv "SERVER_SENTRY_DSN"
   sentryService <- initRaven sentryDSN id sendRecord silentFallback
+  env           <- getEnv "ENVIRONMENT"
   register sentryService
            "api-logger"
            Error
            (show exception)
-           (recordUpdate request exception)
+           (recordUpdate env request exception)
   defaultOnException request exception
 
-recordUpdate :: Maybe Request -> SomeException -> SentryRecord -> SentryRecord
-recordUpdate Nothing        exception record = record
-recordUpdate (Just request) exception record = record
-  { srServerName = unpack <$> requestHeaderHost request
-  , srExtra      = HM.fromList
+recordUpdate
+  :: String -> Maybe Request -> SomeException -> SentryRecord -> SentryRecord
+recordUpdate _   Nothing        exception record = record
+recordUpdate env (Just request) exception record = record
+  { srServerName  = unpack <$> requestHeaderHost request
+  , srEnvironment = Just env
+  , srExtra       = HM.fromList
     [ ("method"      , (String $ decodeUtf8 $ requestMethod request))
     , ("path"        , (String $ decodeUtf8 $ rawPathInfo request))
     , ("query-string", (String $ decodeUtf8 $ rawQueryString request))

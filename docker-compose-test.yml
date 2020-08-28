@@ -1,34 +1,37 @@
 version: '3'
 services:
-  server:
+  server-test:
     image: stefanchurch/ferry-services-server:latest
+    container_name: ferry-services-server-test
     ports:
       - "3008:3008"
     depends_on:
-      - "db"
+      - "db-test"
     restart: always
     env_file:
-      - envfile.docker
+      - envfile.docker-test
     tty: true
     command: /opt/ferry-services/ferry-services-server-exe
-  event-processor:
+  event-processor-test:
     image: stefanchurch/ferry-services-scraper:latest
+    container_name: ferry-services-scraper-test
     depends_on:
-      - "db"
+      - "db-test"
     restart: always
     env_file:
-      - envfile.docker
+      - envfile.docker-test
     tty: true
     command: /opt/ferry-services/ferry-services-scraper-exe
-  db:
+  db-test:
     image: "mdillon/postgis"
+    container_name: ferry-services-db-test
     environment:
-      POSTGRES_DB: ferry-services
+      POSTGRES_DB: ferry-services-test
     restart: always
     volumes:
-      - datavolume:/var/lib/postgresql/data
+      - datavolumetest:/var/lib/postgresql/data
     env_file:
-      - envfile.docker
+      - envfile.docker-test
 
 volumes:
-  datavolume:
+  datavolumetest:

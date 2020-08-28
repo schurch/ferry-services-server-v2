@@ -1,0 +1,37 @@
+version: '3'
+services:
+  server-prod:
+    image: stefanchurch/ferry-services-server:latest
+    container_name: ferry-services-server-prod
+    ports:
+      - "3009:3009"
+    depends_on:
+      - "db-prod"
+    restart: always
+    env_file:
+      - envfile.docker-prod
+    tty: true
+    command: /opt/ferry-services/ferry-services-server-exe
+  event-processor-prod:
+    image: stefanchurch/ferry-services-scraper:latest
+    container_name: ferry-services-scraper-prod
+    depends_on:
+      - "db-prod"
+    restart: always
+    env_file:
+      - envfile.docker-prod
+    tty: true
+    command: /opt/ferry-services/ferry-services-scraper-exe
+  db-prod:
+    image: "mdillon/postgis"
+    container_name: ferry-services-db-prod
+    environment:
+      POSTGRES_DB: ferry-services-prod
+    restart: always
+    volumes:
+      - datavolumeprod:/var/lib/postgresql/data
+    env_file:
+      - envfile.docker-prod
+
+volumes:
+  datavolumeprod:
