@@ -4,14 +4,15 @@
 
 module Types where
 
+import           Data.Aeson
+import           Data.Char                      ( toLower )
+import           Data.Scientific                ( Scientific )
+import           Data.Time.Clock                ( UTCTime )
+import           Data.UUID                      ( UUID )
 import           Database.PostgreSQL.Simple.ToField
 import           Database.PostgreSQL.Simple.FromField
 import           Database.PostgreSQL.Simple
-import           Data.Aeson
 import           GHC.Generics
-import           Data.Time.Clock                ( UTCTime )
-import           Data.UUID                      ( UUID )
-import           Data.Char                      ( toLower )
 
 data APSPayload = APSPayload {
     apsPayloadAps :: APSPayloadBody
@@ -84,6 +85,18 @@ data Installation = Installation {
   , installationpUpatedDate :: UTCTime
 } deriving (Generic, Show, ToRow, FromRow)
 
+data Location = Location {
+    locationID :: Int
+  , locationName :: String
+  , locationLatitude :: Scientific
+  , locationLonitude :: Scientific
+} deriving (Generic, Show, ToRow, FromRow)
+
+data ServiceLocation = ServiceLocation {
+    serviceLocationServiceID :: Int
+  , serviceLocationLocationID :: Int
+} deriving (Generic, Show, ToRow, FromRow)
+
 -- API Types
 data ServiceResponse = ServiceResponse {
     serviceResponseServiceID :: Int
@@ -91,6 +104,7 @@ data ServiceResponse = ServiceResponse {
   , serviceResponseArea :: String
   , serviceResponseRoute :: String
   , serviceResponseStatus :: ServiceStatus
+  , serviceResponseLocations :: [LocationResponse]
   , serviceResponseAdditionalInfo :: Maybe String
   , serviceResponseDisruptionReason :: Maybe String
   , serviceResponseLastUpdatedDate :: Maybe UTCTime
@@ -114,6 +128,15 @@ data AddServiceRequest = AddServiceRequest {
 
 instance FromJSON AddServiceRequest where
   parseJSON = genericParseJSON $ jsonOptions 17
+
+data LocationResponse = LocationResponse {
+    locationResponseName :: String
+  , locationResponseLatitude :: Scientific
+  , locationResponseLongitude :: Scientific
+} deriving (Generic, Show)
+
+instance ToJSON LocationResponse where
+  toJSON = genericToJSON $ jsonOptions 16
 
 jsonOptions :: Int -> Data.Aeson.Options
 jsonOptions prefixLength =

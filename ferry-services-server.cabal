@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 88f63bc0c5a684ab8472e84b0c58fc95d2000bce758c00e0a773b5050e1f734a
+-- hash: 44a4cc1c19413e1e46e7c3b9a03a8e1a1124954a7afde7866efad9d7d9a82be5
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -42,8 +42,10 @@ library
     , amazonka-sns
     , base >=4.7 && <5
     , bytestring
+    , containers
     , lens
     , postgresql-simple
+    , scientific
     , split
     , text
     , time

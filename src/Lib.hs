@@ -27,7 +27,9 @@ import           Data.ByteString                ( ByteString )
 import           Data.Maybe                     ( fromMaybe
                                                 , isNothing
                                                 , fromJust
+                                                , catMaybes
                                                 )
+import           Data.List                      ( find )
 import           Data.Text.Lazy                 ( pack )
 import           Data.Time.Clock                ( UTCTime
                                                 , getCurrentTime
@@ -45,20 +47,26 @@ import           Types
 
 import qualified Data.ByteString.Lazy.Char8    as C
 import qualified Database                      as DB
+import qualified Data.Map                      as M
 
 import           Debug.Trace
 
+-- Lookup locations for a service ID
+type ServiceLocationLookup = M.Map Int [LocationResponse]
+
 getService :: Int -> IO (Maybe ServiceResponse)
 getService serviceID = do
-  service <- DB.getService serviceID
-  time    <- getCurrentTime
-  return $ serviceToServiceResponse time <$> service
+  service        <- DB.getService serviceID
+  time           <- getCurrentTime
+  locationLookup <- getLocationLookup
+  return $ serviceToServiceResponse locationLookup time <$> service
 
 getServices :: IO [ServiceResponse]
 getServices = do
-  services <- DB.getServices
-  time     <- getCurrentTime
-  return $ serviceToServiceResponse time <$> services
+  services       <- DB.getServices
+  time           <- getCurrentTime
+  locationLookup <- getLocationLookup
+  return $ serviceToServiceResponse locationLookup time <$> services
 
 createInstallation :: UUID -> CreateInstallationRequest -> IO [ServiceResponse]
 createInstallation installationID (CreateInstallationRequest deviceToken deviceType)
@@ -86,22 +94,27 @@ deleteServiceForInstallation installationID serviceID = do
 
 getServicesForInstallation :: UUID -> IO [ServiceResponse]
 getServicesForInstallation installationID = do
-  services <- DB.getServicesForInstallation installationID
-  time     <- getCurrentTime
-  return $ serviceToServiceResponse time <$> services
+  services       <- DB.getServicesForInstallation installationID
+  time           <- getCurrentTime
+  locationLookup <- getLocationLookup
+  return $ serviceToServiceResponse locationLookup time <$> services
 
-serviceToServiceResponse :: UTCTime -> Service -> ServiceResponse
-serviceToServiceResponse currentTime Service {..} = ServiceResponse
-  { serviceResponseServiceID        = serviceID
-  , serviceResponseSortOrder        = serviceSortOrder
-  , serviceResponseArea             = serviceArea
-  , serviceResponseRoute            = serviceRoute
-  , serviceResponseStatus           = status
-  , serviceResponseAdditionalInfo   = serviceAdditionalInfo
-  , serviceResponseDisruptionReason = serviceDisruptionReason
-  , serviceResponseLastUpdatedDate  = serviceLastUpdatedDate
-  , serviceResponseUpdated          = serviceUpdated
-  }
+serviceToServiceResponse
+  :: ServiceLocationLookup -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponse locationLookup currentTime Service {..} =
+  ServiceResponse
+    { serviceResponseServiceID        = serviceID
+    , serviceResponseSortOrder        = serviceSortOrder
+    , serviceResponseArea             = serviceArea
+    , serviceResponseRoute            = serviceRoute
+    , serviceResponseStatus           = status
+    , serviceResponseLocations        = fromMaybe []
+                                          $ M.lookup serviceID locationLookup
+    , serviceResponseAdditionalInfo   = serviceAdditionalInfo
+    , serviceResponseDisruptionReason = serviceDisruptionReason
+    , serviceResponseLastUpdatedDate  = serviceLastUpdatedDate
+    , serviceResponseUpdated          = serviceUpdated
+    }
  where
   -- Unknown status if over 30 mins ago
   status :: ServiceStatus
@@ -232,3 +245,42 @@ fetchStatusesAndNotify = do
     stringToUTCTime :: String -> UTCTime
     stringToUTCTime time =
       posixSecondsToUTCTime $ fromInteger (read time) / 1000
+
+getLocationLookup :: IO ServiceLocationLookup
+getLocationLookup = do
+  locations        <- DB.getLocations
+  serviceLocations <- DB.getServiceLocations
+  return $ buildServiceLocationLookup locations serviceLocations
+
+buildServiceLocationLookup
+  :: [Location] -> [ServiceLocation] -> ServiceLocationLookup
+buildServiceLocationLookup allLocations serviceLocations =
+  locationsIDsToLocationResponses <$> serviceIDLocationIDsLookup
+ where
+  locationsIDsToLocationResponses :: [Int] -> [LocationResponse]
+  locationsIDsToLocationResponses locationIDs =
+    let locations =
+            catMaybes $ findLocationInLocations allLocations <$> locationIDs
+    in  locationToLocationResponse <$> locations
+
+  tuplesFromServiceLocations :: [ServiceLocation] -> [(Int, [Int])]
+  tuplesFromServiceLocations serviceLocations =
+    [ (serviceID, [locationID])
+    | (ServiceLocation serviceID locationID) <- serviceLocations
+    ]
+
+  serviceIDLocationIDsLookup :: M.Map Int [Int]
+  serviceIDLocationIDsLookup =
+    M.fromListWith (++) $ tuplesFromServiceLocations serviceLocations
+
+  findLocationInLocations :: [Location] -> Int -> Maybe Location
+  findLocationInLocations locations locationIDToFind = find
+    (\Location { locationID = locationID } -> locationIDToFind == locationID)
+    locations
+
+  locationToLocationResponse :: Location -> LocationResponse
+  locationToLocationResponse Location {..} = LocationResponse
+    { locationResponseName      = locationName
+    , locationResponseLatitude  = locationLatitude
+    , locationResponseLongitude = locationLonitude
+    }

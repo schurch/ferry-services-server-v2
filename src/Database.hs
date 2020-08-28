@@ -11,6 +11,8 @@ module Database
   , getInstallationWithID
   , getIntererestedInstallationsForServiceID
   , saveServices
+  , getLocations
+  , getServiceLocations
   )
 where
 
@@ -52,9 +54,9 @@ getServices :: IO [Service]
 getServices = withConnection $ \connection -> query_
   connection
   [sql| 
-      SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated
-      FROM services 
-    |]
+    SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated
+    FROM services 
+  |]
 
 createInstallation :: UUID -> String -> DeviceType -> String -> UTCTime -> IO ()
 createInstallation installationID deviceToken deviceType awsSNSEndpointARN time
@@ -146,3 +148,19 @@ saveServices services = void $ withConnection $ \connection -> executeMany
           updated = excluded.updated
     |]
   services
+
+getLocations :: IO [Location]
+getLocations = withConnection $ \connection -> query_
+  connection
+  [sql| 
+    SELECT location_id, name, latitude ,longitude
+    FROM locations
+  |]
+
+getServiceLocations :: IO [ServiceLocation]
+getServiceLocations = withConnection $ \connection -> query_
+  connection
+  [sql| 
+    SELECT service_id, location_id
+    FROM service_locations
+  |]

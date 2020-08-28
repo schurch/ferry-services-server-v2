@@ -29,9 +29,11 @@ library:
     - amazonka-core
     - amazonka-sns
     - bytestring
+    - containers
     - HTTP
     - lens
     - postgresql-simple
+    - scientific
     - split
     - time
     - text
