@@ -32,10 +32,13 @@ library:
     - containers
     - HTTP
     - lens
+    - mtl
     - postgresql-simple
     - scientific
+    - scotty
     - split
     - time
+    - tinylog
     - text
     - unordered-containers
     - uuid
@@ -52,8 +55,10 @@ executables:
     - aeson
     - bytestring
     - ferry-services-server
+    - mtl
     - raven-haskell
     - scotty
+    - tinylog
     - text
     - unordered-containers
     - wai

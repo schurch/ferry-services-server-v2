@@ -20,6 +20,7 @@ import           Control.Monad                  ( void
                                                 , when
                                                 , forM_
                                                 )
+import           Control.Monad.IO.Class         ( liftIO )
 import           Data.Aeson                     ( eitherDecode
                                                 , encode
                                                 )
@@ -41,6 +42,9 @@ import           Network.HTTP                   ( simpleHTTP
                                                 , getRequest
                                                 , getResponseBody
                                                 )
+import           System.Logger.Class            ( debug
+                                                , msg
+                                                )
 
 import           AWS
 import           Types
@@ -54,27 +58,27 @@ import           Debug.Trace
 -- Lookup locations for a service ID
 type ServiceLocationLookup = M.Map Int [LocationResponse]
 
-getService :: Int -> IO (Maybe ServiceResponse)
+getService :: Int -> Action (Maybe ServiceResponse)
 getService serviceID = do
   service        <- DB.getService serviceID
-  time           <- getCurrentTime
+  time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   return $ serviceToServiceResponse locationLookup time <$> service
 
-getServices :: IO [ServiceResponse]
+getServices :: Action [ServiceResponse]
 getServices = do
   services       <- DB.getServices
-  time           <- getCurrentTime
+  time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   return $ serviceToServiceResponse locationLookup time <$> services
 
-createInstallation :: UUID -> CreateInstallationRequest -> IO [ServiceResponse]
+createInstallation
+  :: UUID -> CreateInstallationRequest -> Action [ServiceResponse]
 createInstallation installationID (CreateInstallationRequest deviceToken deviceType)
   = do
-    awsSNSEndpointARN <- registerDeviceToken installationID
-                                             deviceToken
-                                             deviceType
-    time <- getCurrentTime
+    awsSNSEndpointARN <- liftIO
+      $ registerDeviceToken installationID deviceToken deviceType
+    time <- liftIO getCurrentTime
     DB.createInstallation installationID
                           deviceToken
                           deviceType
@@ -82,20 +86,20 @@ createInstallation installationID (CreateInstallationRequest deviceToken deviceT
                           time
     getServicesForInstallation installationID
 
-addServiceToInstallation :: UUID -> Int -> IO [ServiceResponse]
+addServiceToInstallation :: UUID -> Int -> Action [ServiceResponse]
 addServiceToInstallation installationID serviceID = do
   DB.addServiceToInstallation installationID serviceID
   getServicesForInstallation installationID
 
-deleteServiceForInstallation :: UUID -> Int -> IO [ServiceResponse]
+deleteServiceForInstallation :: UUID -> Int -> Action [ServiceResponse]
 deleteServiceForInstallation installationID serviceID = do
   DB.deleteServiceForInstallation installationID serviceID
   getServicesForInstallation installationID
 
-getServicesForInstallation :: UUID -> IO [ServiceResponse]
+getServicesForInstallation :: UUID -> Action [ServiceResponse]
 getServicesForInstallation installationID = do
   services       <- DB.getServicesForInstallation installationID
-  time           <- getCurrentTime
+  time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   return $ serviceToServiceResponse locationLookup time <$> services
 
@@ -246,10 +250,10 @@ fetchStatusesAndNotify = do
     stringToUTCTime time =
       posixSecondsToUTCTime $ fromInteger (read time) / 1000
 
-getLocationLookup :: IO ServiceLocationLookup
+getLocationLookup :: Action ServiceLocationLookup
 getLocationLookup = do
-  locations        <- DB.getLocations
-  serviceLocations <- DB.getServiceLocations
+  locations        <- liftIO DB.getLocations
+  serviceLocations <- liftIO DB.getServiceLocations
   return $ buildServiceLocationLookup locations serviceLocations
 
 buildServiceLocationLookup

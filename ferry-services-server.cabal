@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 44a4cc1c19413e1e46e7c3b9a03a8e1a1124954a7afde7866efad9d7d9a82be5
+-- hash: b0fe3cec15738f5d0ea474c99511bdf4331f166e322d269e43ca2e03fc163041
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -44,11 +44,14 @@ library
     , bytestring
     , containers
     , lens
+    , mtl
     , postgresql-simple
     , scientific
+    , scotty
     , split
     , text
     , time
+    , tinylog
     , unordered-containers
     , uuid
   default-language: Haskell2010
@@ -78,9 +81,11 @@ executable ferry-services-server-exe
     , base >=4.7 && <5
     , bytestring
     , ferry-services-server
+    , mtl
     , raven-haskell
     , scotty
     , text
+    , tinylog
     , unordered-containers
     , uuid
     , wai

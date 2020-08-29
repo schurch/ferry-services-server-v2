@@ -3,7 +3,9 @@
 module Main where
 
 import           Lib
-import           Web.Scotty
+import           Types
+import           Web.Scotty.Trans
+import           Control.Monad.Reader           ( runReaderT )
 import           Control.Monad.IO.Class         ( liftIO )
 import           Network.Wai.Handler.Warp       ( Settings
                                                 , defaultOnException
@@ -31,6 +33,9 @@ import           Data.ByteString.Char8          ( unpack )
 import           Data.Aeson                     ( Value(..) )
 import           Data.Text.Encoding             ( decodeUtf8 )
 import           System.Environment             ( getEnv )
+import           System.Logger                  ( create
+                                                , Output(StdOut)
+                                                )
 import           Data.UUID                      ( UUID
                                                 , fromText
                                                 )
@@ -47,33 +52,37 @@ main = do
   let settings =
         setPort (read port) . setOnException exceptionHandler $ defaultSettings
   let options = Options { verbose = 0, settings = settings }
-  scottyOpts options $ do
-    get "/api/services" $ do
-      services <- liftIO getServices
-      json services
-    get "/api/services/:serviceID" $ do
-      serviceID <- param "serviceID"
-      service   <- liftIO $ getService serviceID
-      json service
-    post "/api/installations/:installationID" $ do
-      installationID <- param "installationID"
-      request        <- jsonData
-      services       <- liftIO $ createInstallation installationID request
-      json services
-    get "/api/installations/:installationID/services" $ do
-      installationID <- param "installationID"
-      services       <- liftIO $ getServicesForInstallation installationID
-      json services
-    post "/api/installations/:installationID/services" $ do
-      installationID <- param "installationID"
-      (AddServiceRequest serviceID) <- jsonData
-      services <- liftIO $ addServiceToInstallation installationID serviceID
-      json services
-    delete "/api/installations/:installationID/services/:serviceID" $ do
-      installationID <- param "installationID"
-      serviceID <- param "serviceID"
-      services <- liftIO $ deleteServiceForInstallation installationID serviceID
-      json services
+  logger <- create StdOut
+  scottyOptsT options (flip runReaderT (Env logger)) app
+
+app :: Scotty
+app = do
+  get "/api/services" $ do
+    services <- getServices
+    json services
+  get "/api/services/:serviceID" $ do
+    serviceID <- param "serviceID"
+    service   <- getService serviceID
+    json service
+  post "/api/installations/:installationID" $ do
+    installationID <- param "installationID"
+    request        <- jsonData
+    services       <- createInstallation installationID request
+    json services
+  get "/api/installations/:installationID/services" $ do
+    installationID <- param "installationID"
+    services       <- getServicesForInstallation installationID
+    json services
+  post "/api/installations/:installationID/services" $ do
+    installationID <- param "installationID"
+    (AddServiceRequest serviceID) <- jsonData
+    services <- addServiceToInstallation installationID serviceID
+    json services
+  delete "/api/installations/:installationID/services/:serviceID" $ do
+    installationID <- param "installationID"
+    serviceID      <- param "serviceID"
+    services       <- deleteServiceForInstallation installationID serviceID
+    json services
 
 exceptionHandler :: Maybe Request -> SomeException -> IO ()
 exceptionHandler request exception = do

@@ -25,20 +25,22 @@ import           Data.UUID                      ( UUID )
 import           Database.PostgreSQL.Simple
 import           Database.PostgreSQL.Simple.SqlQQ
 import           System.Environment             ( getEnv )
-
+import           Control.Monad.IO.Class         ( MonadIO
+                                                , liftIO
+                                                )
 import           Types
 
 connectionString :: IO ByteString
 connectionString = fromString <$> getEnv "DB_CONNECTION"
 
-withConnection :: (Connection -> IO a) -> IO a
+withConnection :: MonadIO m => (Connection -> IO a) -> m a
 withConnection action = do
-  dbConnection <- connectionString >>= connectPostgreSQL
-  result       <- action dbConnection
-  close dbConnection
+  dbConnection <- liftIO $ connectionString >>= connectPostgreSQL
+  result       <- liftIO $ action dbConnection
+  liftIO $ close dbConnection
   return result
 
-getService :: Int -> IO (Maybe Service)
+getService :: MonadIO m => Int -> m (Maybe Service)
 getService serviceID = do
   results <- withConnection $ \connection -> query
     connection
@@ -50,7 +52,7 @@ getService serviceID = do
     (Only serviceID)
   return $ listToMaybe results
 
-getServices :: IO [Service]
+getServices :: MonadIO m => m [Service]
 getServices = withConnection $ \connection -> query_
   connection
   [sql| 
@@ -58,7 +60,8 @@ getServices = withConnection $ \connection -> query_
     FROM services 
   |]
 
-createInstallation :: UUID -> String -> DeviceType -> String -> UTCTime -> IO ()
+createInstallation
+  :: MonadIO m => UUID -> String -> DeviceType -> String -> UTCTime -> m ()
 createInstallation installationID deviceToken deviceType awsSNSEndpointARN time
   = void $ withConnection $ \connection -> execute
     connection
@@ -74,7 +77,7 @@ createInstallation installationID deviceToken deviceType awsSNSEndpointARN time
     |]
     (installationID, deviceToken, deviceType, awsSNSEndpointARN, time)
 
-addServiceToInstallation :: UUID -> Int -> IO ()
+addServiceToInstallation :: MonadIO m => UUID -> Int -> m ()
 addServiceToInstallation installationID serviceID =
   void $ withConnection $ \connection -> execute
     connection
@@ -85,7 +88,7 @@ addServiceToInstallation installationID serviceID =
     |]
     (installationID, serviceID)
 
-deleteServiceForInstallation :: UUID -> Int -> IO ()
+deleteServiceForInstallation :: MonadIO m => UUID -> Int -> m ()
 deleteServiceForInstallation installationID serviceID =
   void $ withConnection $ \connection -> execute
     connection
@@ -94,7 +97,7 @@ deleteServiceForInstallation installationID serviceID =
     |]
     (installationID, serviceID)
 
-getServicesForInstallation :: UUID -> IO [Service]
+getServicesForInstallation :: MonadIO m => UUID -> m [Service]
 getServicesForInstallation installationID = withConnection $ \connection ->
   query
     connection
@@ -106,7 +109,7 @@ getServicesForInstallation installationID = withConnection $ \connection ->
     |]
     (Only installationID)
 
-getInstallationWithID :: UUID -> IO (Maybe Installation)
+getInstallationWithID :: MonadIO m => UUID -> m (Maybe Installation)
 getInstallationWithID installationID = do
   results <- withConnection $ \connection -> query
     connection
@@ -118,7 +121,7 @@ getInstallationWithID installationID = do
     (Only installationID)
   return $ listToMaybe results
 
-getIntererestedInstallationsForServiceID :: Int -> IO [Installation]
+getIntererestedInstallationsForServiceID :: MonadIO m => Int -> m [Installation]
 getIntererestedInstallationsForServiceID serviceID =
   withConnection $ \connection -> query
     connection
@@ -130,7 +133,7 @@ getIntererestedInstallationsForServiceID serviceID =
       |]
     (Only $ serviceID)
 
-saveServices :: [Service] -> IO ()
+saveServices :: MonadIO m => [Service] -> m ()
 saveServices services = void $ withConnection $ \connection -> executeMany
   connection
   [sql| 
@@ -149,7 +152,7 @@ saveServices services = void $ withConnection $ \connection -> executeMany
     |]
   services
 
-getLocations :: IO [Location]
+getLocations :: MonadIO m => m [Location]
 getLocations = withConnection $ \connection -> query_
   connection
   [sql| 
@@ -157,7 +160,7 @@ getLocations = withConnection $ \connection -> query_
     FROM locations
   |]
 
-getServiceLocations :: IO [ServiceLocation]
+getServiceLocations :: MonadIO m => m [ServiceLocation]
 getServiceLocations = withConnection $ \connection -> query_
   connection
   [sql| 

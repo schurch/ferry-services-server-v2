@@ -1,19 +1,46 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Types where
 
+import           Control.Monad.Reader           ( ReaderT
+                                                , asks
+                                                )
 import           Data.Aeson
 import           Data.Char                      ( toLower )
 import           Data.Scientific                ( Scientific )
+import           Data.Text.Lazy                 ( Text )
 import           Data.Time.Clock                ( UTCTime )
 import           Data.UUID                      ( UUID )
 import           Database.PostgreSQL.Simple.ToField
 import           Database.PostgreSQL.Simple.FromField
 import           Database.PostgreSQL.Simple
+import           System.Logger                  ( Logger
+                                                , log
+                                                )
+import           System.Logger.Class            ( MonadLogger
+                                                , log
+                                                )
+import           Web.Scotty.Trans               ( ScottyT
+                                                , ActionT
+                                                )
 import           GHC.Generics
 
+-- Web server
+data Env = Env { logger :: Logger }
+
+type Scotty = ScottyT Text (ReaderT Env IO) ()
+type Action = ActionT Text (ReaderT Env IO)
+
+instance MonadLogger Types.Action where
+  log level message = do
+    logger <- asks logger
+    System.Logger.log logger level message
+
+-- Push payloads
 data APSPayload = APSPayload {
     apsPayloadAps :: APSPayloadBody
   , apsPayloadServiceID :: Int
@@ -29,6 +56,7 @@ data APSPayloadBody = APSPayloadBody {
 instance ToJSON APSPayloadBody where
   toJSON = genericToJSON $ jsonOptions 14
 
+-- General
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
 
 instance Enum ServiceStatus where
