@@ -5,7 +5,6 @@ module AWS
   ( EndpointAttributesResult(..)
   , PushPayload(..)
   , createPushEndpoint
-  , sendNotification
   , sendNotificationWihPayload
   , getAttributesForEndpoint
   , updateDeviceTokenForEndpoint
@@ -43,6 +42,7 @@ import           Network.AWS                    ( Credentials(..)
                                                 , runResourceT
                                                 , newEnv
                                                 , newLogger
+                                                , Logger
                                                 )
 import           Network.AWS.Auth               ( AccessKey(..)
                                                 , SecretKey(..)
@@ -69,9 +69,14 @@ import           Network.AWS.Types              ( AWSRequest
                                                 )
 import           System.Environment             ( getEnv )
 import           System.IO                      ( stdout )
+import           Data.Binary.Builder            ( Builder
+                                                , toLazyByteString
+                                                )
 
 import qualified Data.Text.Lazy                as T
 import qualified Data.Text.Lazy.Encoding       as TE
+import qualified System.Logger                 as L
+import qualified System.Logger.Message         as L
 
 import           Types
 
@@ -99,18 +104,18 @@ instance ToJSON PushPayload where
 
 data EndpointAttributesResult = EndpointNotFound | AttributeResults String Bool
 
-createPushEndpoint :: String -> DeviceType -> IO String
-createPushEndpoint deviceToken deviceType = do
+createPushEndpoint :: L.Logger -> String -> DeviceType -> IO String
+createPushEndpoint logger deviceToken deviceType = do
   applePlatformARN <- getEnv "AWS_APPLE_PLATFORM_ARN"
   let request =
         createPlatformEndpoint (pack applePlatformARN) (pack deviceToken)
-  result <- performRequest request
+  result <- performRequestLogging logger request
   return (unpack . fromJust $ result ^. cpersEndpointARN)
 
-getAttributesForEndpoint :: String -> IO EndpointAttributesResult
-getAttributesForEndpoint endpointARN = do
+getAttributesForEndpoint :: L.Logger -> String -> IO EndpointAttributesResult
+getAttributesForEndpoint logger endpointARN = do
   let request = getEndpointAttributes (pack endpointARN)
-  result <- trying _NotFoundException (performRequest request)
+  result <- trying _NotFoundException (performRequestLogging logger request)
   case result of
     Left  _       -> return EndpointNotFound
     Right result' -> do
@@ -121,15 +126,15 @@ getAttributesForEndpoint endpointARN = do
               "Enabled"
       return $ AttributeResults deviceToken enabled
 
-updateDeviceTokenForEndpoint :: String -> String -> IO ()
-updateDeviceTokenForEndpoint endpointARN deviceToken = do
+updateDeviceTokenForEndpoint :: L.Logger -> String -> String -> IO ()
+updateDeviceTokenForEndpoint logger endpointARN deviceToken = do
   let request =
         setEndpointAttributes (pack endpointARN) & seaAttributes .~ fromList
           [("Token", pack deviceToken), ("Enabled", "True")]
-  void $ performRequest request
+  void $ performRequestLogging logger request
 
-sendNotificationWihPayload :: String -> PushPayload -> IO ()
-sendNotificationWihPayload endpointARN payload = do
+sendNotificationWihPayload :: L.Logger -> String -> PushPayload -> IO ()
+sendNotificationWihPayload logger endpointARN payload = do
   let pushData = encode payload
   let request =
         publish (T.toStrict . TE.decodeUtf8 $ pushData)
@@ -137,18 +142,22 @@ sendNotificationWihPayload endpointARN payload = do
           ?~ pack endpointARN
           &  pMessageStructure
           ?~ "json"
-  void $ performRequest request
+  void $ performRequestLogging logger request
 
-sendNotification :: String -> String -> IO ()
-sendNotification endpointARN message = do
-  let request = publish (pack message) & pTargetARN ?~ pack endpointARN
-  void $ performRequest request
-
-performRequest :: (AWSRequest a) => a -> IO (Rs a)
-performRequest request = do
-  lgr    <- newLogger Debug stdout
+performRequestLogging :: (AWSRequest a) => L.Logger -> a -> IO (Rs a)
+performRequestLogging logger request = do
+  lgr    <- createLogger logger
   key_id <- getEnv "AWS_ACCESS_KEY_ID"
   key    <- getEnv "AWS_SECRET_ACCESS_KEY"
   env    <- newEnv
     (FromKeys (AccessKey $ fromString key_id) (SecretKey $ fromString key))
   runResourceT $ runAWS (env & envLogger .~ lgr) $ within Sydney $ send request
+ where
+  createLogger :: L.Logger -> IO Logger
+  createLogger logger = do
+    return $ \lvl builder -> do
+      case lvl of
+        Info  -> L.info logger (L.msg $ toLazyByteString builder)
+        Error -> L.err logger (L.msg $ toLazyByteString builder)
+        Debug -> L.debug logger (L.msg $ toLazyByteString builder)
+        Trace -> L.trace logger (L.msg $ toLazyByteString builder)

@@ -16,18 +16,26 @@ import           System.Log.Raven.Types         ( SentryLevel(Error)
                                                 , SentryRecord(..)
                                                 )
 import           System.Environment             ( getEnv )
+import           System.Logger                  ( Output(StdOut)
+                                                , Logger
+                                                , create
+                                                , info
+                                                , err
+                                                )
+import           System.Logger.Message          ( msg )
 
 main :: IO ()
 main = do
-  putStrLn "Starting scraper..."
+  logger <- create StdOut
+  info logger (msg "Starting scraper...")
   forever $ do
-    putStrLn "Fetching statuses..."
-    catch fetchStatusesAndNotify handleException
+    info logger (msg "Fetching statuses...")
+    catch (fetchStatusesAndNotify logger) (handleException logger)
     threadDelay (900 * 1000 * 1000) -- 15 mins
 
-handleException :: SomeException -> IO ()
-handleException exception = do
-  putStrLn $ "An error occured: " <> show exception
+handleException :: Logger -> SomeException -> IO ()
+handleException logger exception = do
+  err logger (msg $ "An error occured: " <> show exception)
   sentryDSN     <- getEnv "SCRAPER_SENTRY_DSN"
   env           <- getEnv "ENVIRONMENT"
   sentryService <- initRaven sentryDSN id sendRecord silentFallback

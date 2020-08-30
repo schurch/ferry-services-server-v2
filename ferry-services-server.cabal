@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b0fe3cec15738f5d0ea474c99511bdf4331f166e322d269e43ca2e03fc163041
+-- hash: 2a1cb3afa01fd04c17baed04227ba2582f2c7075d28bc66f2ee206ecb96f59cf
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -41,6 +41,7 @@ library
     , amazonka-core
     , amazonka-sns
     , base >=4.7 && <5
+    , binary
     , bytestring
     , containers
     , lens
@@ -67,6 +68,7 @@ executable ferry-services-scraper-exe
       base >=4.7 && <5
     , ferry-services-server
     , raven-haskell
+    , tinylog
   default-language: Haskell2010
 
 executable ferry-services-server-exe

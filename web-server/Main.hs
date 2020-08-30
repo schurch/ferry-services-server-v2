@@ -35,7 +35,9 @@ import           Data.Text.Encoding             ( decodeUtf8 )
 import           System.Environment             ( getEnv )
 import           System.Logger                  ( create
                                                 , Output(StdOut)
+                                                , info
                                                 )
+import           System.Logger.Message          ( msg )
 import           Data.UUID                      ( UUID
                                                 , fromText
                                                 )
@@ -43,16 +45,17 @@ import           Data.Text.Lazy                 ( Text
                                                 , toStrict
                                                 )
 
+
 import qualified Data.HashMap.Strict           as HM
 
 main :: IO ()
 main = do
-  port <- getEnv "SERVER_PORT"
-  putStrLn $ "Listening on port " <> port <> "..."
+  logger <- create StdOut
+  port   <- getEnv "SERVER_PORT"
+  info logger (msg $ "Listening on port " <> port <> "...")
   let settings =
         setPort (read port) . setOnException exceptionHandler $ defaultSettings
   let options = Options { verbose = 0, settings = settings }
-  logger <- create StdOut
   scottyOptsT options (flip runReaderT (Env logger)) app
 
 app :: Scotty

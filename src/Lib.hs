@@ -42,9 +42,11 @@ import           Network.HTTP                   ( simpleHTTP
                                                 , getRequest
                                                 , getResponseBody
                                                 )
-import           System.Logger.Class            ( debug
+import           System.Logger.Class            ( Logger
+                                                , debug
                                                 , msg
                                                 )
+import           Control.Monad.Reader           ( asks )
 
 import           AWS
 import           Types
@@ -76,8 +78,9 @@ createInstallation
   :: UUID -> CreateInstallationRequest -> Action [ServiceResponse]
 createInstallation installationID (CreateInstallationRequest deviceToken deviceType)
   = do
-    awsSNSEndpointARN <- liftIO
-      $ registerDeviceToken installationID deviceToken deviceType
+    awsSNSEndpointARN <- registerDeviceToken installationID
+                                             deviceToken
+                                             deviceType
     time <- liftIO getCurrentTime
     DB.createInstallation installationID
                           deviceToken
@@ -146,23 +149,27 @@ serviceToServiceResponse locationLookup currentTime Service {..} =
 --     call set endpoint attributes to set the latest device token and then enable the platform endpoint
 --   endif
 -- endif
-registerDeviceToken :: UUID -> String -> DeviceType -> IO String
+registerDeviceToken :: UUID -> String -> DeviceType -> Action String
 registerDeviceToken installationID deviceToken deviceType = do
+  logger'            <- asks logger
   storedInstallation <- DB.getInstallationWithID installationID
   currentEndpointARN <- if (isNothing storedInstallation)
-    then createPushEndpoint deviceToken deviceType
+    then liftIO $ createPushEndpoint logger' deviceToken deviceType
     else return $ installationEndpointARN . fromJust $ storedInstallation
-  endpointAttributesResult <- getAttributesForEndpoint currentEndpointARN
+  endpointAttributesResult <- liftIO
+    $ getAttributesForEndpoint logger' currentEndpointARN
   case endpointAttributesResult of
-    EndpointNotFound -> createPushEndpoint deviceToken deviceType
+    EndpointNotFound ->
+      liftIO $ createPushEndpoint logger' deviceToken deviceType
     AttributeResults awsDeviceToken isEnabled -> do
       when (awsDeviceToken /= deviceToken || isEnabled == False)
-        $ void
-        $ updateDeviceTokenForEndpoint currentEndpointARN deviceToken
+        $ liftIO
+        . void
+        $ updateDeviceTokenForEndpoint logger' currentEndpointARN deviceToken
       return currentEndpointARN
 
-fetchStatusesAndNotify :: IO ()
-fetchStatusesAndNotify = do
+fetchStatusesAndNotify :: Logger -> IO ()
+fetchStatusesAndNotify logger = do
   services <- fetchServices
   notifyForServices services
   DB.saveServices services
@@ -184,7 +191,7 @@ fetchStatusesAndNotify = do
             $ serviceID service
           forM_ interestedInstallations
             $ \Installation { installationEndpointARN = endpointARN } ->
-                sendNotificationWihPayload endpointARN payload
+                sendNotificationWihPayload logger endpointARN payload
       Nothing -> return ()
    where
     serviceToNotificationMessage :: Service -> String
