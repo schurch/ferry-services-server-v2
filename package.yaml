@@ -34,6 +34,7 @@ library:
     - HTTP
     - lens
     - mtl
+    - network-uri
     - postgresql-simple
     - scientific
     - scotty
@@ -43,6 +44,7 @@ library:
     - text
     - unordered-containers
     - uuid
+    - zlib
 
 executables:
   ferry-services-server-exe:

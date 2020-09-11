@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2a1cb3afa01fd04c17baed04227ba2582f2c7075d28bc66f2ee206ecb96f59cf
+-- hash: 6cb9790143ae928e16eb3de599d4dcdbb835ce768e9b7ebd8bfc378af53908d7
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -46,6 +46,7 @@ library
     , containers
     , lens
     , mtl
+    , network-uri
     , postgresql-simple
     , scientific
     , scotty
@@ -55,6 +56,7 @@ library
     , tinylog
     , unordered-containers
     , uuid
+    , zlib
   default-language: Haskell2010
 
 executable ferry-services-scraper-exe

@@ -41,12 +41,19 @@ import           Data.UUID                      ( UUID )
 import           Network.HTTP                   ( simpleHTTP
                                                 , getRequest
                                                 , getResponseBody
+                                                , Request(..)
+                                                , RequestMethod(..)
                                                 )
 import           System.Logger.Class            ( Logger
                                                 , debug
                                                 , msg
                                                 )
 import           Control.Monad.Reader           ( asks )
+import           Network.URI                    ( parseURI )
+import           Network.HTTP.Headers           ( Header(..)
+                                                , HeaderName(..)
+                                                )
+import           Codec.Compression.GZip         ( decompress )
 
 import           AWS
 import           Types
@@ -217,10 +224,22 @@ fetchStatusesAndNotify logger = do
 
   fetchServices :: IO [Service]
   fetchServices = do
-    responseBody <-
-      simpleHTTP (getRequest "http://status.calmac.info/?ajax=json")
-        >>= getResponseBody
-    let result = eitherDecode (C.pack responseBody)
+    let uri = fromJust $ parseURI "http://status.calmac.info/?ajax=json"
+    let
+      request = Request
+        uri
+        GET
+        [ Header HdrContentType "application/json; charset=utf-8"
+        , Header HdrAcceptEncoding "gzip, deflate"
+        , Header HdrAccept "application/json, text/javascript, */*; q=0.01"
+        , Header
+          HdrUserAgent
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Safari/605.1.15"
+        , Header HdrHost "status.calmac.info"
+        ]
+        ""
+    responseBody <- simpleHTTP request >>= getResponseBody
+    let result = eitherDecode (decompress responseBody)
     case result of
       Left  decodingError         -> error decodingError
       Right serviceDetailsResults -> do
