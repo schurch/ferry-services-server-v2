@@ -106,9 +106,10 @@ data EndpointAttributesResult = EndpointNotFound | AttributeResults String Bool
 
 createPushEndpoint :: L.Logger -> String -> DeviceType -> IO String
 createPushEndpoint logger deviceToken deviceType = do
-  applePlatformARN <- getEnv "AWS_APPLE_PLATFORM_ARN"
-  let request =
-        createPlatformEndpoint (pack applePlatformARN) (pack deviceToken)
+  platformARN <- case deviceType of
+    IOS     -> getEnv "AWS_APPLE_PLATFORM_ARN"
+    Android -> getEnv "AWS_GOOGLE_PLATFORM_ARN"
+  let request = createPlatformEndpoint (pack platformARN) (pack deviceToken)
   result <- performRequestLogging logger request
   return (unpack . fromJust $ result ^. cpersEndpointARN)
 

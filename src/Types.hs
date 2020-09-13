@@ -41,6 +41,7 @@ instance MonadLogger Types.Action where
     System.Logger.log logger level message
 
 -- Push payloads
+-- Apple
 data APSPayload = APSPayload {
     apsPayloadAps :: APSPayloadBody
   , apsPayloadServiceID :: Int
@@ -54,6 +55,29 @@ data APSPayloadBody = APSPayloadBody {
 } deriving (Generic, Show)
 
 instance ToJSON APSPayloadBody where
+  toJSON = genericToJSON $ jsonOptions 14
+
+-- Google
+data CGMPayload = CGMPayload {
+    gcmPayloadNotification :: GCMPaylodNotification
+  , gcmPayloadData :: GCMPayloadData
+} deriving (Generic, Show)
+
+instance ToJSON CGMPayload where
+  toJSON = genericToJSON $ jsonOptions 10
+
+data GCMPaylodNotification = GCMPaylodNotification {
+  gcmPaylodNotificationTitle :: String
+} deriving (Generic, Show)
+
+instance ToJSON GCMPaylodNotification where
+  toJSON = genericToJSON $ jsonOptions 21
+
+data GCMPayloadData = GCMPayloadData {
+  gcmPayloadDataServiceID :: Int
+} deriving (Generic, Show)
+
+instance ToJSON GCMPayloadData where
   toJSON = genericToJSON $ jsonOptions 14
 
 -- General

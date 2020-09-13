@@ -192,13 +192,26 @@ fetchStatusesAndNotify logger = do
         let shouldNotify = statusesDifferent && statusValid
         when shouldNotify $ do
           let message = serviceToNotificationMessage service
-          let payload =
-                pushPayloadWithMessageAndServiceID message (serviceID service)
           interestedInstallations <- DB.getIntererestedInstallationsForServiceID
             $ serviceID service
-          forM_ interestedInstallations
-            $ \Installation { installationEndpointARN = endpointARN } ->
-                sendNotificationWihPayload logger endpointARN payload
+          let iOSInterestedInstallations = filter
+                ((==) IOS . installationDeviceType)
+                interestedInstallations
+          let androidInterestedInstallations = filter
+                ((==) Android . installationDeviceType)
+                interestedInstallations
+          forM_ iOSInterestedInstallations
+            $ \Installation { installationEndpointARN = endpointARN } -> do
+                let applePayload = applePushPayloadWithMessageAndServiceID
+                      message
+                      (serviceID service)
+                sendNotificationWihPayload logger endpointARN applePayload
+          forM_ androidInterestedInstallations
+            $ \Installation { installationEndpointARN = endpointARN } -> do
+                let androidPayload = androidPushPayloadWithMessageAndServiceID
+                      message
+                      (serviceID service)
+                sendNotificationWihPayload logger endpointARN androidPayload
       Nothing -> return ()
    where
     serviceToNotificationMessage :: Service -> String
@@ -212,14 +225,27 @@ fetchStatusesAndNotify logger = do
       | serviceStatus == Unknown
       = error "Do not message for unknow service"
 
-    pushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
-    pushPayloadWithMessageAndServiceID message serviceID =
+    applePushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
+    applePushPayloadWithMessageAndServiceID message serviceID =
       let apsPayload    = (APSPayload (APSPayloadBody message) serviceID)
           stringPayload = C.unpack . encode $ apsPayload
       in  PushPayload { pushPayloadDefault     = message
                       , pushPayloadApns        = Just stringPayload
                       , pushPayloadApnsSandbox = Just stringPayload
                       , pushPayloadGcm         = Nothing
+                      }
+
+    androidPushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
+    androidPushPayloadWithMessageAndServiceID message serviceID =
+      let gcmPayload =
+              (CGMPayload (GCMPaylodNotification message)
+                          (GCMPayloadData serviceID)
+              )
+          stringPayload = C.unpack . encode $ gcmPayload
+      in  PushPayload { pushPayloadDefault     = message
+                      , pushPayloadApns        = Nothing
+                      , pushPayloadApnsSandbox = Nothing
+                      , pushPayloadGcm         = Just stringPayload
                       }
 
   fetchServices :: IO [Service]
