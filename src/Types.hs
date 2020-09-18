@@ -137,16 +137,12 @@ data Installation = Installation {
   , installationpUpatedDate :: UTCTime
 } deriving (Generic, Show, ToRow, FromRow)
 
-data Location = Location {
-    locationID :: Int
-  , locationName :: String
-  , locationLatitude :: Scientific
-  , locationLonitude :: Scientific
-} deriving (Generic, Show, ToRow, FromRow)
-
 data ServiceLocation = ServiceLocation {
     serviceLocationServiceID :: Int
   , serviceLocationLocationID :: Int
+  , serviceLocationName :: String
+  , serviceLocationLatitude :: Scientific
+  , serviceLocationLonitude :: Scientific
 } deriving (Generic, Show, ToRow, FromRow)
 
 -- API Types

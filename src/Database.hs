@@ -11,7 +11,6 @@ module Database
   , getInstallationWithID
   , getIntererestedInstallationsForServiceID
   , saveServices
-  , getLocations
   , getServiceLocations
   )
 where
@@ -128,7 +127,7 @@ getIntererestedInstallationsForServiceID serviceID =
     [sql| 
       SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
       FROM installation_services s
-      JOIN installations i on s.installation_id = i.installation_id
+      JOIN installations i ON s.installation_id = i.installation_id
       WHERE s.service_id = ? 
       |]
     (Only $ serviceID)
@@ -152,18 +151,11 @@ saveServices services = void $ withConnection $ \connection -> executeMany
     |]
   services
 
-getLocations :: MonadIO m => m [Location]
-getLocations = withConnection $ \connection -> query_
-  connection
-  [sql| 
-    SELECT location_id, name, latitude ,longitude
-    FROM locations
-  |]
-
 getServiceLocations :: MonadIO m => m [ServiceLocation]
 getServiceLocations = withConnection $ \connection -> query_
   connection
   [sql| 
-    SELECT service_id, location_id
-    FROM service_locations
+    SELECT sl.service_id, l.location_id, l.name, l.latitude, l.longitude
+    FROM service_locations sl
+    JOIN locations l ON l.location_id = sl.location_id 
   |]

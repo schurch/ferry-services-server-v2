@@ -304,39 +304,10 @@ fetchStatusesAndNotify logger = do
 
 getLocationLookup :: Action ServiceLocationLookup
 getLocationLookup = do
-  locations        <- liftIO DB.getLocations
   serviceLocations <- liftIO DB.getServiceLocations
-  return $ buildServiceLocationLookup locations serviceLocations
-
-buildServiceLocationLookup
-  :: [Location] -> [ServiceLocation] -> ServiceLocationLookup
-buildServiceLocationLookup allLocations serviceLocations =
-  locationsIDsToLocationResponses <$> serviceIDLocationIDsLookup
- where
-  locationsIDsToLocationResponses :: [Int] -> [LocationResponse]
-  locationsIDsToLocationResponses locationIDs =
-    let locations =
-            catMaybes $ findLocationInLocations allLocations <$> locationIDs
-    in  locationToLocationResponse <$> locations
-
-  tuplesFromServiceLocations :: [ServiceLocation] -> [(Int, [Int])]
-  tuplesFromServiceLocations serviceLocations =
-    [ (serviceID, [locationID])
-    | (ServiceLocation serviceID locationID) <- serviceLocations
-    ]
-
-  serviceIDLocationIDsLookup :: M.Map Int [Int]
-  serviceIDLocationIDsLookup =
-    M.fromListWith (++) $ tuplesFromServiceLocations serviceLocations
-
-  findLocationInLocations :: [Location] -> Int -> Maybe Location
-  findLocationInLocations locations locationIDToFind = find
-    (\Location { locationID = locationID } -> locationIDToFind == locationID)
-    locations
-
-  locationToLocationResponse :: Location -> LocationResponse
-  locationToLocationResponse Location {..} = LocationResponse
-    { locationResponseName      = locationName
-    , locationResponseLatitude  = locationLatitude
-    , locationResponseLongitude = locationLonitude
-    }
+  return
+    $ M.fromListWith (++)
+    $ [ (serviceID, [(LocationResponse name latitude longitude)])
+      | (ServiceLocation serviceID locationID name latitude longitude) <-
+        serviceLocations
+      ]
