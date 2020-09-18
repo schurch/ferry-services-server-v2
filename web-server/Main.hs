@@ -14,11 +14,13 @@ import           Network.Wai.Handler.Warp       ( Settings
                                                 , setPort
                                                 )
 import           Network.Wai                    ( Request
+                                                , Middleware
                                                 , rawPathInfo
                                                 , rawQueryString
                                                 , requestHeaderHost
                                                 , requestMethod
                                                 )
+import           Network.Wai.Middleware.RequestLogger
 import           Control.Exception.Base         ( SomeException )
 import           System.Log.Raven               ( initRaven
                                                 , register
@@ -36,6 +38,10 @@ import           System.Environment             ( getEnv )
 import           System.Logger                  ( create
                                                 , Output(StdOut)
                                                 , info
+                                                , Logger
+                                                , Level(..)
+                                                , level
+                                                , log
                                                 )
 import           System.Logger.Message          ( msg )
 import           Data.UUID                      ( UUID
@@ -44,7 +50,10 @@ import           Data.UUID                      ( UUID
 import           Data.Text.Lazy                 ( Text
                                                 , toStrict
                                                 )
-
+import           Data.Default                   ( def )
+import           System.Log.FastLogger.Internal ( LogStr
+                                                , fromLogStr
+                                                )
 
 import qualified Data.HashMap.Strict           as HM
 
@@ -56,10 +65,12 @@ main = do
   let settings =
         setPort (read port) . setOnException exceptionHandler $ defaultSettings
   let options = Options { verbose = 0, settings = settings }
-  scottyOptsT options (flip runReaderT (Env logger)) app
+  requestLogger <- mkRequestLogger $ loggerSettings logger
+  scottyOptsT options (flip runReaderT (Env logger)) (app requestLogger)
 
-app :: Scotty
-app = do
+app :: Middleware -> Scotty
+app requestLogger = do
+  middleware requestLogger
   get "/api/services" $ do
     services <- getServices
     json services
@@ -94,7 +105,7 @@ exceptionHandler request exception = do
   env           <- getEnv "ENVIRONMENT"
   register sentryService
            "api-logger"
-           Error
+           System.Log.Raven.Types.Error
            (show exception)
            (recordUpdate env request exception)
   defaultOnException request exception
@@ -118,3 +129,26 @@ instance Parsable UUID where
 maybeToEither :: Text -> Maybe a -> Either Text a
 maybeToEither errorMessage Nothing      = Left errorMessage
 maybeToEither _            (Just value) = Right value
+
+loggerSettings :: Logger -> RequestLoggerSettings
+loggerSettings logger = case currentLogLevel of
+  Trace               -> debugSettings
+  Debug               -> debugSettings
+  Info                -> infoSettings
+  Warn                -> infoSettings
+  System.Logger.Error -> infoSettings
+  Fatal               -> infoSettings
+ where
+  debugSettings :: RequestLoggerSettings
+  debugSettings = def { destination = Callback callbackLog }
+
+  infoSettings :: RequestLoggerSettings
+  infoSettings =
+    def { outputFormat = Apache FromSocket, destination = Callback callbackLog }
+
+  currentLogLevel :: Level
+  currentLogLevel = level logger
+
+  callbackLog :: LogStr -> IO ()
+  callbackLog str =
+    System.Logger.log logger currentLogLevel $ msg $ fromLogStr str

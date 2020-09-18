@@ -57,6 +57,8 @@ executables:
     dependencies:
     - aeson
     - bytestring
+    - data-default
+    - fast-logger
     - ferry-services-server
     - mtl
     - raven-haskell
@@ -65,6 +67,7 @@ executables:
     - text
     - unordered-containers
     - wai
+    - wai-extra
     - warp
     - uuid
 

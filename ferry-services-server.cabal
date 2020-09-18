@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6cb9790143ae928e16eb3de599d4dcdbb835ce768e9b7ebd8bfc378af53908d7
+-- hash: ab787ad8f9c17b9529372d0b5d9bd48e2f16f088401a5adb90a58543f687fbfe
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -84,6 +84,8 @@ executable ferry-services-server-exe
       aeson
     , base >=4.7 && <5
     , bytestring
+    , data-default
+    , fast-logger
     , ferry-services-server
     , mtl
     , raven-haskell
@@ -93,6 +95,7 @@ executable ferry-services-server-exe
     , unordered-containers
     , uuid
     , wai
+    , wai-extra
     , warp
   default-language: Haskell2010
 
