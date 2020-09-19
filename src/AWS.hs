@@ -3,11 +3,13 @@
 
 module AWS
   ( EndpointAttributesResult(..)
+  , SendNotificationResult(..)
   , PushPayload(..)
   , createPushEndpoint
   , sendNotificationWihPayload
   , getAttributesForEndpoint
   , updateDeviceTokenForEndpoint
+  , deletePushEndpoint
   )
 where
 
@@ -47,11 +49,14 @@ import           Network.AWS                    ( Credentials(..)
 import           Network.AWS.Auth               ( AccessKey(..)
                                                 , SecretKey(..)
                                                 )
-import           Network.AWS.SNS                ( _NotFoundException )
+import           Network.AWS.SNS                ( _NotFoundException
+                                                , _EndpointDisabledException
+                                                )
 import           Network.AWS.SNS.CreatePlatformEndpoint
                                                 ( cpersEndpointARN
                                                 , createPlatformEndpoint
                                                 )
+import           Network.AWS.SNS.DeleteEndpoint ( deleteEndpoint )
 import           Network.AWS.SNS.GetEndpointAttributes
                                                 ( getEndpointAttributes
                                                 , gearsAttributes
@@ -102,7 +107,8 @@ instance ToJSON PushPayload where
     , "GCM" .= gcm
     ]
 
-data EndpointAttributesResult = EndpointNotFound | AttributeResults String Bool
+data EndpointAttributesResult = EndpointAttributesEndpointNotFound | AttributeResults String Bool
+data SendNotificationResult = SendNotificationResultSuccess | SendNotificationEndpointDisabled
 
 createPushEndpoint :: L.Logger -> String -> DeviceType -> IO String
 createPushEndpoint logger deviceToken deviceType = do
@@ -113,12 +119,17 @@ createPushEndpoint logger deviceToken deviceType = do
   result <- performRequestLogging logger request
   return (unpack . fromJust $ result ^. cpersEndpointARN)
 
+deletePushEndpoint :: L.Logger -> String -> IO ()
+deletePushEndpoint logger endpointARN = do
+  let request = deleteEndpoint (pack endpointARN)
+  void $ performRequestLogging logger request
+
 getAttributesForEndpoint :: L.Logger -> String -> IO EndpointAttributesResult
 getAttributesForEndpoint logger endpointARN = do
   let request = getEndpointAttributes (pack endpointARN)
   result <- trying _NotFoundException (performRequestLogging logger request)
   case result of
-    Left  _       -> return EndpointNotFound
+    Left  _       -> return EndpointAttributesEndpointNotFound
     Right result' -> do
       let attributes  = result' ^. gearsAttributes
       let deviceToken = unpack . fromJust $ attributes ^. at "Token"
@@ -134,7 +145,8 @@ updateDeviceTokenForEndpoint logger endpointARN deviceToken = do
           [("Token", pack deviceToken), ("Enabled", "True")]
   void $ performRequestLogging logger request
 
-sendNotificationWihPayload :: L.Logger -> String -> PushPayload -> IO ()
+sendNotificationWihPayload
+  :: L.Logger -> String -> PushPayload -> IO SendNotificationResult
 sendNotificationWihPayload logger endpointARN payload = do
   let pushData = encode payload
   let request =
@@ -143,7 +155,11 @@ sendNotificationWihPayload logger endpointARN payload = do
           ?~ pack endpointARN
           &  pMessageStructure
           ?~ "json"
-  void $ performRequestLogging logger request
+  result <- trying _EndpointDisabledException
+    $ performRequestLogging logger request
+  case result of
+    Left  _ -> return SendNotificationEndpointDisabled
+    Right _ -> return SendNotificationResultSuccess
 
 performRequestLogging :: (AWSRequest a) => L.Logger -> a -> IO (Rs a)
 performRequestLogging logger request = do

@@ -12,6 +12,7 @@ module Database
   , getIntererestedInstallationsForServiceID
   , saveServices
   , getServiceLocations
+  , deleteInstallationWithID
   )
 where
 
@@ -159,3 +160,22 @@ getServiceLocations = withConnection $ \connection -> query_
     FROM service_locations sl
     JOIN locations l ON l.location_id = sl.location_id 
   |]
+
+deleteInstallationWithID :: MonadIO m => UUID -> m ()
+deleteInstallationWithID installationID = do
+  deleteInstallationServicesWithID installationID
+  void $ withConnection $ \connection -> execute
+    connection
+    [sql| 
+      DELETE FROM installations WHERE installation_id = ?
+    |]
+    (Only installationID)
+
+deleteInstallationServicesWithID :: MonadIO m => UUID -> m ()
+deleteInstallationServicesWithID installationID =
+  void $ withConnection $ \connection -> execute
+    connection
+    [sql| 
+      DELETE FROM installation_services WHERE installation_id = ?
+    |]
+    (Only installationID)

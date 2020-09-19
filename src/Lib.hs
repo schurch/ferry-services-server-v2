@@ -166,7 +166,7 @@ registerDeviceToken installationID deviceToken deviceType = do
   endpointAttributesResult <- liftIO
     $ getAttributesForEndpoint logger' currentEndpointARN
   case endpointAttributesResult of
-    EndpointNotFound ->
+    EndpointAttributesEndpointNotFound ->
       liftIO $ createPushEndpoint logger' deviceToken deviceType
     AttributeResults awsDeviceToken isEnabled -> do
       when (awsDeviceToken /= deviceToken || isEnabled == False)
@@ -201,19 +201,32 @@ fetchStatusesAndNotify logger = do
                 ((==) Android . installationDeviceType)
                 interestedInstallations
           forM_ iOSInterestedInstallations
-            $ \Installation { installationEndpointARN = endpointARN } -> do
-                let applePayload = applePushPayloadWithMessageAndServiceID
+            $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
+                do
+                  let
+                    payload = applePushPayloadWithMessageAndServiceID
                       message
                       (serviceID service)
-                sendNotificationWihPayload logger endpointARN applePayload
+                  sendNotification logger installationID endpointARN payload
           forM_ androidInterestedInstallations
-            $ \Installation { installationEndpointARN = endpointARN } -> do
-                let androidPayload = androidPushPayloadWithMessageAndServiceID
+            $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
+                do
+                  let
+                    payload = androidPushPayloadWithMessageAndServiceID
                       message
                       (serviceID service)
-                sendNotificationWihPayload logger endpointARN androidPayload
+                  sendNotification logger installationID endpointARN payload
       Nothing -> return ()
    where
+    sendNotification :: Logger -> UUID -> String -> PushPayload -> IO ()
+    sendNotification logger installationID endpointARN payload = do
+      result <- sendNotificationWihPayload logger endpointARN payload
+      case result of
+        SendNotificationEndpointDisabled -> do
+          void $ DB.deleteInstallationWithID installationID
+          deletePushEndpoint logger endpointARN
+        SendNotificationResultSuccess -> return ()
+
     serviceToNotificationMessage :: Service -> String
     serviceToNotificationMessage Service { serviceRoute = serviceRoute, serviceStatus = serviceStatus }
       | serviceStatus == Normal
