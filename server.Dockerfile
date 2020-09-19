@@ -11,5 +11,6 @@ RUN apt-get update && \
   rm -rf /var/lib/apt/lists/*
 
 COPY $BIN_DIR .
+COPY ./public ./public
 
 CMD ["/opt/ferry-services/ferry-services-server-exe"]

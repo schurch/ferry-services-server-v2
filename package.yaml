@@ -68,6 +68,7 @@ executables:
     - unordered-containers
     - wai
     - wai-extra
+    - wai-middleware-static
     - warp
     - uuid
 

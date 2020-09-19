@@ -1,0 +1,211 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <title>Scottish Ferries App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+  <meta name="apple-itunes-app" content="app-id=861271891">
+  <style>
+    @font-face {
+      src: url("'/fonts/avenir.ttc'")
+    }
+
+    body {
+      font-family: "avenir", "arial", sans-serif;
+      margin: 0px 0px 0px 0px
+    }
+
+    a {
+      color: #ffffff
+    }
+
+    h1 {
+      font-weight: 100;
+      font-size: 35pt;
+      line-height: 100%
+    }
+
+    h2 {
+      font-weight: 100;
+      font-size: 14pt
+    }
+
+    .inner-container {
+      width: 750px;
+      margin: 0px auto 0px auto
+    }
+
+    #header-container {
+      color: #ffffff;
+      padding-top: 50px;
+      background: -webkit-linear-gradient(180deg, #50C8C8 75%, #ffffff 15%);
+      background: -moz-linear-gradient(180deg, #50C8C8 75%, #ffffff 15%);
+      background: -ms-linear-gradient(180deg, #50C8C8 75%, #ffffff 15%);
+      background: -o-linear-gradient(180deg, #50C8C8 75%, #ffffff 15%);
+      background: linear-gradient(180deg, #50C8C8 75%, #ffffff 15%)
+    }
+
+    #header-container h2 {
+      margin-top: -20px;
+      padding-bottom: 5px
+    }
+
+    #header-container .inner-container {
+      display: flex;
+      align-items: center;
+      flex-direction: row;
+      justify-content: flex-start
+    }
+
+    #header-blurb {
+      margin-top: -80px;
+      margin-bottom: 40px;
+      padding: 0px 0px 0px 0px;
+      text-align: start
+    }
+
+    #features-container {
+      text-align: center
+    }
+
+    #feature-container {
+      display: flex;
+      flex-wrap: wrap;
+      flex-direction: row;
+      justify-content: flex-start
+    }
+
+    .single-feature-container {
+      width: 33.33332%;
+      margin: 0px 0px 0px 0px
+    }
+
+    .single-feature-container h2 {
+      font-weight: 500;
+      margin: 0px 0px 0px 0px
+    }
+
+    .single-feature-container p {
+      margin: 0px 0px 30px 0px
+    }
+
+    .feature-icon {
+      float: left;
+      padding-top: 4px
+    }
+
+    .feature-text {
+      float: left;
+      text-align: start;
+      width: 75%;
+      margin-left: 15px
+    }
+
+    #support-container {
+      background-color: #50C8C8;
+      color: #ffffff;
+      padding: 20px 0px 20px 0px;
+      text-align: center;
+      margin: 10px 0px 0px 0px
+    }
+
+    #support-container h1 {
+      margin: 0px 0px 0px 0px
+    }
+
+    #support-container p {
+      padding: 0px 20px 0px 20px
+    }
+
+    @media screen and (max-width: 750px) {
+      .inner-container {
+        width: 100%;
+        margin: 0px 0px 0px 0px
+      }
+
+      #header-container .inner-container {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        justify-content: center
+      }
+
+      #feature-container {
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+        justify-content: center
+      }
+
+      #feature-container {
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+        justify-content: center
+      }
+
+      .single-feature-container {
+        width: 80%;
+        margin: 10px auto 10px auto
+      }
+
+      #header-blurb {
+        margin-top: 0px;
+        margin-bottom: 40px;
+        padding: 0px 40px 0px 40px;
+        text-align: center
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="header-container">
+    <div class="inner-container">
+      <div id="header-blurb"><img src="images/icon.png" width="70px">
+        <h1>Scottish Ferries</h1>
+        <h2>Up to date disruption information for ferry services throughout Scotland.</h2><a
+          href="https://itunes.apple.com/gb/app/scottish-ferries/id861271891?mt=8"><img src="images/app-store.png"
+            width="170px"></a>
+      </div>
+      <div><img src="images/screenshot.png" width="320px"></div>
+    </div>
+  </div>
+  <div id="features-container">
+    <div class="inner-container">
+      <h1>Features</h1>
+      <div id="feature-container">
+        <div class="single-feature-container">
+          <div class="feature-icon"><img src="images/wind.png" width="30px"></div>
+          <div class="feature-text">
+            <h2>Disruption info</h2>
+            <p>Live disruption infromtaion for ferry services</p>
+          </div>
+        </div>
+        <div class="single-feature-container">
+          <div class="feature-icon"><img src="images/notification.png" width="30px"></div>
+          <div class="feature-text">
+            <h2>Notifications</h2>
+            <p>Get notififed when the disrution status of a service changes</p>
+          </div>
+        </div>
+        <div class="single-feature-container">
+          <div class="feature-icon"><img src="images/weather.png" width="30px"></div>
+          <div class="feature-text">
+            <h2>Weather</h2>
+            <p>Current weather forecast for each port</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="support-container">
+    <div class="inner-container">
+      <h1>Support</h1>
+      <p>Please contact me at <a href="mailto:stefan.church@gmail.com">stefan.church@gmail.com</a> if you have any
+        issues or questions.</p>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -54,6 +54,11 @@ import           Data.Default                   ( def )
 import           System.Log.FastLogger.Internal ( LogStr
                                                 , fromLogStr
                                                 )
+import           Network.Wai.Middleware.Static  ( staticPolicy
+                                                , noDots
+                                                , isNotAbsolute
+                                                , addBase
+                                                )
 
 import qualified Data.HashMap.Strict           as HM
 
@@ -71,6 +76,8 @@ main = do
 app :: Middleware -> Scotty
 app requestLogger = do
   middleware requestLogger
+  middleware $ staticPolicy (noDots <> isNotAbsolute <> addBase "public")
+  get "/" $ redirect "/index.html"
   get "/api/services" $ do
     services <- getServices
     json services
