@@ -80,29 +80,35 @@ app requestLogger = do
   get "/" $ redirect "/index.html"
   get "/api/services" $ do
     services <- getServices
+    setHeader "Access-Control-Allow-Origin" "*"
     json services
   get "/api/services/:serviceID" $ do
     serviceID <- param "serviceID"
     service   <- getService serviceID
+    setHeader "Access-Control-Allow-Origin" "*"
     json service
   post "/api/installations/:installationID" $ do
     installationID <- param "installationID"
     request        <- jsonData
     services       <- createInstallation installationID request
+    setHeader "Access-Control-Allow-Origin" "*"
     json services
   get "/api/installations/:installationID/services" $ do
     installationID <- param "installationID"
     services       <- getServicesForInstallation installationID
+    setHeader "Access-Control-Allow-Origin" "*"
     json services
   post "/api/installations/:installationID/services" $ do
     installationID <- param "installationID"
     (AddServiceRequest serviceID) <- jsonData
     services <- addServiceToInstallation installationID serviceID
+    setHeader "Access-Control-Allow-Origin" "*"
     json services
   delete "/api/installations/:installationID/services/:serviceID" $ do
     installationID <- param "installationID"
     serviceID      <- param "serviceID"
     services       <- deleteServiceForInstallation installationID serviceID
+    setHeader "Access-Control-Allow-Origin" "*"
     json services
 
 exceptionHandler :: Maybe Request -> SomeException -> IO ()
