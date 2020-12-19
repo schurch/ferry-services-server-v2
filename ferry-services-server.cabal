@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: eae5c6434165264fc05cb1e0b01acbf85ad74dff3f916d61fddc0a5703c1ddf4
+-- hash: ef48a194aebf0a453476c231681b43e05bb9b31f20c4e8ad9ffa6040396a01f5
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -110,8 +110,12 @@ executable transxchange-fetcher-exe
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , cassava
+    , containers
     , directory
     , network
+    , vector
+    , zip
   default-language: Haskell2010
 
 test-suite ferry-services-server-test

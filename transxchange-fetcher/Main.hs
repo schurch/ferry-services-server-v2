@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Main where
 
@@ -31,27 +32,100 @@ import           Control.Concurrent             ( newQSem
                                                 , waitQSem
                                                 , forkIO
                                                 )
-import           System.Directory
+import           System.Directory               ( doesFileExist
+                                                , removeFile
+                                                , removeDirectoryRecursive
+                                                )
 import           System.Environment             ( getEnv )
 import           Control.Monad                  ( when
                                                 , void
+                                                , forM_
+                                                )
+import           GHC.Generics                   ( Generic )
+import           Data.Csv                       ( (.:)
+                                                , decodeByName
+                                                , FromNamedRecord(..)
+                                                )
+import           Data.Map                       ( fromListWith
+                                                , toList
+                                                )
+import           Codec.Archive.Zip              ( unpackInto
+                                                , withArchive
                                                 )
 
 import qualified Control.Exception             as E
 import qualified Data.ByteString.Char8         as C
+import qualified Data.ByteString.Lazy          as BL
+import qualified Data.Vector                   as V
+
+data ServiceReportService = ServiceReportService {
+    rowId :: !Int
+  , regionCode :: !String
+  , regionOperatorCode :: !String
+  , serviceCode :: !String
+  , lineName :: !String
+  , description :: !String
+  , startDate :: !String
+  , nationalOperatorCode :: !String
+  , dataSource :: !String
+} deriving (Generic, Show)
+
+instance FromNamedRecord ServiceReportService where
+  parseNamedRecord r =
+    ServiceReportService
+      <$> r
+      .:  "RowId"
+      <*> r
+      .:  "RegionCode"
+      <*> r
+      .:  "RegionOperatorCode"
+      <*> r
+      .:  "ServiceCode"
+      <*> r
+      .:  "LineName"
+      <*> r
+      .:  "Description"
+      <*> r
+      .:  "StartDate"
+      <*> r
+      .:  "NationalOperatorCode"
+      <*> r
+      .:  "DataSource"
 
 main :: IO ()
 main = do
   ftpAddress  <- getEnv "TRAVELLINE_FTP_ADDRESS"
   ftpUsername <- getEnv "TRAVELLINE_FTP_USERNAME"
   ftpPassword <- getEnv "TRAVELLINE_FTP_PASSWORD"
+  putStrLn "Downloading servicereport.csv ..."
   downloadFile ftpAddress ftpUsername ftpPassword "servicereport.csv"
-  downloadFile ftpAddress ftpUsername ftpPassword "S.zip"
+  csvData <- BL.readFile "servicereport.csv"
+  case decodeByName csvData of
+    Left  err           -> putStrLn err
+    Right (_, services) -> do
+      let calmacServices =
+            filter (\s -> nationalOperatorCode s == "CALM")
+              . V.toList
+              $ services
+      let files = (\s -> (regionCode s, serviceCode s)) <$> calmacServices
+      -- Create a list of files based on the containing zip file. e.g. [(S, [FSACM12, FSACM14]), (SW, [FSACM11, FSACM18])]
+      let groupedFiles =
+            toList $ fromListWith (++) [ (k, [v]) | (k, v) <- files ]
+      forM_ groupedFiles $ \(zip, files) -> do
+        let zipFileName = zip <> ".zip"
+        putStrLn $ "Downloading " <> zipFileName <> " ..."
+        downloadFile ftpAddress ftpUsername ftpPassword zipFileName
+        putStrLn $ "Processing " <> zipFileName <> " ..."
+        withArchive zipFileName (unpackInto zip)
+        -- removeFileIfExists zipFileName
+        removeDirectoryRecursive zip
+        putStrLn $ "Finished processing " <> zipFileName
+  -- removeFileIfExists "servicereport.csv"
+  putStrLn "Completed processing"
 
 downloadFile :: String -> String -> String -> String -> IO ()
-downloadFile address username password filename = do
-  fileExists <- doesFileExist filename
-  when fileExists $ removeFile filename
+downloadFile address username password file = do
+  removeFileIfExists file
   runTCPClient address "21" $ \socket -> do
     msg <- recv socket 1024
     C.putStrLn msg
@@ -62,11 +136,16 @@ downloadFile address username password filename = do
     sem <- newQSem 0
     forkIO $ do
       runTCPClient host port $ \transferSocket -> do
-        transferData filename transferSocket
+        transferData file transferSocket
         signalQSem sem
-    sendMessage ("RETR " <> C.pack filename) socket
+    sendMessage ("RETR " <> C.pack file) socket
     waitQSem sem
     void $ sendMessage "QUIT" socket
+
+removeFileIfExists :: String -> IO ()
+removeFileIfExists file = do
+  fileExists <- doesFileExist file
+  when fileExists $ removeFile file
 
 transferData :: String -> Socket -> IO ()
 transferData filename socket = do

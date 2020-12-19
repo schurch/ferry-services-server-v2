@@ -94,8 +94,12 @@ executables:
     dependencies:
     # - ferry-services-server
     - bytestring
-    - network
+    - cassava
+    - containers
     - directory
+    - network
+    - vector
+    - zip
 
 tests:
   ferry-services-server-test:
