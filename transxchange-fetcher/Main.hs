@@ -107,10 +107,14 @@ main = do
             filter (\s -> nationalOperatorCode s == "CALM")
               . V.toList
               $ services
-      let files = (\s -> (regionCode s, serviceCode s)) <$> calmacServices
       -- Create a list of files based on the containing zip file. e.g. [(S, [FSACM12, FSACM14]), (SW, [FSACM11, FSACM18])]
-      let groupedFiles =
-            toList $ fromListWith (++) [ (k, [v]) | (k, v) <- files ]
+      let
+        groupedFiles = toList $ fromListWith
+          (++)
+          [ (regionCode, [serviceCode])
+          | ServiceReportService { regionCode = regionCode, serviceCode = serviceCode } <-
+            calmacServices
+          ]
       forM_ groupedFiles $ \(zip, files) -> do
         let zipFileName = zip <> ".zip"
         putStrLn $ "Downloading " <> zipFileName <> " ..."
