@@ -30,3 +30,7 @@ server: build
 .PHONY: scraper
 scraper: build
 	stack exec ferry-services-scraper-exe
+
+.PHONY: transxchange-fetcher
+transxchange-fetcher: build
+	stack exec transxchange-fetcher-exe

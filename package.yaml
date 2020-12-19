@@ -84,6 +84,19 @@ executables:
     - raven-haskell
     - tinylog
 
+  transxchange-fetcher-exe:
+    main:                Main.hs
+    source-dirs:         transxchange-fetcher
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    # - ferry-services-server
+    - bytestring
+    - network
+    - directory
+
 tests:
   ferry-services-server-test:
     main:                Spec.hs
