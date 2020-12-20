@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-#  LANGUAGE TypeApplications  #-}
 
 module Main where
 
@@ -31,13 +32,15 @@ import           Control.Concurrent             ( newQSem
                                                 , signalQSem
                                                 , waitQSem
                                                 , forkIO
+                                                , threadDelay
                                                 )
 import           System.Directory               ( doesFileExist
                                                 , removeFile
                                                 , removeDirectoryRecursive
                                                 )
 import           System.Environment             ( getEnv )
-import           Control.Monad                  ( when
+import           Control.Monad                  ( forever
+                                                , when
                                                 , void
                                                 , forM_
                                                 )
@@ -52,11 +55,32 @@ import           Data.Map                       ( fromListWith
 import           Codec.Archive.Zip              ( unpackInto
                                                 , withArchive
                                                 )
+import           System.Log.Raven               ( initRaven
+                                                , register
+                                                , silentFallback
+                                                )
+import           System.Log.Raven.Transport.HttpConduit
+                                                ( sendRecord )
+import           System.Log.Raven.Types         ( SentryLevel(Error)
+                                                , SentryRecord(..)
+                                                )
+import           Control.Exception              ( SomeException
+                                                , catch
+                                                )
+import           System.Logger                  ( Output(StdOut)
+                                                , Logger
+                                                , create
+                                                , info
+                                                , debug
+                                                , err
+                                                )
+import           System.Logger.Message          ( msg )
 
 import qualified Control.Exception             as E
 import qualified Data.ByteString.Char8         as C
 import qualified Data.ByteString.Lazy          as BL
 import qualified Data.Vector                   as V
+
 
 data ServiceReportService = ServiceReportService {
     rowId :: !Int
@@ -94,14 +118,38 @@ instance FromNamedRecord ServiceReportService where
 
 main :: IO ()
 main = do
+  logger <- create StdOut
+  info logger (msg @String "Starting fetcher...")
+  forever $ do
+    info logger (msg @String "Fetching transxchangedata...")
+    catch (fetchAndProcessData logger) (handleException logger)
+    threadDelay (1440 * 60 * 1000 * 1000) -- 1440 mins (24 hours)
+
+handleException :: Logger -> SomeException -> IO ()
+handleException logger exception = do
+  err logger (msg $ "An error occured: " <> show exception)
+  sentryDSN     <- getEnv "TRANSXCHANGE_FETCHER_SENTRY_DSN"
+  env           <- getEnv "ENVIRONMENT"
+  sentryService <- initRaven sentryDSN id sendRecord silentFallback
+  register sentryService
+           "transxchange-fetcher-logger"
+           Error
+           (show exception)
+           (recordUpdate env)
+
+recordUpdate :: String -> SentryRecord -> SentryRecord
+recordUpdate env record = record { srEnvironment = Just env }
+
+fetchAndProcessData :: Logger -> IO ()
+fetchAndProcessData logger = do
   ftpAddress  <- getEnv "TRAVELLINE_FTP_ADDRESS"
   ftpUsername <- getEnv "TRAVELLINE_FTP_USERNAME"
   ftpPassword <- getEnv "TRAVELLINE_FTP_PASSWORD"
-  putStrLn "Downloading servicereport.csv ..."
-  downloadFile ftpAddress ftpUsername ftpPassword "servicereport.csv"
+  info logger (msg @String "Downloading servicereport.csv ...")
+  downloadFile logger ftpAddress ftpUsername ftpPassword "servicereport.csv"
   csvData <- BL.readFile "servicereport.csv"
   case decodeByName csvData of
-    Left  err           -> putStrLn err
+    Left  err           -> error err
     Right (_, services) -> do
       let calmacServices =
             filter (\s -> nationalOperatorCode s == "CALM")
@@ -117,34 +165,34 @@ main = do
           ]
       forM_ groupedFiles $ \(zip, files) -> do
         let zipFileName = zip <> ".zip"
-        putStrLn $ "Downloading " <> zipFileName <> " ..."
-        downloadFile ftpAddress ftpUsername ftpPassword zipFileName
-        putStrLn $ "Processing " <> zipFileName <> " ..."
+        info logger (msg @String $ "Downloading " <> zipFileName <> " ...")
+        downloadFile logger ftpAddress ftpUsername ftpPassword zipFileName
+        info logger (msg @String $ "Processing " <> zipFileName <> " ...")
         withArchive zipFileName (unpackInto zip)
         -- removeFileIfExists zipFileName
         removeDirectoryRecursive zip
-        putStrLn $ "Finished processing " <> zipFileName
+        info logger (msg @String $ "Finished processing " <> zipFileName)
   -- removeFileIfExists "servicereport.csv"
-  putStrLn "Completed processing"
+  info logger (msg @String $ "Completed processing")
 
-downloadFile :: String -> String -> String -> String -> IO ()
-downloadFile address username password file = do
+downloadFile :: Logger -> String -> String -> String -> String -> IO ()
+downloadFile logger address username password file = do
   removeFileIfExists file
   runTCPClient address "21" $ \socket -> do
-    msg <- recv socket 1024
-    C.putStrLn msg
-    sendMessage ("USER " <> C.pack username) socket
-    sendMessage ("PASS " <> C.pack password) socket
-    response <- sendMessage "PASV" socket
+    welcomeMessage <- recv socket 1024
+    debug logger $ msg ("FTP: " <> head (C.split '\r' welcomeMessage))
+    sendMessage logger ("USER " <> C.pack username) socket
+    sendMessage logger ("PASS " <> C.pack password) socket
+    response <- sendMessage logger "PASV" socket
     let (host, port) = extractAddressAndPort $ C.unpack response
     sem <- newQSem 0
     forkIO $ do
       runTCPClient host port $ \transferSocket -> do
         transferData file transferSocket
         signalQSem sem
-    sendMessage ("RETR " <> C.pack file) socket
+    sendMessage logger ("RETR " <> C.pack file) socket
     waitQSem sem
-    void $ sendMessage "QUIT" socket
+    void $ sendMessage logger "QUIT" socket
 
 removeFileIfExists :: String -> IO ()
 removeFileIfExists file = do
@@ -157,11 +205,11 @@ transferData filename socket = do
   C.appendFile filename response
   if C.null response then return () else transferData filename socket
 
-sendMessage :: C.ByteString -> Socket -> IO C.ByteString
-sendMessage message socket = do
+sendMessage :: Logger -> C.ByteString -> Socket -> IO C.ByteString
+sendMessage logger message socket = do
   sendAll socket $ message <> "\r\n"
   response <- recv socket 1024
-  C.putStrLn response
+  debug logger $ msg ("FTP: " <> head (C.split '\r' response))
   return response
 
 extractAddressAndPort :: String -> (String, String)

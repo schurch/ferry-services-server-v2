@@ -31,7 +31,7 @@ main = do
   forever $ do
     info logger (msg "Fetching statuses...")
     catch (fetchStatusesAndNotify logger) (handleException logger)
-    threadDelay (900 * 1000 * 1000) -- 15 mins
+    threadDelay (15 * 60 * 1000 * 1000) -- 15 mins
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do

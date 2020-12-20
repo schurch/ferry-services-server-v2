@@ -98,6 +98,8 @@ executables:
     - containers
     - directory
     - network
+    - tinylog
+    - raven-haskell
     - vector
     - zip
 

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ef48a194aebf0a453476c231681b43e05bb9b31f20c4e8ad9ffa6040396a01f5
+-- hash: 991ee6318648b17f45632c8b2a3457f959984d65868119e980c35e680f45f00a
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -114,6 +114,8 @@ executable transxchange-fetcher-exe
     , containers
     , directory
     , network
+    , raven-haskell
+    , tinylog
     , vector
     , zip
   default-language: Haskell2010
