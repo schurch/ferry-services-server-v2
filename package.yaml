@@ -100,7 +100,9 @@ executables:
     - network
     - tinylog
     - raven-haskell
+    - time
     - vector
+    - xml
     - zip
 
 tests:

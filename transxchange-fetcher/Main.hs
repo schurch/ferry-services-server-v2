@@ -75,6 +75,7 @@ import           System.Logger                  ( Output(StdOut)
                                                 , err
                                                 )
 import           System.Logger.Message          ( msg )
+import           TransxchangeParser
 
 import qualified Control.Exception             as E
 import qualified Data.ByteString.Char8         as C
@@ -169,10 +170,17 @@ fetchAndProcessData logger = do
         downloadFile logger ftpAddress ftpUsername ftpPassword zipFileName
         info logger (msg @String $ "Processing " <> zipFileName <> " ...")
         withArchive zipFileName (unpackInto zip)
-        -- removeFileIfExists zipFileName
+        forM_ files $ \file -> do
+          let filename = "SVR" <> file <> ".xml"
+          info logger (msg @String $ "Processing " <> filename <> " in " <> zipFileName <> " ...")
+          fileContents <- readFile $ "S/" <> filename
+          let transxchangeData = parseTransxchangeXML fileContents
+          -- print transxchangeData
+          return ()
+        removeFileIfExists zipFileName
         removeDirectoryRecursive zip
         info logger (msg @String $ "Finished processing " <> zipFileName)
-  -- removeFileIfExists "servicereport.csv"
+  removeFileIfExists "servicereport.csv"
   info logger (msg @String $ "Completed processing")
 
 downloadFile :: Logger -> String -> String -> String -> String -> IO ()
