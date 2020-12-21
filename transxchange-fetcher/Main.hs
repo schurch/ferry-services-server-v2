@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-#  LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
@@ -172,8 +172,16 @@ fetchAndProcessData logger = do
         withArchive zipFileName (unpackInto zip)
         forM_ files $ \file -> do
           let filename = "SVR" <> file <> ".xml"
-          info logger (msg @String $ "Processing " <> filename <> " in " <> zipFileName <> " ...")
-          fileContents <- readFile $ "S/" <> filename
+          info
+            logger
+            (  msg @String
+            $  "Processing "
+            <> filename
+            <> " in "
+            <> zipFileName
+            <> " ..."
+            )
+          fileContents <- readFile $ zip <> "/" <> filename
           let transxchangeData = parseTransxchangeXML fileContents
           -- print transxchangeData
           return ()
