@@ -44,6 +44,7 @@ library:
     - text
     - unordered-containers
     - uuid
+    - xml
     - zlib
 
 executables:
@@ -92,7 +93,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    # - ferry-services-server
+    - ferry-services-server
     - bytestring
     - cassava
     - containers
@@ -102,7 +103,6 @@ executables:
     - raven-haskell
     - time
     - vector
-    - xml
     - zip
 
 tests:

@@ -1,6 +1,6 @@
 module TransxchangeTypes where
 
-import Data.Time
+import           Data.Time                      ( UTCTime )
 
 data TransXChangeData = TransXChangeData
   { stopPoints :: [AnnotatedStopPointRef]

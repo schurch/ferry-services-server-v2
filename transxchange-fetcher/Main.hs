@@ -75,13 +75,12 @@ import           System.Logger                  ( Output(StdOut)
                                                 , err
                                                 )
 import           System.Logger.Message          ( msg )
-import           TransxchangeParser
+import           TransxchangeParser             ( parseTransxchangeXML )
 
 import qualified Control.Exception             as E
 import qualified Data.ByteString.Char8         as C
 import qualified Data.ByteString.Lazy          as BL
 import qualified Data.Vector                   as V
-
 
 data ServiceReportService = ServiceReportService {
     rowId :: !Int
