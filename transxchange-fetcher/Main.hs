@@ -76,6 +76,7 @@ import           System.Logger                  ( Output(StdOut)
                                                 )
 import           System.Logger.Message          ( msg )
 import           TransxchangeParser             ( parseTransxchangeXML )
+import           Database                       ( updateTransxchangeData )
 
 import qualified Control.Exception             as E
 import qualified Data.ByteString.Char8         as C
@@ -182,8 +183,7 @@ fetchAndProcessData logger = do
             )
           fileContents <- readFile $ zip <> "/" <> filename
           let transxchangeData = parseTransxchangeXML fileContents
-          -- print transxchangeData
-          return ()
+          updateTransxchangeData transxchangeData
         removeFileIfExists zipFileName
         removeDirectoryRecursive zip
         info logger (msg @String $ "Finished processing " <> zipFileName)

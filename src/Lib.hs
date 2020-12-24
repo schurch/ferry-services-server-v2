@@ -1,7 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Lib
@@ -160,7 +157,7 @@ registerDeviceToken :: UUID -> String -> DeviceType -> Action String
 registerDeviceToken installationID deviceToken deviceType = do
   logger'            <- asks logger
   storedInstallation <- DB.getInstallationWithID installationID
-  currentEndpointARN <- if (isNothing storedInstallation)
+  currentEndpointARN <- if isNothing storedInstallation
     then liftIO $ createPushEndpoint logger' deviceToken deviceType
     else return $ installationEndpointARN . fromJust $ storedInstallation
   endpointAttributesResult <- liftIO
@@ -169,7 +166,7 @@ registerDeviceToken installationID deviceToken deviceType = do
     EndpointAttributesEndpointNotFound ->
       liftIO $ createPushEndpoint logger' deviceToken deviceType
     AttributeResults awsDeviceToken isEnabled -> do
-      when (awsDeviceToken /= deviceToken || isEnabled == False)
+      when (awsDeviceToken /= deviceToken || not isEnabled)
         $ liftIO
         . void
         $ updateDeviceTokenForEndpoint logger' currentEndpointARN deviceToken
@@ -240,7 +237,7 @@ fetchStatusesAndNotify logger = do
 
     applePushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
     applePushPayloadWithMessageAndServiceID message serviceID =
-      let apsPayload    = (APSPayload (APSPayloadBody message) serviceID)
+      let apsPayload    = APSPayload (APSPayloadBody message) serviceID
           stringPayload = C.unpack . encode $ apsPayload
       in  PushPayload { pushPayloadDefault     = message
                       , pushPayloadApns        = Just stringPayload
@@ -250,10 +247,8 @@ fetchStatusesAndNotify logger = do
 
     androidPushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
     androidPushPayloadWithMessageAndServiceID message serviceID =
-      let gcmPayload =
-              (CGMPayload (GCMPaylodNotification message)
-                          (GCMPayloadData serviceID)
-              )
+      let gcmPayload = CGMPayload (GCMPaylodNotification message)
+                                  (GCMPayloadData serviceID)
           stringPayload = C.unpack . encode $ gcmPayload
       in  PushPayload { pushPayloadDefault     = message
                       , pushPayloadApns        = Nothing
@@ -320,7 +315,7 @@ getLocationLookup = do
   serviceLocations <- liftIO DB.getServiceLocations
   return
     $ M.fromListWith (++)
-    $ [ (serviceID, [(LocationResponse name latitude longitude)])
+    $ [ (serviceID, [LocationResponse name latitude longitude])
       | (ServiceLocation serviceID locationID name latitude longitude) <-
         serviceLocations
       ]

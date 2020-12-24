@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Types where
@@ -9,15 +8,26 @@ module Types where
 import           Control.Monad.Reader           ( ReaderT
                                                 , asks
                                                 )
-import           Data.Aeson
+import           Data.Aeson                     ( genericParseJSON
+                                                , camelTo2
+                                                , defaultOptions
+                                                , genericToJSON
+                                                , FromJSON(parseJSON)
+                                                , Options(fieldLabelModifier)
+                                                , ToJSON(toJSON)
+                                                )
 import           Data.Char                      ( toLower )
 import           Data.Scientific                ( Scientific )
 import           Data.Text.Lazy                 ( Text )
 import           Data.Time.Clock                ( UTCTime )
 import           Data.UUID                      ( UUID )
 import           Database.PostgreSQL.Simple.ToField
+                                                ( ToField(..) )
 import           Database.PostgreSQL.Simple.FromField
-import           Database.PostgreSQL.Simple
+                                                ( FromField(..) )
+import           Database.PostgreSQL.Simple     ( ToRow
+                                                , FromRow
+                                                )
 import           System.Logger                  ( Logger
                                                 , log
                                                 )
@@ -27,7 +37,7 @@ import           System.Logger.Class            ( MonadLogger
 import           Web.Scotty.Trans               ( ScottyT
                                                 , ActionT
                                                 )
-import           GHC.Generics
+import           GHC.Generics                   ( Generic )
 
 -- Web server
 data Env = Env { logger :: Logger }

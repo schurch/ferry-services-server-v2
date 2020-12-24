@@ -13,6 +13,7 @@ module Database
   , saveServices
   , getServiceLocations
   , deleteInstallationWithID
+  , updateTransxchangeData
   )
 where
 
@@ -22,13 +23,27 @@ import           Data.Maybe                     ( listToMaybe )
 import           Data.Time.Clock                ( UTCTime )
 import           Data.String                    ( fromString )
 import           Data.UUID                      ( UUID )
-import           Database.PostgreSQL.Simple
+import           Database.PostgreSQL.Simple     ( Connection
+                                                , execute
+                                                , executeMany
+                                                , query
+                                                , query_
+                                                , close
+                                                , connectPostgreSQL
+                                                , Only(Only)
+                                                )
 import           Database.PostgreSQL.Simple.SqlQQ
+                                                ( sql )
 import           System.Environment             ( getEnv )
 import           Control.Monad.IO.Class         ( MonadIO
                                                 , liftIO
                                                 )
-import           Types
+import           Types                          ( ServiceLocation
+                                                , Installation
+                                                , Service
+                                                , DeviceType
+                                                )
+import           TransxchangeTypes
 
 connectionString :: IO ByteString
 connectionString = fromString <$> getEnv "DB_CONNECTION"
@@ -40,7 +55,7 @@ withConnection action = do
   liftIO $ close dbConnection
   return result
 
-getService :: MonadIO m => Int -> m (Maybe Service)
+getService :: MonadIO m => Int -> m (Maybe Types.Service)
 getService serviceID = do
   results <- withConnection $ \connection -> query
     connection
@@ -52,7 +67,7 @@ getService serviceID = do
     (Only serviceID)
   return $ listToMaybe results
 
-getServices :: MonadIO m => m [Service]
+getServices :: MonadIO m => m [Types.Service]
 getServices = withConnection $ \connection -> query_
   connection
   [sql| 
@@ -97,7 +112,7 @@ deleteServiceForInstallation installationID serviceID =
     |]
     (installationID, serviceID)
 
-getServicesForInstallation :: MonadIO m => UUID -> m [Service]
+getServicesForInstallation :: MonadIO m => UUID -> m [Types.Service]
 getServicesForInstallation installationID = withConnection $ \connection ->
   query
     connection
@@ -131,9 +146,9 @@ getIntererestedInstallationsForServiceID serviceID =
       JOIN installations i ON s.installation_id = i.installation_id
       WHERE s.service_id = ? 
       |]
-    (Only $ serviceID)
+    (Only serviceID)
 
-saveServices :: MonadIO m => [Service] -> m ()
+saveServices :: MonadIO m => [Types.Service] -> m ()
 saveServices services = void $ withConnection $ \connection -> executeMany
   connection
   [sql| 
@@ -179,3 +194,18 @@ deleteInstallationServicesWithID installationID =
       DELETE FROM installation_services WHERE installation_id = ?
     |]
     (Only installationID)
+
+updateTransxchangeData :: MonadIO m => TransXChangeData -> m ()
+updateTransxchangeData TransXChangeData { stopPoints = stopPoints } = do
+  void $ withConnection $ \connection -> do
+    executeMany
+        connection
+        [sql| 
+        INSERT INTO stop_point (stop_point_id, common_name) 
+        VALUES (?,?)
+        ON CONFLICT (stop_point_id) DO UPDATE 
+          SET common_name = excluded.common_name
+        |]
+      $   (\(AnnotatedStopPointRef id commonName) -> (id, commonName))
+      <$> stopPoints
+

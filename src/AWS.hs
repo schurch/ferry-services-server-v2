@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 module AWS
   ( EndpointAttributesResult(..)
@@ -83,7 +82,7 @@ import qualified Data.Text.Lazy.Encoding       as TE
 import qualified System.Logger                 as L
 import qualified System.Logger.Message         as L
 
-import           Types
+import           Types                          ( DeviceType(..) )
 
 -- { 
 --   "default": "This is the default message which must be present when publishing a message to a topic. The default message will only be used if a message is not present for 
