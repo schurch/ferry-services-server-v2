@@ -17,7 +17,9 @@ module Database
   )
 where
 
-import           Control.Monad                  ( void )
+import           Control.Monad                  ( void
+                                                , forM_
+                                                )
 import           Data.ByteString                ( ByteString )
 import           Data.Maybe                     ( listToMaybe )
 import           Data.Time.Clock                ( UTCTime )
@@ -196,16 +198,155 @@ deleteInstallationServicesWithID installationID =
     (Only installationID)
 
 updateTransxchangeData :: MonadIO m => TransXChangeData -> m ()
-updateTransxchangeData TransXChangeData { stopPoints = stopPoints } = do
-  void $ withConnection $ \connection -> do
-    executeMany
-        connection
-        [sql| 
-        INSERT INTO stop_point (stop_point_id, common_name) 
-        VALUES (?,?)
-        ON CONFLICT (stop_point_id) DO UPDATE 
-          SET common_name = excluded.common_name
-        |]
-      $   (\(AnnotatedStopPointRef id commonName) -> (id, commonName))
-      <$> stopPoints
+updateTransxchangeData TransXChangeData { stopPoints = stopPoints, routeSections = routeSections, routes = routes, journeyPatternSections = journeyPatternSections, operators = operators }
+  = do
+    void $ withConnection $ \connection -> do
+      insertStopPoints connection stopPoints
+      insertRouteSections connection routeSections
+      insertRoutes connection routes
+      insertJourneyPatternSections connection journeyPatternSections
+      insertOperators connection operators
+ where
+  insertStopPoints :: Connection -> [AnnotatedStopPointRef] -> IO ()
+  insertStopPoints connection stopPoints = do
+    let statement = [sql| 
+                      INSERT INTO stop_point (stop_point_id, common_name) 
+                      VALUES (?,?)
+                      ON CONFLICT (stop_point_id) DO UPDATE 
+                        SET common_name = excluded.common_name
+                    |]
+    let values =
+          (\(AnnotatedStopPointRef id commonName) -> (id, commonName))
+            <$> stopPoints
+    void $ executeMany connection statement values
 
+  insertRouteSections :: Connection -> [RouteSection] -> IO ()
+  insertRouteSections connection routeSections = do
+    let statement = [sql| 
+                      INSERT INTO route_section (route_section_id) 
+                      VALUES (?)
+                      ON CONFLICT (route_section_id) DO NOTHING
+                    |]
+    let values =
+          (\(RouteSection routeSectionID _) -> Only routeSectionID)
+            <$> routeSections
+    void $ executeMany connection statement values
+    forM_ routeSections $ \(RouteSection routeSectionID links) ->
+      insertRouteLinks connection routeSectionID links
+
+  insertRouteLinks :: Connection -> String -> [RouteLink] -> IO ()
+  insertRouteLinks connection routeSectionID routeLinks = do
+    let statement = [sql| 
+                      INSERT INTO route_link (route_link_id, route_section_id, from_stop_point, to_stop_point, route_direction) 
+                      VALUES (?, ?, ?, ?, ?)
+                      ON CONFLICT (route_link_id) DO UPDATE 
+                        SET route_section_id = excluded.route_section_id,
+                            from_stop_point = excluded.from_stop_point,
+                            to_stop_point = excluded.to_stop_point, 
+                            route_direction = excluded.route_direction
+                    |]
+    let values =
+          (\(RouteLink routeLinkID fromStopPoint toStopPoint direction) ->
+              (routeLinkID, routeSectionID, fromStopPoint, toStopPoint, direction)
+            )
+            <$> routeLinks
+    void $ executeMany connection statement values
+
+  insertRoutes :: Connection -> [Route] -> IO ()
+  insertRoutes connection routes = do
+    let statement = [sql| 
+                      INSERT INTO route (route_id, route_description, route_section_id) 
+                      VALUES (?, ?, ?)
+                      ON CONFLICT (route_id) DO UPDATE 
+                        SET route_description = excluded.route_description,
+                            route_section_id = excluded.route_section_id
+                    |]
+    let values =
+          (\(Route routeID routeDescription routeSectionID) ->
+              (routeID, routeDescription, routeSectionID)
+            )
+            <$> routes
+    void $ executeMany connection statement values
+
+  insertJourneyPatternSections :: Connection -> [JourneyPatternSection] -> IO ()
+  insertJourneyPatternSections connection journeyPatternSections = do
+    let statement = [sql| 
+                      INSERT INTO journey_pattern_section (journey_pattern_section_id) 
+                      VALUES (?)
+                      ON CONFLICT (journey_pattern_section_id) DO NOTHING
+                    |]
+    let values =
+          (\(JourneyPatternSection journeyPatterSectionID _) ->
+              Only journeyPatterSectionID
+            )
+            <$> journeyPatternSections
+    void $ executeMany connection statement values
+    forM_ journeyPatternSections
+      $ \(JourneyPatternSection journeyPatterSectionID timingLinks) ->
+          insertJourneyPatternTimingLinks connection
+                                          journeyPatterSectionID
+                                          timingLinks
+
+  insertJourneyPatternTimingLinks
+    :: Connection -> String -> [JourneyPatternTimingLink] -> IO ()
+  insertJourneyPatternTimingLinks connection journeyPatterSectionID timingLinks
+    = do
+      let statement = [sql| 
+                      INSERT INTO journey_pattern_timing_link (
+                        journey_pattern_timing_link_id, 
+                        journey_pattern_section_id, 
+                        from_stop_point, 
+                        from_timing_status, 
+                        from_wait_time, 
+                        to_stop_point, 
+                        to_timing_status, 
+                        route_link_id, 
+                        journey_direction, 
+                        run_time) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                      ON CONFLICT (journey_pattern_timing_link_id) DO UPDATE 
+                        SET journey_pattern_section_id = excluded.journey_pattern_section_id,
+                            from_stop_point = excluded.from_stop_point,
+                            from_timing_status = excluded.from_timing_status, 
+                            from_wait_time = excluded.from_wait_time, 
+                            to_stop_point = excluded.to_stop_point, 
+                            to_timing_status = excluded.to_timing_status, 
+                            route_link_id = excluded.route_link_id, 
+                            journey_direction = excluded.journey_direction, 
+                            run_time = excluded.run_time
+                    |]
+      let
+        values =
+          (\(JourneyPatternTimingLink journeyPatternTimingLinkId journeyPatternFromWaitTime journeyPatternFromStopPointRef journeyPatternFromTimingStatus journeyPatternToStopPointsRef journeyPatternToTimingStatus routeLinkRef journeyDirection runTime) ->
+              ( journeyPatternTimingLinkId
+              , journeyPatterSectionID
+              , journeyPatternFromStopPointRef
+              , journeyPatternFromTimingStatus
+              , journeyPatternFromWaitTime
+              , journeyPatternToStopPointsRef
+              , journeyPatternToTimingStatus
+              , routeLinkRef
+              , journeyDirection
+              , runTime
+              )
+            )
+            <$> timingLinks
+      void $ executeMany connection statement values
+
+  insertOperators :: Connection -> [Operator] -> IO ()
+  insertOperators connection operators = do
+    let statement = [sql| 
+                      INSERT INTO operator (operator_id, national_operator_code, operator_code, operator_short_name) 
+                      VALUES (?, ?, ?, ?)
+                      ON CONFLICT (operator_id) DO UPDATE 
+                        SET national_operator_code = excluded.national_operator_code,
+                            operator_code = excluded.operator_code,
+                            operator_short_name = excluded.operator_short_name
+                    |]
+    let
+      values =
+        (\(Operator operatorID nationalOperatorCode operatorCode operatorShortName) ->
+            (operatorID, nationalOperatorCode, operatorCode, operatorShortName)
+          )
+          <$> operators
+    void $ executeMany connection statement values
