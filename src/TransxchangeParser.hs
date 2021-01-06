@@ -22,6 +22,7 @@ import           Text.XML.Light                 ( QName(QName, qName)
                                                 , Element(elName)
                                                 )
 import           TransxchangeTypes
+-- import           Debug.Trace
 
 parseTransxchangeXML :: String -> TransXChangeData
 parseTransxchangeXML input = TransXChangeData
@@ -266,9 +267,9 @@ getVehicleJourneys element = do
                                 strContent
                                 (findChild "JourneyPatternRef" element)
     , departureTime = maybe "" strContent (findChild "DepartureTime" element)
-    , daysOfWeek = fromMaybe [] weekDays
-    , specialDaysOfOperation = fromMaybe [] operationDays
-    , specialDaysOfNonOperation = fromMaybe [] nonOperationDays
+    , daysOfWeek = fromMaybe [] $ weekDays element
+    , specialDaysOfOperation = fromMaybe [] $ operationDays element
+    , specialDaysOfNonOperation = fromMaybe [] $ nonOperationDays element
     , note = maybe ""
                    strContent
                    (findChild "Note" element >>= findChild "NoteText")
@@ -277,22 +278,22 @@ getVehicleJourneys element = do
                        (findChild "Note" element >>= findChild "NoteCode")
     }
 
-  nonOperationDays :: Maybe [DateRange]
-  nonOperationDays = do
+  nonOperationDays :: Element -> Maybe [DateRange]
+  nonOperationDays element = do
     operatingProfile     <- findChild "OperatingProfile" element
     specialDaysOperation <- findChild "SpecialDaysOperation" operatingProfile
     daysOfNonOperation   <- findChild "DaysOfNonOperation" specialDaysOperation
     return $ elementToDateRange <$> findChildren "DateRange" daysOfNonOperation
 
-  operationDays :: Maybe [DateRange]
-  operationDays = do
+  operationDays :: Element -> Maybe [DateRange]
+  operationDays element = do
     operatingProfile     <- findChild "OperatingProfile" element
     specialDaysOperation <- findChild "SpecialDaysOperation" operatingProfile
     daysOfOperation      <- findChild "DaysOfOperation" specialDaysOperation
     return $ elementToDateRange <$> findChildren "DateRange" daysOfOperation
 
-  weekDays :: Maybe [WeekDay]
-  weekDays = do
+  weekDays :: Element -> Maybe [WeekDay]
+  weekDays element = do
     operatingProfile  <- findChild "OperatingProfile" element
     regularDayType    <- findChild "RegularDayType" operatingProfile
     daysOfWeekElement <- findChild "DaysOfWeek" regularDayType

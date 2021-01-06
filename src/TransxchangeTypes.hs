@@ -1,6 +1,9 @@
 module TransxchangeTypes where
 
 import           Data.Time                      ( UTCTime )
+import           Database.PostgreSQL.Simple.ToField
+import           Data.Binary.Builder            ( putStringUtf8 )
+import           Data.Char                      ( toLower )
 
 data TransXChangeData = TransXChangeData
   { stopPoints :: [AnnotatedStopPointRef]
@@ -114,3 +117,7 @@ data WeekDay
   | Saturday
   | Sunday
   deriving (Show, Eq)
+
+instance ToField WeekDay where
+  toField a =
+    Plain $ putStringUtf8 $ "'" <> (toLower <$> show a) <> "'::day_of_week"

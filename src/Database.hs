@@ -36,6 +36,8 @@ import           Database.PostgreSQL.Simple     ( Connection
                                                 )
 import           Database.PostgreSQL.Simple.SqlQQ
                                                 ( sql )
+import           Database.PostgreSQL.Simple.Types
+                                                ( PGArray(..) )
 import           System.Environment             ( getEnv )
 import           Control.Monad.IO.Class         ( MonadIO
                                                 , liftIO
@@ -45,6 +47,7 @@ import           Types                          ( ServiceLocation
                                                 , Service
                                                 , DeviceType
                                                 )
+import           Data.Time.LocalTime            ( TimeOfDay(..) )
 import           TransxchangeTypes
 
 connectionString :: IO ByteString
@@ -198,7 +201,7 @@ deleteInstallationServicesWithID installationID =
     (Only installationID)
 
 updateTransxchangeData :: MonadIO m => TransXChangeData -> m ()
-updateTransxchangeData TransXChangeData { stopPoints = stopPoints, routeSections = routeSections, routes = routes, journeyPatternSections = journeyPatternSections, operators = operators }
+updateTransxchangeData (TransXChangeData stopPoints routeSections routes journeyPatternSections operators services vehicleJourneys)
   = do
     void $ withConnection $ \connection -> do
       insertStopPoints connection stopPoints
@@ -206,6 +209,8 @@ updateTransxchangeData TransXChangeData { stopPoints = stopPoints, routeSections
       insertRoutes connection routes
       insertJourneyPatternSections connection journeyPatternSections
       insertOperators connection operators
+      insertServices connection services
+      insertVehicleJourneys connection vehicleJourneys
  where
   insertStopPoints :: Connection -> [AnnotatedStopPointRef] -> IO ()
   insertStopPoints connection stopPoints = do
@@ -292,28 +297,28 @@ updateTransxchangeData TransXChangeData { stopPoints = stopPoints, routeSections
   insertJourneyPatternTimingLinks connection journeyPatterSectionID timingLinks
     = do
       let statement = [sql| 
-                      INSERT INTO journey_pattern_timing_link (
-                        journey_pattern_timing_link_id, 
-                        journey_pattern_section_id, 
-                        from_stop_point, 
-                        from_timing_status, 
-                        from_wait_time, 
-                        to_stop_point, 
-                        to_timing_status, 
-                        route_link_id, 
-                        journey_direction, 
-                        run_time) 
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                      ON CONFLICT (journey_pattern_timing_link_id) DO UPDATE 
-                        SET journey_pattern_section_id = excluded.journey_pattern_section_id,
-                            from_stop_point = excluded.from_stop_point,
-                            from_timing_status = excluded.from_timing_status, 
-                            from_wait_time = excluded.from_wait_time, 
-                            to_stop_point = excluded.to_stop_point, 
-                            to_timing_status = excluded.to_timing_status, 
-                            route_link_id = excluded.route_link_id, 
-                            journey_direction = excluded.journey_direction, 
-                            run_time = excluded.run_time
+                        INSERT INTO journey_pattern_timing_link (
+                          journey_pattern_timing_link_id, 
+                          journey_pattern_section_id, 
+                          from_stop_point, 
+                          from_timing_status, 
+                          from_wait_time, 
+                          to_stop_point, 
+                          to_timing_status, 
+                          route_link_id, 
+                          journey_direction, 
+                          run_time) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (journey_pattern_timing_link_id) DO UPDATE 
+                          SET journey_pattern_section_id = excluded.journey_pattern_section_id,
+                              from_stop_point = excluded.from_stop_point,
+                              from_timing_status = excluded.from_timing_status, 
+                              from_wait_time = excluded.from_wait_time, 
+                              to_stop_point = excluded.to_stop_point, 
+                              to_timing_status = excluded.to_timing_status, 
+                              route_link_id = excluded.route_link_id, 
+                              journey_direction = excluded.journey_direction, 
+                              run_time = excluded.run_time
                     |]
       let
         values =
@@ -350,3 +355,151 @@ updateTransxchangeData TransXChangeData { stopPoints = stopPoints, routeSections
           )
           <$> operators
     void $ executeMany connection statement values
+
+  insertServices :: Connection -> [TransxchangeTypes.Service] -> IO ()
+  insertServices connection services = do
+    let statement = [sql| 
+                      INSERT INTO transxchange_service (service_code, operator_id, mode, description, start_date, end_date, origin, destination) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                      ON CONFLICT (service_code) DO UPDATE 
+                        SET operator_id = excluded.operator_id,
+                            mode = excluded.mode,
+                            description = excluded.description,
+                            start_date = excluded.start_date,
+                            end_date = excluded.end_date,
+                            origin = excluded.origin,
+                            destination = excluded.destination
+                    |]
+    let
+      values =
+        (\(TransxchangeTypes.Service serviceCode lines (DateRange startDate endDate) registeredOperatorRef mode description (StandardService origin destination _)) ->
+            ( serviceCode
+            , registeredOperatorRef
+            , mode
+            , description
+            , startDate
+            , endDate
+            , origin
+            , destination
+            )
+          )
+          <$> services
+    void $ executeMany connection statement values
+    forM_ services
+      $ \TransxchangeTypes.Service { serviceCode = serviceCode, TransxchangeTypes.lines = lines, standardService = StandardService { journeyPatterns = journeyPatterns } } ->
+          do
+            insertLines connection serviceCode lines
+            insertJourneyPatterns connection serviceCode journeyPatterns
+
+  insertLines :: Connection -> String -> [Line] -> IO ()
+  insertLines connection serviceCode lines = do
+    let statement = [sql| 
+                      INSERT INTO line (line_id, service_code, line_name) 
+                      VALUES (?, ?, ?)
+                      ON CONFLICT (line_id) DO UPDATE 
+                        SET service_code = excluded.service_code,
+                            line_name = excluded.line_name
+                    |]
+    let values =
+          (\(Line lineID lineName) -> (lineID, serviceCode, lineName)) <$> lines
+    void $ executeMany connection statement values
+
+  insertJourneyPatterns :: Connection -> String -> [JourneyPattern] -> IO ()
+  insertJourneyPatterns connection serviceCode journeyPatterns = do
+    let statement = [sql| 
+                      INSERT INTO journey_pattern (journey_pattern_id, service_code, journey_pattern_section_id, direction) 
+                      VALUES (?, ?, ?, ?)
+                      ON CONFLICT (journey_pattern_id) DO UPDATE 
+                        SET service_code = excluded.service_code,
+                            journey_pattern_section_id = excluded.journey_pattern_section_id,
+                            direction = excluded.direction
+                    |]
+    let
+      values =
+        (\(JourneyPattern journeyPatternID journeyPatternDirection journeyPatternSectionRef) ->
+            ( journeyPatternID
+            , serviceCode
+            , journeyPatternSectionRef
+            , journeyPatternDirection
+            )
+          )
+          <$> journeyPatterns
+    void $ executeMany connection statement values
+
+  insertVehicleJourneys :: Connection -> [VehicleJourney] -> IO ()
+  insertVehicleJourneys connection vehicleJourneys = do
+    let statement = [sql| 
+                      INSERT INTO vehicle_journey (vehicle_journey_code, service_code, line_id, journey_pattern_id, operator_id, days_of_week, departure_time, note, note_code) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                      ON CONFLICT (vehicle_journey_code) DO UPDATE 
+                        SET service_code = excluded.service_code,
+                            line_id = excluded.line_id,
+                            journey_pattern_id = excluded.journey_pattern_id,
+                            operator_id = excluded.operator_id,
+                            days_of_week = excluded.days_of_week,
+                            departure_time = excluded.departure_time,
+                            note = excluded.note,
+                            note_code = excluded.note_code
+                    |]
+    let
+      values =
+        (\(VehicleJourney operatorRef vehicleJourneyCode serviceRef lineRef journeyPatternRef departureTime daysOfWeek _ _ note noteCode) ->
+            ( vehicleJourneyCode
+            , serviceRef
+            , lineRef
+            , journeyPatternRef
+            , operatorRef
+            , PGArray daysOfWeek
+            , timeStringToTime departureTime
+            , note
+            , noteCode
+            )
+          )
+          <$> vehicleJourneys
+    void $ executeMany connection statement values
+    forM_ vehicleJourneys
+      $ \VehicleJourney { vehicleJourneyCode = vehicleJourneyCode, specialDaysOfOperation = specialDaysOfOperation, specialDaysOfNonOperation = specialDaysOfNonOperation } ->
+          do
+            insertDayOfOperation connection
+                                 vehicleJourneyCode
+                                 specialDaysOfOperation
+            insertDayOfNonOperation connection
+                                    vehicleJourneyCode
+                                    specialDaysOfNonOperation
+
+  insertDayOfOperation :: Connection -> String -> [DateRange] -> IO ()
+  insertDayOfOperation connection vehicleJourneyCode daysOfOperation = do
+    let statement = [sql| 
+                      INSERT INTO day_of_operation (vehicle_journey_code, start_date, end_date) 
+                      VALUES (?, ?, ?)
+                      ON CONFLICT (vehicle_journey_code, start_date, end_date) DO NOTHING
+                    |]
+    let values =
+          (\(DateRange start end) -> (vehicleJourneyCode, start, end))
+            <$> daysOfOperation
+    void $ executeMany connection statement values
+
+  insertDayOfNonOperation :: Connection -> String -> [DateRange] -> IO ()
+  insertDayOfNonOperation connection vehicleJourneyCode daysOfOperation = do
+    let statement = [sql| 
+                      INSERT INTO day_of_non_operation (vehicle_journey_code, start_date, end_date) 
+                      VALUES (?, ?, ?)
+                      ON CONFLICT (vehicle_journey_code, start_date, end_date) DO NOTHING
+                    |]
+    let values =
+          (\(DateRange start end) -> (vehicleJourneyCode, start, end))
+            <$> daysOfOperation
+    void $ executeMany connection statement values
+
+  timeStringToTime :: String -> TimeOfDay
+  timeStringToTime string =
+    let timeParts = splitOn ':' string
+    in  TimeOfDay (read $ head timeParts)
+                  (read $ timeParts !! 1)
+                  (read $ timeParts !! 2)
+
+splitOn :: (Foldable t, Eq a) => a -> t a -> [[a]]
+splitOn delimiter = foldr f [[]]
+ where
+  f c l@(x : xs) | c == delimiter = [] : l
+                 | otherwise      = (c : x) : xs

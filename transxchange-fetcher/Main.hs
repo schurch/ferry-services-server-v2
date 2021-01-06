@@ -77,6 +77,7 @@ import           System.Logger                  ( Output(StdOut)
 import           System.Logger.Message          ( msg )
 import           TransxchangeParser             ( parseTransxchangeXML )
 import           Database                       ( updateTransxchangeData )
+-- import           Debug.Trace
 
 import qualified Control.Exception             as E
 import qualified Data.ByteString.Char8         as C
@@ -168,7 +169,6 @@ fetchAndProcessData logger = do
         let zipFileName = zip <> ".zip"
         info logger (msg @String $ "Downloading " <> zipFileName <> " ...")
         downloadFile logger ftpAddress ftpUsername ftpPassword zipFileName
-        info logger (msg @String $ "Processing " <> zipFileName <> " ...")
         withArchive zipFileName (unpackInto zip)
         forM_ files $ \file -> do
           let filename = "SVR" <> file <> ".xml"
@@ -186,9 +186,7 @@ fetchAndProcessData logger = do
           updateTransxchangeData transxchangeData
         removeFileIfExists zipFileName
         removeDirectoryRecursive zip
-        info logger (msg @String $ "Finished processing " <> zipFileName)
   removeFileIfExists "servicereport.csv"
-  info logger (msg @String $ "Completed processing")
 
 downloadFile :: Logger -> String -> String -> String -> String -> IO ()
 downloadFile logger address username password file = do
@@ -230,18 +228,12 @@ sendMessage logger message socket = do
 extractAddressAndPort :: String -> (String, String)
 extractAddressAndPort response =
   let [h1, h2, h3, h4, p1, p2] =
-          splitBy ',' . init . drop 1 . dropWhile (/= '(') . trim $ response
+          splitOn ',' . init . drop 1 . dropWhile (/= '(') . trim $ response
       host  = intercalate "." [h1, h2, h3, h4]
       port1 = read p1
       port2 = read p2
       port  = show $ (port1 * 256) + port2
   in  (host, port)
-
-splitBy :: (Foldable t, Eq a) => a -> t a -> [[a]]
-splitBy delimiter = foldr f [[]]
- where
-  f c l@(x : xs) | c == delimiter = [] : l
-                 | otherwise      = (c : x) : xs
 
 trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace
@@ -262,3 +254,9 @@ runTCPClient host port client = withSocketsDo $ do
   openSocket :: AddrInfo -> IO Socket
   openSocket = \addr ->
     socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
+
+splitOn :: (Foldable t, Eq a) => a -> t a -> [[a]]
+splitOn delimiter = foldr f [[]]
+ where
+  f c l@(x : xs) | c == delimiter = [] : l
+                 | otherwise      = (c : x) : xs

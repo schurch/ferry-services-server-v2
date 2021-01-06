@@ -86,11 +86,13 @@ CREATE TABLE vehicle_journey (
 CREATE TABLE day_of_operation (
   vehicle_journey_code TEXT NOT NULL REFERENCES vehicle_journey (vehicle_journey_code),
   start_date DATE NOT NULL,
-  end_date DATE NOT NULL
+  end_date DATE NOT NULL,
+  PRIMARY KEY(vehicle_journey_code, start_date, end_date)
 );
 
 CREATE TABLE day_of_non_operation (
   vehicle_journey_code TEXT NOT NULL REFERENCES vehicle_journey (vehicle_journey_code),
   start_date DATE NOT NULL,
-  end_date DATE NOT NULL
+  end_date DATE NOT NULL,
+  PRIMARY KEY(vehicle_journey_code, start_date, end_date)
 );
