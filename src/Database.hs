@@ -202,17 +202,11 @@ deleteInstallationServicesWithID installationID =
     |]
     (Only installationID)
 
-updateTransxchangeData :: MonadIO m => TransXChangeData -> m ()
-updateTransxchangeData (TransXChangeData stopPoints routeSections routes journeyPatternSections operators services vehicleJourneys)
-  = void $ withConnection $ \connection -> withTransaction connection $ do
+updateTransxchangeData :: MonadIO m => [TransXChangeData] -> m ()
+updateTransxchangeData transxchangeData = withConnection $ \connection ->
+  withTransaction connection $ do
     deleteOldData connection
-    insertStopPoints connection stopPoints
-    insertRouteSections connection routeSections
-    insertRoutes connection routes
-    insertJourneyPatternSections connection journeyPatternSections
-    insertOperators connection operators
-    insertServices connection services
-    insertVehicleJourneys connection vehicleJourneys
+    forM_ transxchangeData $ updateSingleTransxchangeData connection
  where
   deleteOldData :: Connection -> IO ()
   deleteOldData connection = do
@@ -234,6 +228,18 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
         DELETE FROM stop_points;
       |]
 
+
+updateSingleTransxchangeData :: Connection -> TransXChangeData -> IO ()
+updateSingleTransxchangeData connection (TransXChangeData stopPoints routeSections routes journeyPatternSections operators services vehicleJourneys)
+  = do
+    insertStopPoints connection stopPoints
+    insertRouteSections connection routeSections
+    insertRoutes connection routes
+    insertJourneyPatternSections connection journeyPatternSections
+    insertOperators connection operators
+    insertServices connection services
+    insertVehicleJourneys connection vehicleJourneys
+ where
   insertStopPoints :: Connection -> [AnnotatedStopPointRef] -> IO ()
   insertStopPoints connection stopPoints = do
     let statement = [sql| 

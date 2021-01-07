@@ -42,7 +42,7 @@ import           System.Environment             ( getEnv )
 import           Control.Monad                  ( forever
                                                 , when
                                                 , void
-                                                , forM_
+                                                , forM
                                                 )
 import           GHC.Generics                   ( Generic )
 import           Data.Csv                       ( (.:)
@@ -77,12 +77,19 @@ import           System.Logger                  ( Output(StdOut)
 import           System.Logger.Message          ( msg )
 import           TransxchangeParser             ( parseTransxchangeXML )
 import           Database                       ( updateTransxchangeData )
+import           TransxchangeTypes              ( TransXChangeData )
 -- import           Debug.Trace
 
 import qualified Control.Exception             as E
 import qualified Data.ByteString.Char8         as C
 import qualified Data.ByteString.Lazy          as BL
 import qualified Data.Vector                   as V
+
+data FTPConnectionDetails = FTPConnectionDetails {
+    address :: String
+  , username :: String
+  , password :: String
+}
 
 data ServiceReportService = ServiceReportService {
     rowId :: !Int
@@ -147,8 +154,10 @@ fetchAndProcessData logger = do
   ftpAddress  <- getEnv "TRAVELLINE_FTP_ADDRESS"
   ftpUsername <- getEnv "TRAVELLINE_FTP_USERNAME"
   ftpPassword <- getEnv "TRAVELLINE_FTP_PASSWORD"
+  let ftpConnectionDetails =
+        FTPConnectionDetails ftpAddress ftpUsername ftpPassword
   info logger (msg @String "Downloading servicereport.csv ...")
-  downloadFile logger ftpAddress ftpUsername ftpPassword "servicereport.csv"
+  downloadFile logger ftpConnectionDetails "servicereport.csv"
   csvData <- BL.readFile "servicereport.csv"
   case decodeByName csvData of
     Left  err           -> error err
@@ -165,31 +174,41 @@ fetchAndProcessData logger = do
           | ServiceReportService { regionCode = regionCode, serviceCode = serviceCode } <-
             calmacServices
           ]
-      forM_ groupedFiles $ \(zip, files) -> do
-        let zipFileName = zip <> ".zip"
-        info logger (msg @String $ "Downloading " <> zipFileName <> " ...")
-        downloadFile logger ftpAddress ftpUsername ftpPassword zipFileName
-        withArchive zipFileName (unpackInto zip)
-        forM_ files $ \file -> do
-          let filename = "SVR" <> file <> ".xml"
-          info
-            logger
-            (  msg @String
-            $  "Processing "
-            <> filename
-            <> " in "
-            <> zipFileName
-            <> " ..."
-            )
-          fileContents <- readFile $ zip <> "/" <> filename
-          let transxchangeData = parseTransxchangeXML fileContents
-          updateTransxchangeData transxchangeData
-        removeFileIfExists zipFileName
-        removeDirectoryRecursive zip
+      allTransxchangeData <- forM groupedFiles
+        $ uncurry (downloadAndParseZip logger ftpConnectionDetails)
+      updateTransxchangeData $ concat allTransxchangeData
   removeFileIfExists "servicereport.csv"
 
-downloadFile :: Logger -> String -> String -> String -> String -> IO ()
-downloadFile logger address username password file = do
+downloadAndParseZip
+  :: Logger
+  -> FTPConnectionDetails
+  -> String
+  -> [String]
+  -> IO [TransXChangeData]
+downloadAndParseZip logger ftpConnectionDetails zip files = do
+  let zipFileName = zip <> ".zip"
+  info logger (msg @String $ "Downloading " <> zipFileName <> " ...")
+  downloadFile logger ftpConnectionDetails zipFileName
+  withArchive zipFileName (unpackInto zip)
+  zipTansxchangeData <- forM files $ \file -> do
+    let filename = "SVR" <> file <> ".xml"
+    info
+      logger
+      (  msg @String
+      $  "Processing "
+      <> filename
+      <> " in "
+      <> zipFileName
+      <> " ..."
+      )
+    fileContents <- readFile $ zip <> "/" <> filename
+    return $ parseTransxchangeXML fileContents
+  removeFileIfExists zipFileName
+  removeDirectoryRecursive zip
+  return zipTansxchangeData
+
+downloadFile :: Logger -> FTPConnectionDetails -> String -> IO ()
+downloadFile logger (FTPConnectionDetails address username password) file = do
   removeFileIfExists file
   runTCPClient address "21" $ \socket -> do
     welcomeMessage <- recv socket 1024
