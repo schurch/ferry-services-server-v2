@@ -205,6 +205,7 @@ deleteInstallationServicesWithID installationID =
 updateTransxchangeData :: MonadIO m => TransXChangeData -> m ()
 updateTransxchangeData (TransXChangeData stopPoints routeSections routes journeyPatternSections operators services vehicleJourneys)
   = void $ withConnection $ \connection -> withTransaction connection $ do
+    deleteOldData connection
     insertStopPoints connection stopPoints
     insertRouteSections connection routeSections
     insertRoutes connection routes
