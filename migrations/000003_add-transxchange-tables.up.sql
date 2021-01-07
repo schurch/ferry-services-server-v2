@@ -1,55 +1,55 @@
 CREATE TYPE day_of_week AS ENUM ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
 
-CREATE TABLE stop_point (
+CREATE TABLE stop_points (
     stop_point_id TEXT PRIMARY KEY,
     common_name TEXT
 );
 
-CREATE TABLE route_section (
+CREATE TABLE route_sections (
     route_section_id TEXT PRIMARY KEY
 );
 
-CREATE TABLE route_link (
+CREATE TABLE route_links (
     route_link_id TEXT PRIMARY KEY,
-    route_section_id TEXT NOT NULL REFERENCES route_section (route_section_id),
-    from_stop_point TEXT NOT NULL REFERENCES stop_point (stop_point_id),
-    to_stop_point TEXT NOT NULL REFERENCES stop_point (stop_point_id),
+    route_section_id TEXT NOT NULL REFERENCES route_sections (route_section_id),
+    from_stop_point TEXT NOT NULL REFERENCES stop_points (stop_point_id),
+    to_stop_point TEXT NOT NULL REFERENCES stop_points (stop_point_id),
     route_direction TEXT
 );
 
-CREATE TABLE route (
+CREATE TABLE routes (
     route_id TEXT PRIMARY KEY,
     route_description TEXT,
-    route_section_id TEXT NOT NULL REFERENCES route_section (route_section_id)
+    route_section_id TEXT NOT NULL REFERENCES route_sections (route_section_id)
 );
 
-CREATE TABLE journey_pattern_section (
+CREATE TABLE journey_pattern_sections (
     journey_pattern_section_id TEXT PRIMARY KEY
 );
 
-CREATE TABLE journey_pattern_timing_link (
+CREATE TABLE journey_pattern_timing_links (
     journey_pattern_timing_link_id TEXT PRIMARY KEY,
-    journey_pattern_section_id TEXT NOT NULL REFERENCES journey_pattern_section (journey_pattern_section_id),
-    from_stop_point TEXT NOT NULL REFERENCES stop_point (stop_point_id),
+    journey_pattern_section_id TEXT NOT NULL REFERENCES journey_pattern_sections (journey_pattern_section_id),
+    from_stop_point TEXT NOT NULL REFERENCES stop_points (stop_point_id),
     from_timing_status TEXT NOT NULL,
     from_wait_time TEXT NULL,
-    to_stop_point TEXT NOT NULL REFERENCES stop_point (stop_point_id),
+    to_stop_point TEXT NOT NULL REFERENCES stop_points (stop_point_id),
     to_timing_status TEXT NOT NULL,
-    route_link_id TEXT NOT NULL REFERENCES route_link(route_link_id),
+    route_link_id TEXT NOT NULL REFERENCES route_links (route_link_id),
     journey_direction TEXT NOT NULL,
     run_time TEXT NOT NULL
 );
 
-CREATE TABLE operator (
+CREATE TABLE operators (
     operator_id TEXT PRIMARY KEY,
     national_operator_code TEXT NOT NULL,
     operator_code TEXT NOT NULL,
     operator_short_name TEXT NOT NULL
 );
 
-CREATE TABLE transxchange_service (
+CREATE TABLE transxchange_services (
     service_code TEXT PRIMARY KEY,
-    operator_id TEXT NOT NULL REFERENCES operator (operator_id),
+    operator_id TEXT NOT NULL REFERENCES operators (operator_id),
     mode TEXT NOT NULL,
     description TEXT NOT NULL,
     start_date DATE NOT NULL,
@@ -58,40 +58,40 @@ CREATE TABLE transxchange_service (
     destination TEXT NOT NULL
 );
 
-CREATE TABLE line (
+CREATE TABLE lines (
     line_id TEXT PRIMARY KEY,
-    service_code TEXT NOT NULL REFERENCES transxchange_service (service_code),
+    service_code TEXT NOT NULL REFERENCES transxchange_services (service_code),
     line_name TEXT NOT NULL
 );
 
-CREATE TABLE journey_pattern (
+CREATE TABLE journey_patterns (
     journey_pattern_id TEXT PRIMARY KEY,
-    service_code TEXT NOT NULL REFERENCES transxchange_service (service_code),
-    journey_pattern_section_id TEXT NOT NULL REFERENCES journey_pattern_section (journey_pattern_section_id),
+    service_code TEXT NOT NULL REFERENCES transxchange_services (service_code),
+    journey_pattern_section_id TEXT NOT NULL REFERENCES journey_pattern_sections (journey_pattern_section_id),
     direction TEXT NOT NULL
 );
 
-CREATE TABLE vehicle_journey (
+CREATE TABLE vehicle_journeys (
     vehicle_journey_code TEXT PRIMARY KEY,
-    service_code TEXT NOT NULL REFERENCES transxchange_service (service_code),
-    line_id TEXT NOT NULL REFERENCES line (line_id),
-    journey_pattern_id TEXT NOT NULL REFERENCES journey_pattern (journey_pattern_id),
-    operator_id TEXT NOT NULL REFERENCES operator (operator_id),
+    service_code TEXT NOT NULL REFERENCES transxchange_services (service_code),
+    line_id TEXT NOT NULL REFERENCES lines (line_id),
+    journey_pattern_id TEXT NOT NULL REFERENCES journey_patterns (journey_pattern_id),
+    operator_id TEXT NOT NULL REFERENCES operators (operator_id),
     days_of_week day_of_week[] NOT NULL,
     departure_time TIME NOT NULL,
     note TEXT NULL,
     note_code TEXT NULL
 );
 
-CREATE TABLE day_of_operation (
-  vehicle_journey_code TEXT NOT NULL REFERENCES vehicle_journey (vehicle_journey_code),
+CREATE TABLE days_of_operation (
+  vehicle_journey_code TEXT NOT NULL REFERENCES vehicle_journeys (vehicle_journey_code),
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   PRIMARY KEY(vehicle_journey_code, start_date, end_date)
 );
 
-CREATE TABLE day_of_non_operation (
-  vehicle_journey_code TEXT NOT NULL REFERENCES vehicle_journey (vehicle_journey_code),
+CREATE TABLE days_of_non_operation (
+  vehicle_journey_code TEXT NOT NULL REFERENCES vehicle_journeys (vehicle_journey_code),
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   PRIMARY KEY(vehicle_journey_code, start_date, end_date)

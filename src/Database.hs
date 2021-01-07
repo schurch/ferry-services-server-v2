@@ -27,12 +27,14 @@ import           Data.String                    ( fromString )
 import           Data.UUID                      ( UUID )
 import           Database.PostgreSQL.Simple     ( Connection
                                                 , execute
+                                                , execute_
                                                 , executeMany
                                                 , query
                                                 , query_
                                                 , close
                                                 , connectPostgreSQL
                                                 , Only(Only)
+                                                , withTransaction
                                                 )
 import           Database.PostgreSQL.Simple.SqlQQ
                                                 ( sql )
@@ -202,20 +204,39 @@ deleteInstallationServicesWithID installationID =
 
 updateTransxchangeData :: MonadIO m => TransXChangeData -> m ()
 updateTransxchangeData (TransXChangeData stopPoints routeSections routes journeyPatternSections operators services vehicleJourneys)
-  = do
-    void $ withConnection $ \connection -> do
-      insertStopPoints connection stopPoints
-      insertRouteSections connection routeSections
-      insertRoutes connection routes
-      insertJourneyPatternSections connection journeyPatternSections
-      insertOperators connection operators
-      insertServices connection services
-      insertVehicleJourneys connection vehicleJourneys
+  = void $ withConnection $ \connection -> withTransaction connection $ do
+    insertStopPoints connection stopPoints
+    insertRouteSections connection routeSections
+    insertRoutes connection routes
+    insertJourneyPatternSections connection journeyPatternSections
+    insertOperators connection operators
+    insertServices connection services
+    insertVehicleJourneys connection vehicleJourneys
  where
+  deleteOldData :: Connection -> IO ()
+  deleteOldData connection = do
+    void $ execute_
+      connection
+      [sql| 
+        DELETE FROM days_of_non_operation;
+        DELETE FROM days_of_operation;
+        DELETE FROM vehicle_journeys;
+        DELETE FROM journey_patterns;
+        DELETE FROM lines;
+        DELETE FROM transxchange_services;
+        DELETE FROM operators;
+        DELETE FROM journey_pattern_timing_links;
+        DELETE FROM journey_pattern_sections;
+        DELETE FROM routes;
+        DELETE FROM route_links;
+        DELETE FROM route_sections;
+        DELETE FROM stop_points;
+      |]
+
   insertStopPoints :: Connection -> [AnnotatedStopPointRef] -> IO ()
   insertStopPoints connection stopPoints = do
     let statement = [sql| 
-                      INSERT INTO stop_point (stop_point_id, common_name) 
+                      INSERT INTO stop_points (stop_point_id, common_name) 
                       VALUES (?,?)
                       ON CONFLICT (stop_point_id) DO UPDATE 
                         SET common_name = excluded.common_name
@@ -228,7 +249,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertRouteSections :: Connection -> [RouteSection] -> IO ()
   insertRouteSections connection routeSections = do
     let statement = [sql| 
-                      INSERT INTO route_section (route_section_id) 
+                      INSERT INTO route_sections (route_section_id) 
                       VALUES (?)
                       ON CONFLICT (route_section_id) DO NOTHING
                     |]
@@ -242,7 +263,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertRouteLinks :: Connection -> String -> [RouteLink] -> IO ()
   insertRouteLinks connection routeSectionID routeLinks = do
     let statement = [sql| 
-                      INSERT INTO route_link (route_link_id, route_section_id, from_stop_point, to_stop_point, route_direction) 
+                      INSERT INTO route_links (route_link_id, route_section_id, from_stop_point, to_stop_point, route_direction) 
                       VALUES (?, ?, ?, ?, ?)
                       ON CONFLICT (route_link_id) DO UPDATE 
                         SET route_section_id = excluded.route_section_id,
@@ -260,7 +281,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertRoutes :: Connection -> [Route] -> IO ()
   insertRoutes connection routes = do
     let statement = [sql| 
-                      INSERT INTO route (route_id, route_description, route_section_id) 
+                      INSERT INTO routes (route_id, route_description, route_section_id) 
                       VALUES (?, ?, ?)
                       ON CONFLICT (route_id) DO UPDATE 
                         SET route_description = excluded.route_description,
@@ -276,7 +297,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertJourneyPatternSections :: Connection -> [JourneyPatternSection] -> IO ()
   insertJourneyPatternSections connection journeyPatternSections = do
     let statement = [sql| 
-                      INSERT INTO journey_pattern_section (journey_pattern_section_id) 
+                      INSERT INTO journey_pattern_sections (journey_pattern_section_id) 
                       VALUES (?)
                       ON CONFLICT (journey_pattern_section_id) DO NOTHING
                     |]
@@ -297,7 +318,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertJourneyPatternTimingLinks connection journeyPatterSectionID timingLinks
     = do
       let statement = [sql| 
-                        INSERT INTO journey_pattern_timing_link (
+                        INSERT INTO journey_pattern_timing_links (
                           journey_pattern_timing_link_id, 
                           journey_pattern_section_id, 
                           from_stop_point, 
@@ -341,7 +362,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertOperators :: Connection -> [Operator] -> IO ()
   insertOperators connection operators = do
     let statement = [sql| 
-                      INSERT INTO operator (operator_id, national_operator_code, operator_code, operator_short_name) 
+                      INSERT INTO operators (operator_id, national_operator_code, operator_code, operator_short_name) 
                       VALUES (?, ?, ?, ?)
                       ON CONFLICT (operator_id) DO UPDATE 
                         SET national_operator_code = excluded.national_operator_code,
@@ -359,7 +380,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertServices :: Connection -> [TransxchangeTypes.Service] -> IO ()
   insertServices connection services = do
     let statement = [sql| 
-                      INSERT INTO transxchange_service (service_code, operator_id, mode, description, start_date, end_date, origin, destination) 
+                      INSERT INTO transxchange_services (service_code, operator_id, mode, description, start_date, end_date, origin, destination) 
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                       ON CONFLICT (service_code) DO UPDATE 
                         SET operator_id = excluded.operator_id,
@@ -394,7 +415,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertLines :: Connection -> String -> [Line] -> IO ()
   insertLines connection serviceCode lines = do
     let statement = [sql| 
-                      INSERT INTO line (line_id, service_code, line_name) 
+                      INSERT INTO lines (line_id, service_code, line_name) 
                       VALUES (?, ?, ?)
                       ON CONFLICT (line_id) DO UPDATE 
                         SET service_code = excluded.service_code,
@@ -407,7 +428,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertJourneyPatterns :: Connection -> String -> [JourneyPattern] -> IO ()
   insertJourneyPatterns connection serviceCode journeyPatterns = do
     let statement = [sql| 
-                      INSERT INTO journey_pattern (journey_pattern_id, service_code, journey_pattern_section_id, direction) 
+                      INSERT INTO journey_patterns (journey_pattern_id, service_code, journey_pattern_section_id, direction) 
                       VALUES (?, ?, ?, ?)
                       ON CONFLICT (journey_pattern_id) DO UPDATE 
                         SET service_code = excluded.service_code,
@@ -429,7 +450,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertVehicleJourneys :: Connection -> [VehicleJourney] -> IO ()
   insertVehicleJourneys connection vehicleJourneys = do
     let statement = [sql| 
-                      INSERT INTO vehicle_journey (vehicle_journey_code, service_code, line_id, journey_pattern_id, operator_id, days_of_week, departure_time, note, note_code) 
+                      INSERT INTO vehicle_journeys (vehicle_journey_code, service_code, line_id, journey_pattern_id, operator_id, days_of_week, departure_time, note, note_code) 
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                       ON CONFLICT (vehicle_journey_code) DO UPDATE 
                         SET service_code = excluded.service_code,
@@ -470,7 +491,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertDayOfOperation :: Connection -> String -> [DateRange] -> IO ()
   insertDayOfOperation connection vehicleJourneyCode daysOfOperation = do
     let statement = [sql| 
-                      INSERT INTO day_of_operation (vehicle_journey_code, start_date, end_date) 
+                      INSERT INTO days_of_operation (vehicle_journey_code, start_date, end_date) 
                       VALUES (?, ?, ?)
                       ON CONFLICT (vehicle_journey_code, start_date, end_date) DO NOTHING
                     |]
@@ -482,7 +503,7 @@ updateTransxchangeData (TransXChangeData stopPoints routeSections routes journey
   insertDayOfNonOperation :: Connection -> String -> [DateRange] -> IO ()
   insertDayOfNonOperation connection vehicleJourneyCode daysOfOperation = do
     let statement = [sql| 
-                      INSERT INTO day_of_non_operation (vehicle_journey_code, start_date, end_date) 
+                      INSERT INTO days_of_non_operation (vehicle_journey_code, start_date, end_date) 
                       VALUES (?, ?, ?)
                       ON CONFLICT (vehicle_journey_code, start_date, end_date) DO NOTHING
                     |]
