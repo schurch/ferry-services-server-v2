@@ -315,7 +315,7 @@ getLocationLookup = do
   serviceLocations <- liftIO DB.getServiceLocations
   return
     $ M.fromListWith (++)
-    $ [ (serviceID, [LocationResponse name latitude longitude])
+    $ [ (serviceID, [LocationResponse locationID name latitude longitude])
       | (ServiceLocation serviceID locationID name latitude longitude) <-
         serviceLocations
       ]

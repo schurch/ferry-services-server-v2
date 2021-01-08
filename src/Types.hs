@@ -188,7 +188,8 @@ instance FromJSON AddServiceRequest where
   parseJSON = genericParseJSON $ jsonOptions 17
 
 data LocationResponse = LocationResponse {
-    locationResponseName :: String
+    locationResponseID :: Int
+  , locationResponseName :: String
   , locationResponseLatitude :: Scientific
   , locationResponseLongitude :: Scientific
 } deriving (Generic, Show)
