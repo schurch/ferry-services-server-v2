@@ -10,8 +10,7 @@ module Lib
   , getServicesForInstallation
   , fetchStatusesAndNotify
   , AddServiceRequest(..)
-  )
-where
+  ) where
 
 import           Control.Monad                  ( void
                                                 , when
@@ -51,6 +50,7 @@ import           Network.HTTP.Headers           ( Header(..)
                                                 , HeaderName(..)
                                                 )
 import           Codec.Compression.GZip         ( decompress )
+import           Data.Time.Calendar             ( Day )
 
 import           AWS
 import           Types
@@ -64,8 +64,8 @@ import           Debug.Trace
 -- Lookup locations for a service ID
 type ServiceLocationLookup = M.Map Int [LocationResponse]
 
-getService :: Int -> Action (Maybe ServiceResponse)
-getService serviceID = do
+getService :: Int -> Maybe Day -> Action (Maybe ServiceResponse)
+getService serviceID timetableDate = do
   service        <- DB.getService serviceID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
@@ -315,7 +315,9 @@ getLocationLookup = do
   serviceLocations <- liftIO DB.getServiceLocations
   return
     $ M.fromListWith (++)
-    $ [ (serviceID, [LocationResponse locationID name latitude longitude])
+    $ [ ( serviceID
+        , [LocationResponse locationID name latitude longitude Nothing]
+        )
       | (ServiceLocation serviceID locationID name latitude longitude) <-
         serviceLocations
       ]

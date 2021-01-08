@@ -78,6 +78,7 @@ import           System.Logger.Message          ( msg )
 import           TransxchangeParser             ( parseTransxchangeXML )
 import           Database                       ( updateTransxchangeData )
 import           TransxchangeTypes              ( TransXChangeData )
+import           Utility                        ( splitOn )
 -- import           Debug.Trace
 
 import qualified Control.Exception             as E
@@ -85,23 +86,24 @@ import qualified Data.ByteString.Char8         as C
 import qualified Data.ByteString.Lazy          as BL
 import qualified Data.Vector                   as V
 
-data FTPConnectionDetails = FTPConnectionDetails {
-    address :: String
+data FTPConnectionDetails = FTPConnectionDetails
+  { address  :: String
   , username :: String
   , password :: String
-}
+  }
 
-data ServiceReportService = ServiceReportService {
-    rowId :: !Int
-  , regionCode :: !String
-  , regionOperatorCode :: !String
-  , serviceCode :: !String
-  , lineName :: !String
-  , description :: !String
-  , startDate :: !String
+data ServiceReportService = ServiceReportService
+  { rowId                :: !Int
+  , regionCode           :: !String
+  , regionOperatorCode   :: !String
+  , serviceCode          :: !String
+  , lineName             :: !String
+  , description          :: !String
+  , startDate            :: !String
   , nationalOperatorCode :: !String
-  , dataSource :: !String
-} deriving (Generic, Show)
+  , dataSource           :: !String
+  }
+  deriving (Generic, Show)
 
 instance FromNamedRecord ServiceReportService where
   parseNamedRecord r =
@@ -247,7 +249,7 @@ sendMessage logger message socket = do
 extractAddressAndPort :: String -> (String, String)
 extractAddressAndPort response =
   let [h1, h2, h3, h4, p1, p2] =
-          splitOn ',' . init . drop 1 . dropWhile (/= '(') . trim $ response
+        splitOn ',' . init . drop 1 . dropWhile (/= '(') . trim $ response
       host  = intercalate "." [h1, h2, h3, h4]
       port1 = read p1
       port2 = read p2
@@ -273,9 +275,3 @@ runTCPClient host port client = withSocketsDo $ do
   openSocket :: AddrInfo -> IO Socket
   openSocket = \addr ->
     socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
-
-splitOn :: (Foldable t, Eq a) => a -> t a -> [[a]]
-splitOn delimiter = foldr f [[]]
- where
-  f c l@(x : xs) | c == delimiter = [] : l
-                 | otherwise      = (c : x) : xs

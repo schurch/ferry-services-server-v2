@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Main where
 
@@ -49,6 +50,7 @@ import           Data.UUID                      ( UUID
                                                 )
 import           Data.Text.Lazy                 ( Text
                                                 , toStrict
+                                                , unpack
                                                 )
 import           Data.Default                   ( def )
 import           System.Log.FastLogger.Internal ( LogStr
@@ -59,6 +61,8 @@ import           Network.Wai.Middleware.Static  ( staticPolicy
                                                 , isNotAbsolute
                                                 , addBase
                                                 )
+import           Data.Time.Calendar             ( Day )
+import           Utility                        ( stringToDay )
 
 import qualified Data.HashMap.Strict           as HM
 
@@ -83,8 +87,9 @@ app requestLogger = do
     setHeader "Access-Control-Allow-Origin" "*"
     json services
   get "/api/services/:serviceID" $ do
-    serviceID <- param "serviceID"
-    service   <- getService serviceID
+    serviceID     <- param "serviceID"
+    timetableDate <- param "timetableDate" `rescue` (\_ -> return Nothing)
+    service       <- getService serviceID timetableDate
     setHeader "Access-Control-Allow-Origin" "*"
     json service
   post "/api/installations/:installationID" $ do
@@ -127,7 +132,7 @@ recordUpdate
   :: String -> Maybe Request -> SomeException -> SentryRecord -> SentryRecord
 recordUpdate _   Nothing        exception record = record
 recordUpdate env (Just request) exception record = record
-  { srServerName  = unpack <$> requestHeaderHost request
+  { srServerName  = Data.ByteString.Char8.unpack <$> requestHeaderHost request
   , srEnvironment = Just env
   , srExtra       = HM.fromList
     [ ("method"      , (String $ decodeUtf8 $ requestMethod request))
@@ -138,6 +143,9 @@ recordUpdate env (Just request) exception record = record
 
 instance Parsable UUID where
   parseParam = maybeToEither "Error parsing UUID" . fromText . toStrict
+
+instance Parsable (Maybe Day) where
+  parseParam = Right . stringToDay . Data.Text.Lazy.unpack
 
 maybeToEither :: Text -> Maybe a -> Either Text a
 maybeToEither errorMessage Nothing      = Left errorMessage

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e86b42160bc5213b993c626ff249e8fec8fab99a27d46dfd1834a7e8d6bd06e5
+-- hash: 322ba6ba1c8fad4346d26bc692a1e691ba73457813b254f97d7aff38ce8bf2c0
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -32,6 +32,7 @@ library
       TransxchangeParser
       TransxchangeTypes
       Types
+      Utility
   other-modules:
       Paths_ferry_services_server
   hs-source-dirs:
@@ -94,6 +95,7 @@ executable ferry-services-server-exe
     , raven-haskell
     , scotty
     , text
+    , time
     , tinylog
     , unordered-containers
     , uuid

@@ -64,6 +64,7 @@ executables:
     - mtl
     - raven-haskell
     - scotty
+    - time
     - tinylog
     - text
     - unordered-containers

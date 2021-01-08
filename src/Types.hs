@@ -13,7 +13,10 @@ import           Data.Aeson                     ( genericParseJSON
                                                 , defaultOptions
                                                 , genericToJSON
                                                 , FromJSON(parseJSON)
-                                                , Options(fieldLabelModifier)
+                                                , Options
+                                                  ( fieldLabelModifier
+                                                  , omitNothingFields
+                                                  )
                                                 , ToJSON(toJSON)
                                                 )
 import           Data.Char                      ( toLower )
@@ -37,10 +40,13 @@ import           System.Logger.Class            ( MonadLogger
 import           Web.Scotty.Trans               ( ScottyT
                                                 , ActionT
                                                 )
+import           Data.Time.LocalTime            ( TimeOfDay )
 import           GHC.Generics                   ( Generic )
 
 -- Web server
-data Env = Env { logger :: Logger }
+data Env = Env
+  { logger :: Logger
+  }
 
 type Scotty = ScottyT Text (ReaderT Env IO) ()
 type Action = ActionT Text (ReaderT Env IO)
@@ -52,40 +58,45 @@ instance MonadLogger Types.Action where
 
 -- Push payloads
 -- Apple
-data APSPayload = APSPayload {
-    apsPayloadAps :: APSPayloadBody
+data APSPayload = APSPayload
+  { apsPayloadAps       :: APSPayloadBody
   , apsPayloadServiceID :: Int
-} deriving (Generic, Show)
+  }
+  deriving (Generic, Show)
 
 instance ToJSON APSPayload where
   toJSON = genericToJSON $ jsonOptions 10
 
-data APSPayloadBody = APSPayloadBody {
-    apsPayloadBodyAlert :: String
-} deriving (Generic, Show)
+data APSPayloadBody = APSPayloadBody
+  { apsPayloadBodyAlert :: String
+  }
+  deriving (Generic, Show)
 
 instance ToJSON APSPayloadBody where
   toJSON = genericToJSON $ jsonOptions 14
 
 -- Google
-data CGMPayload = CGMPayload {
-    gcmPayloadNotification :: GCMPaylodNotification
-  , gcmPayloadData :: GCMPayloadData
-} deriving (Generic, Show)
+data CGMPayload = CGMPayload
+  { gcmPayloadNotification :: GCMPaylodNotification
+  , gcmPayloadData         :: GCMPayloadData
+  }
+  deriving (Generic, Show)
 
 instance ToJSON CGMPayload where
   toJSON = genericToJSON $ jsonOptions 10
 
-data GCMPaylodNotification = GCMPaylodNotification {
-  gcmPaylodNotificationTitle :: String
-} deriving (Generic, Show)
+data GCMPaylodNotification = GCMPaylodNotification
+  { gcmPaylodNotificationTitle :: String
+  }
+  deriving (Generic, Show)
 
 instance ToJSON GCMPaylodNotification where
   toJSON = genericToJSON $ jsonOptions 21
 
-data GCMPayloadData = GCMPayloadData {
-  gcmPayloadDataServiceID :: Int
-} deriving (Generic, Show)
+data GCMPayloadData = GCMPayloadData
+  { gcmPayloadDataServiceID :: Int
+  }
+  deriving (Generic, Show)
 
 instance ToJSON GCMPayloadData where
   toJSON = genericToJSON $ jsonOptions 14
@@ -127,95 +138,115 @@ instance FromField DeviceType where
   fromField field byteString = toEnum <$> fromField field byteString
 
 -- Database Types
-data Service = Service {
-    serviceID :: Int
-  , serviceSortOrder :: Int
-  , serviceArea :: String
-  , serviceRoute :: String
-  , serviceStatus :: ServiceStatus
-  , serviceAdditionalInfo :: Maybe String
+data Service = Service
+  { serviceID               :: Int
+  , serviceSortOrder        :: Int
+  , serviceArea             :: String
+  , serviceRoute            :: String
+  , serviceStatus           :: ServiceStatus
+  , serviceAdditionalInfo   :: Maybe String
   , serviceDisruptionReason :: Maybe String
-  , serviceLastUpdatedDate :: Maybe UTCTime
-  , serviceUpdated :: UTCTime
-} deriving (Generic, Show, ToRow, FromRow)
+  , serviceLastUpdatedDate  :: Maybe UTCTime
+  , serviceUpdated          :: UTCTime
+  }
+  deriving (Generic, Show, ToRow, FromRow)
 
-data Installation = Installation {
-    installationID :: UUID
+data Installation = Installation
+  { installationID          :: UUID
   , installationDeviceToken :: String
-  , installationDeviceType :: DeviceType
+  , installationDeviceType  :: DeviceType
   , installationEndpointARN :: String
   , installationpUpatedDate :: UTCTime
-} deriving (Generic, Show, ToRow, FromRow)
+  }
+  deriving (Generic, Show, ToRow, FromRow)
 
-data ServiceLocation = ServiceLocation {
-    serviceLocationServiceID :: Int
+data ServiceLocation = ServiceLocation
+  { serviceLocationServiceID  :: Int
   , serviceLocationLocationID :: Int
-  , serviceLocationName :: String
-  , serviceLocationLatitude :: Scientific
-  , serviceLocationLonitude :: Scientific
-} deriving (Generic, Show, ToRow, FromRow)
+  , serviceLocationName       :: String
+  , serviceLocationLatitude   :: Scientific
+  , serviceLocationLonitude   :: Scientific
+  }
+  deriving (Generic, Show, ToRow, FromRow)
 
 -- API Types
-data ServiceResponse = ServiceResponse {
-    serviceResponseServiceID :: Int
-  , serviceResponseSortOrder :: Int
-  , serviceResponseArea :: String
-  , serviceResponseRoute :: String
-  , serviceResponseStatus :: ServiceStatus
-  , serviceResponseLocations :: [LocationResponse]
-  , serviceResponseAdditionalInfo :: Maybe String
+data ServiceResponse = ServiceResponse
+  { serviceResponseServiceID        :: Int
+  , serviceResponseSortOrder        :: Int
+  , serviceResponseArea             :: String
+  , serviceResponseRoute            :: String
+  , serviceResponseStatus           :: ServiceStatus
+  , serviceResponseLocations        :: [LocationResponse]
+  , serviceResponseAdditionalInfo   :: Maybe String
   , serviceResponseDisruptionReason :: Maybe String
-  , serviceResponseLastUpdatedDate :: Maybe UTCTime
-  , serviceResponseUpdated :: UTCTime
-} deriving (Generic, Show)
+  , serviceResponseLastUpdatedDate  :: Maybe UTCTime
+  , serviceResponseUpdated          :: UTCTime
+  }
+  deriving (Generic, Show)
 
 instance ToJSON ServiceResponse where
   toJSON = genericToJSON $ jsonOptions 15
 
-data CreateInstallationRequest = CreateInstallationRequest {
-    createInstallationRequestDeviceToken :: String
-  , createInstallationRequestDeviceType :: DeviceType
-} deriving (Generic, Show)
+data CreateInstallationRequest = CreateInstallationRequest
+  { createInstallationRequestDeviceToken :: String
+  , createInstallationRequestDeviceType  :: DeviceType
+  }
+  deriving (Generic, Show)
 
 instance FromJSON CreateInstallationRequest where
   parseJSON = genericParseJSON $ jsonOptions 25
 
-data AddServiceRequest = AddServiceRequest {
-    addServiceRequestServiceID :: Int
-} deriving (Generic, Show)
+data AddServiceRequest = AddServiceRequest
+  { addServiceRequestServiceID :: Int
+  }
+  deriving (Generic, Show)
 
 instance FromJSON AddServiceRequest where
   parseJSON = genericParseJSON $ jsonOptions 17
 
-data LocationResponse = LocationResponse {
-    locationResponseID :: Int
-  , locationResponseName :: String
-  , locationResponseLatitude :: Scientific
-  , locationResponseLongitude :: Scientific
-} deriving (Generic, Show)
+data LocationResponse = LocationResponse
+  { locationResponseID         :: Int
+  , locationResponseName       :: String
+  , locationResponseLatitude   :: Scientific
+  , locationResponseLongitude  :: Scientific
+  , locationResponseDepartures :: Maybe [DepatureReponse]
+  }
+  deriving (Generic, Show)
 
 instance ToJSON LocationResponse where
   toJSON = genericToJSON $ jsonOptions 16
 
+data DepatureReponse = DepatureReponse
+  { depatureReponseDestination :: LocationResponse
+  , depatureReponseTime        :: TimeOfDay
+  }
+  deriving (Generic, Show)
+
+instance ToJSON DepatureReponse where
+  toJSON = genericToJSON $ jsonOptions 15
+
 jsonOptions :: Int -> Data.Aeson.Options
-jsonOptions prefixLength =
-  defaultOptions { fieldLabelModifier = camelTo2 '_' . drop prefixLength }
+jsonOptions prefixLength = defaultOptions
+  { fieldLabelModifier = camelTo2 '_' . drop prefixLength
+  , omitNothingFields  = True
+  }
 
 -- Scraper Types
-data AjaxServiceDetails = AjaxServiceDetails {
-    ajaxServiceDetailsReason :: String
-  , ajaxServiceDetailsImage :: String
-  , ajaxServiceDetailsDestName :: String
-  , ajaxServiceDetailsCode :: String
+data AjaxServiceDetails = AjaxServiceDetails
+  { ajaxServiceDetailsReason       :: String
+  , ajaxServiceDetailsImage        :: String
+  , ajaxServiceDetailsDestName     :: String
+  , ajaxServiceDetailsCode         :: String
   , ajaxServiceDetailsInfoIncluded :: String
-  , ajaxServiceDetailsInfoMsg :: Maybe String
-  , ajaxServiceDetailsReported :: String
-  , ajaxServiceDetailsId :: String
-  , ajaxServiceDetailsWebDetail :: String
-  , ajaxServiceDetailsUpdated :: String
-  , ajaxServiceDetailsRouteName :: String
-  , ajaxServiceDetailsStatus :: String
-} deriving (Generic, Show)
+  , ajaxServiceDetailsInfoMsg      :: Maybe String
+  , ajaxServiceDetailsReported     :: String
+  , ajaxServiceDetailsId           :: String
+  , ajaxServiceDetailsWebDetail    :: String
+  , ajaxServiceDetailsUpdated      :: String
+  , ajaxServiceDetailsRouteName    :: String
+  , ajaxServiceDetailsStatus       :: String
+  }
+  deriving (Generic, Show)
 
 instance FromJSON AjaxServiceDetails where
   parseJSON = genericParseJSON

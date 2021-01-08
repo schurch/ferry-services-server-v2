@@ -2,14 +2,14 @@
 
 module TransxchangeParser
   ( parseTransxchangeXML
-  )
-where
+  ) where
 
-import           Data.Maybe                     ( fromMaybe )
+import           Data.Maybe                     ( fromMaybe
+                                                , fromJust
+                                                )
 import           Data.String                    ( IsString(..) )
-import           Data.Time                      ( UTCTime
-                                                , defaultTimeLocale
-                                                , parseTimeOrError
+import           Data.Time.Calendar             ( Day
+                                                , fromGregorian
                                                 )
 import           Text.XML.Light                 ( QName(QName, qName)
                                                 , parseXML
@@ -21,6 +21,7 @@ import           Text.XML.Light                 ( QName(QName, qName)
                                                 , strContent
                                                 , Element(elName)
                                                 )
+import           Utility                        ( stringToDay )
 import           TransxchangeTypes
 -- import           Debug.Trace
 
@@ -48,9 +49,6 @@ attr name = QName name Nothing Nothing
 
 attrValue :: String -> Element -> String
 attrValue name element = fromMaybe "" $ findAttr (attr name) element
-
-parseXMLDate :: String -> UTCTime
-parseXMLDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%d"
 
 -- Stop Points
 getStopPoints :: Element -> Maybe [AnnotatedStopPointRef]
@@ -311,6 +309,12 @@ getVehicleJourneys element = do
 
 elementToDateRange :: Element -> DateRange
 elementToDateRange element = DateRange
-  { startDate = parseXMLDate . strContent <$> findChild "StartDate" element
-  , endDate   = parseXMLDate . strContent <$> findChild "EndDate" element
+  { startDate = fromJust
+                .   stringToDay
+                .   strContent
+                <$> findChild "StartDate" element
+  , endDate   = fromJust
+                .   stringToDay
+                .   strContent
+                <$> findChild "EndDate" element
   }

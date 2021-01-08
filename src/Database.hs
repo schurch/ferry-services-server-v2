@@ -14,8 +14,7 @@ module Database
   , getServiceLocations
   , deleteInstallationWithID
   , updateTransxchangeData
-  )
-where
+  ) where
 
 import           Control.Monad                  ( void
                                                 , forM_
@@ -50,6 +49,7 @@ import           Types                          ( ServiceLocation
                                                 , DeviceType
                                                 )
 import           Data.Time.LocalTime            ( TimeOfDay(..) )
+import           Utility                        ( splitOn )
 import           TransxchangeTypes
 
 connectionString :: IO ByteString
@@ -143,7 +143,8 @@ getInstallationWithID installationID = do
     (Only installationID)
   return $ listToMaybe results
 
-getIntererestedInstallationsForServiceID :: MonadIO m => Int -> m [Installation]
+getIntererestedInstallationsForServiceID
+  :: MonadIO m => Int -> m [Installation]
 getIntererestedInstallationsForServiceID serviceID =
   withConnection $ \connection -> query
     connection
@@ -300,7 +301,8 @@ updateSingleTransxchangeData connection (TransXChangeData stopPoints routeSectio
             <$> routes
     void $ executeMany connection statement values
 
-  insertJourneyPatternSections :: Connection -> [JourneyPatternSection] -> IO ()
+  insertJourneyPatternSections
+    :: Connection -> [JourneyPatternSection] -> IO ()
   insertJourneyPatternSections connection journeyPatternSections = do
     let statement = [sql| 
                       INSERT INTO journey_pattern_sections (journey_pattern_section_id) 
@@ -524,9 +526,3 @@ updateSingleTransxchangeData connection (TransXChangeData stopPoints routeSectio
     in  TimeOfDay (read $ head timeParts)
                   (read $ timeParts !! 1)
                   (read $ timeParts !! 2)
-
-splitOn :: (Foldable t, Eq a) => a -> t a -> [[a]]
-splitOn delimiter = foldr f [[]]
- where
-  f c l@(x : xs) | c == delimiter = [] : l
-                 | otherwise      = (c : x) : xs

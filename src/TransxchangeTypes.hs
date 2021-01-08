@@ -1,112 +1,129 @@
 module TransxchangeTypes where
 
-import           Data.Time                      ( UTCTime )
+import           Data.Time.Calendar             ( Day )
 import           Database.PostgreSQL.Simple.ToField
+                                                ( Action(Plain)
+                                                , ToField(..)
+                                                )
 import           Data.Binary.Builder            ( putStringUtf8 )
 import           Data.Char                      ( toLower )
 
 data TransXChangeData = TransXChangeData
-  { stopPoints :: [AnnotatedStopPointRef]
-  , routeSections :: [RouteSection]
-  , routes :: [Route]
+  { stopPoints             :: [AnnotatedStopPointRef]
+  , routeSections          :: [RouteSection]
+  , routes                 :: [Route]
   , journeyPatternSections :: [JourneyPatternSection]
-  , operators :: [Operator]
-  , services :: [Service]
-  , vehicleJourneys :: [VehicleJourney]
-  } deriving (Show)
+  , operators              :: [Operator]
+  , services               :: [Service]
+  , vehicleJourneys        :: [VehicleJourney]
+  }
+  deriving Show
 
 data AnnotatedStopPointRef = AnnotatedStopPointRef
   { stopPointRef :: String
-  , commonName :: String
-  } deriving (Show)
+  , commonName   :: String
+  }
+  deriving Show
 
 data RouteSection = RouteSection
   { routeSectionId :: String
-  , routeLinks :: [RouteLink]
-  } deriving (Show)
+  , routeLinks     :: [RouteLink]
+  }
+  deriving Show
 
 data RouteLink = RouteLink
-  { routeLinkId :: String
+  { routeLinkId      :: String
   , fromStopPointRef :: String
-  , toStopPointRef :: String
-  , routeDirection :: String
-  } deriving (Show)
+  , toStopPointRef   :: String
+  , routeDirection   :: String
+  }
+  deriving Show
 
 data Route = Route
-  { routeId :: String
+  { routeId          :: String
   , routeDescription :: String
-  , routeSectionRef :: String
-  } deriving (Show)
+  , routeSectionRef  :: String
+  }
+  deriving Show
 
 data JourneyPatternSection = JourneyPatternSection
-  { journeyPatterSectionId :: String
+  { journeyPatterSectionId    :: String
   , journeyPatternTimingLinks :: [JourneyPatternTimingLink]
-  } deriving (Show)
+  }
+  deriving Show
 
 data JourneyPatternTimingLink = JourneyPatternTimingLink
-  { journeyPatternTimingLinkId :: String
-  , journeyPatternFromWaitTime :: String
+  { journeyPatternTimingLinkId     :: String
+  , journeyPatternFromWaitTime     :: String
   , journeyPatternFromStopPointRef :: String
   , journeyPatternFromTimingStatus :: String
-  , journeyPatternToStopPointsRef :: String
-  , journeyPatternToTimingStatus :: String
-  , routeLinkRef :: String
-  , journeyDirection :: String
-  , runTime :: String
-  } deriving (Show)
+  , journeyPatternToStopPointsRef  :: String
+  , journeyPatternToTimingStatus   :: String
+  , routeLinkRef                   :: String
+  , journeyDirection               :: String
+  , runTime                        :: String
+  }
+  deriving Show
 
 data Operator = Operator
-  { operatorId :: String
+  { operatorId           :: String
   , nationalOperatorCode :: String
-  , operatorCode :: String
-  , operatorShortName :: String
-  } deriving (Show)
+  , operatorCode         :: String
+  , operatorShortName    :: String
+  }
+  deriving Show
 
 data Service = Service
-  { serviceCode :: String
-  , lines :: [Line]
-  , operatingPeriod :: DateRange
+  { serviceCode           :: String
+  , lines                 :: [Line]
+  , operatingPeriod       :: DateRange
   , registeredOperatorRef :: String
-  , mode :: String
-  , description :: String
-  , standardService :: StandardService
-  } deriving (Show)
+  , mode                  :: String
+  , description           :: String
+  , standardService       :: StandardService
+  }
+  deriving Show
 
 data Line = Line
-  { lineId :: String
+  { lineId   :: String
   , lineName :: String
-  } deriving (Show)
+  }
+  deriving Show
 
 data StandardService = StandardService
-  { origin :: String
-  , destination :: String
+  { origin          :: String
+  , destination     :: String
   , journeyPatterns :: [JourneyPattern]
-  } deriving (Show)
+  }
+  deriving Show
 
 data JourneyPattern = JourneyPattern
-  { journeyPatternId :: String
-  , journeyPatternDirection :: String
+  { journeyPatternId         :: String
+  , journeyPatternDirection  :: String
   , journeyPatternSectionRef :: String
-  } deriving (Show)
+  }
+  deriving Show
 
 data VehicleJourney = VehicleJourney
-  { operatorRef :: String
-  , vehicleJourneyCode :: String
-  , serviceRef :: String
-  , lineRef :: String
-  , journeyPatternRef :: String
-  , departureTime :: String
-  , daysOfWeek :: [WeekDay]
-  , specialDaysOfOperation :: [DateRange]
+  { operatorRef               :: String
+  , vehicleJourneyCode        :: String
+  , serviceRef                :: String
+  , lineRef                   :: String
+  , journeyPatternRef         :: String
+  , departureTime             :: String
+  , daysOfWeek                :: [WeekDay]
+  , specialDaysOfOperation    :: [DateRange]
   , specialDaysOfNonOperation :: [DateRange]
-  , note :: String
-  , noteCode :: String
-  } deriving (Show)
+  , note                      :: String
+  , noteCode                  :: String
+  }
+  deriving Show
 
 data DateRange = DateRange
-  { startDate :: Maybe UTCTime
-  , endDate :: Maybe UTCTime
-  } deriving (Show)
+  { startDate :: Maybe Day
+  , endDate   :: Maybe Day
+  }
+  deriving Show
 
 data WeekDay
   = Monday
