@@ -228,7 +228,6 @@ updateTransxchangeData transxchangeData = withConnection $ \connection ->
         DELETE FROM stop_points;
       |]
 
-
 updateSingleTransxchangeData :: Connection -> TransXChangeData -> IO ()
 updateSingleTransxchangeData connection (TransXChangeData stopPoints routeSections routes journeyPatternSections operators services vehicleJourneys)
   = do

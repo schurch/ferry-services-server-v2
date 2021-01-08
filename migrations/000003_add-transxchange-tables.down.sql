@@ -13,3 +13,6 @@ DROP TABLE IF EXISTS route_sections;
 DROP TABLE IF EXISTS stop_points;
 
 DROP TYPE IF EXISTS day_of_week;
+
+ALTER TABLE services DROP COLUMN transxchange_service_code;
+ALTER TABLE locations DROP COLUMN stop_point_id;
