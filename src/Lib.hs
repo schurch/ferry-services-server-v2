@@ -26,7 +26,9 @@ import           Data.Maybe                     ( fromMaybe
                                                 , fromJust
                                                 , catMaybes
                                                 )
-import           Data.List                      ( find )
+import           Data.List                      ( find
+                                                , sortBy
+                                                )
 import           Data.Text.Lazy                 ( pack )
 import           Data.Time.Clock                ( UTCTime
                                                 , getCurrentTime
@@ -66,17 +68,19 @@ type ServiceLocationLookup = M.Map Int [LocationResponse]
 
 getService :: Int -> Maybe Day -> Action (Maybe ServiceResponse)
 getService serviceID timetableDate = do
-  service        <- DB.getService serviceID
-  time           <- liftIO getCurrentTime
-  locationLookup <- getLocationLookup
-  return $ serviceToServiceResponse locationLookup time <$> service
+  service   <- DB.getService serviceID
+  time      <- liftIO getCurrentTime
+  locations <- getLocationsForServiceID serviceID timetableDate
+  return $ serviceToServiceResponseWithLocations locations time <$> service
 
 getServices :: Action [ServiceResponse]
 getServices = do
   services       <- DB.getServices
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
-  return $ serviceToServiceResponse locationLookup time <$> services
+  return
+    $   serviceToServiceResponseWithLocationLookup locationLookup time
+    <$> services
 
 createInstallation
   :: UUID -> CreateInstallationRequest -> Action [ServiceResponse]
@@ -108,17 +112,39 @@ getServicesForInstallation installationID = do
   services       <- DB.getServicesForInstallation installationID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
-  return $ serviceToServiceResponse locationLookup time <$> services
+  return
+    $   serviceToServiceResponseWithLocationLookup locationLookup time
+    <$> services
 
-serviceToServiceResponse
-  :: ServiceLocationLookup -> UTCTime -> Service -> ServiceResponse
-serviceToServiceResponse locationLookup currentTime Service {..} =
+serviceToServiceResponseWithLocations
+  :: [LocationResponse] -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponseWithLocations locations currentTime Service {..} =
   ServiceResponse
     { serviceResponseServiceID        = serviceID
     , serviceResponseSortOrder        = serviceSortOrder
     , serviceResponseArea             = serviceArea
     , serviceResponseRoute            = serviceRoute
-    , serviceResponseStatus           = status
+    , serviceResponseStatus           = serviceStatusForTime currentTime
+                                                             serviceUpdated
+                                                             serviceStatus
+    , serviceResponseLocations        = locations
+    , serviceResponseAdditionalInfo   = serviceAdditionalInfo
+    , serviceResponseDisruptionReason = serviceDisruptionReason
+    , serviceResponseLastUpdatedDate  = serviceLastUpdatedDate
+    , serviceResponseUpdated          = serviceUpdated
+    }
+
+serviceToServiceResponseWithLocationLookup
+  :: ServiceLocationLookup -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponseWithLocationLookup locationLookup currentTime Service {..}
+  = ServiceResponse
+    { serviceResponseServiceID        = serviceID
+    , serviceResponseSortOrder        = serviceSortOrder
+    , serviceResponseArea             = serviceArea
+    , serviceResponseRoute            = serviceRoute
+    , serviceResponseStatus           = serviceStatusForTime currentTime
+                                                             serviceUpdated
+                                                             serviceStatus
     , serviceResponseLocations        = fromMaybe []
                                           $ M.lookup serviceID locationLookup
     , serviceResponseAdditionalInfo   = serviceAdditionalInfo
@@ -126,12 +152,12 @@ serviceToServiceResponse locationLookup currentTime Service {..} =
     , serviceResponseLastUpdatedDate  = serviceLastUpdatedDate
     , serviceResponseUpdated          = serviceUpdated
     }
- where
-  -- Unknown status if over 30 mins ago
-  status :: ServiceStatus
-  status =
-    let diff = diffUTCTime currentTime serviceUpdated
-    in  if diff > 1800 then Unknown else serviceStatus
+
+-- Unknown status if over 30 mins ago
+serviceStatusForTime :: UTCTime -> UTCTime -> ServiceStatus -> ServiceStatus
+serviceStatusForTime currentTime serviceUpdated serviceStatus =
+  let diff = diffUTCTime currentTime serviceUpdated
+  in  if diff > 1800 then Unknown else serviceStatus
 
 -- Pseudo code from AWS docs:
 -- retrieve the latest device token from the mobile operating system
@@ -309,6 +335,57 @@ fetchStatusesAndNotify logger = do
     stringToUTCTime :: String -> UTCTime
     stringToUTCTime time =
       posixSecondsToUTCTime $ fromInteger (read time) / 1000
+
+getLocationsForServiceID :: Int -> Maybe Day -> Action [LocationResponse]
+getLocationsForServiceID serviceID date = do
+  serviceLocations <- DB.getLocationsForServiceID serviceID
+  case date of
+    Just date' -> do
+      locationDepartures <- DB.getLocationDeparturesForServiceID serviceID date'
+      let departuresLookup = createDeparturesLookup locationDepartures
+      return
+        $   locationToLocationResponseWithDepartures departuresLookup
+        <$> serviceLocations
+    Nothing -> return $ locationToLocationResponse <$> serviceLocations
+ where
+  locationToLocationResponse :: Location -> LocationResponse
+  locationToLocationResponse (Location id name latitude longitude) =
+    LocationResponse id name latitude longitude Nothing
+
+  locationToLocationResponseWithDepartures
+    :: M.Map Int [DepatureReponse] -> Location -> LocationResponse
+  locationToLocationResponseWithDepartures departureLookup (Location id name latitude longitude)
+    = let
+        departures = M.lookup id departureLookup
+        sortedDepartures =
+          sortBy
+              (\a b -> compare (depatureReponseTime a) (depatureReponseTime b))
+            <$> departures
+      in
+        LocationResponse id name latitude longitude sortedDepartures
+
+  createDeparturesLookup :: [LocationDeparture] -> M.Map Int [DepatureReponse]
+  createDeparturesLookup departures =
+    M.fromListWith (++)
+      $ [ ( locationID
+          , [ DepatureReponse
+                (LocationResponse destinationLocationID
+                                  destinationLocationName
+                                  destinationLocationLatitude
+                                  destinationLocationLatitudeLongitude
+                                  Nothing
+                )
+                departureTime
+                (runtimeToSeconds departureDuration)
+            ]
+          )
+        | (LocationDeparture locationID destinationLocationID destinationLocationName destinationLocationLatitude destinationLocationLatitudeLongitude departureTime departureDuration) <-
+          departures
+        ]
+
+  runtimeToSeconds :: String -> Int
+  runtimeToSeconds runtime =
+    read . drop 2 . take (length runtime - 1) $ runtime
 
 getLocationLookup :: Action ServiceLocationLookup
 getLocationLookup = do

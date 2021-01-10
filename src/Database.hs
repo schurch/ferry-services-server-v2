@@ -11,8 +11,10 @@ module Database
   , getInstallationWithID
   , getIntererestedInstallationsForServiceID
   , saveServices
-  , getServiceLocations
   , deleteInstallationWithID
+  , getServiceLocations
+  , getLocationsForServiceID
+  , getLocationDeparturesForServiceID
   , updateTransxchangeData
   ) where
 
@@ -47,9 +49,12 @@ import           Types                          ( ServiceLocation
                                                 , Installation
                                                 , Service
                                                 , DeviceType
+                                                , LocationDeparture
+                                                , Location
                                                 )
 import           Data.Time.LocalTime            ( TimeOfDay(..) )
 import           Utility                        ( splitOn )
+import           Data.Time.Calendar             ( Day )
 import           TransxchangeTypes
 
 connectionString :: IO ByteString
@@ -175,15 +180,6 @@ saveServices services = void $ withConnection $ \connection -> executeMany
     |]
   services
 
-getServiceLocations :: MonadIO m => m [ServiceLocation]
-getServiceLocations = withConnection $ \connection -> query_
-  connection
-  [sql| 
-    SELECT sl.service_id, l.location_id, l.name, l.latitude, l.longitude
-    FROM service_locations sl
-    JOIN locations l ON l.location_id = sl.location_id 
-  |]
-
 deleteInstallationWithID :: MonadIO m => UUID -> m ()
 deleteInstallationWithID installationID = do
   deleteInstallationServicesWithID installationID
@@ -202,6 +198,104 @@ deleteInstallationServicesWithID installationID =
       DELETE FROM installation_services WHERE installation_id = ?
     |]
     (Only installationID)
+
+getServiceLocations :: MonadIO m => m [ServiceLocation]
+getServiceLocations = withConnection $ \connection -> query_
+  connection
+  [sql| 
+    SELECT sl.service_id, l.location_id, l.name, l.latitude, l.longitude
+    FROM service_locations sl
+    JOIN locations l ON l.location_id = sl.location_id 
+  |]
+
+getLocationsForServiceID :: MonadIO m => Int -> m [Location]
+getLocationsForServiceID serviceID = withConnection $ \connection -> query
+  connection
+  [sql| 
+    SELECT l.location_id, l.name, l.latitude, l.longitude
+    FROM service_locations sl
+    JOIN locations l ON l.location_id = sl.location_id 
+    WHERE sl.service_id = ?
+  |]
+  (Only serviceID)
+
+getLocationDeparturesForServiceID
+  :: MonadIO m => Int -> Day -> m [LocationDeparture]
+getLocationDeparturesForServiceID serviceID date = do
+  withConnection $ \connection -> query
+    connection
+    [sql| 
+      WITH constants(query_date) AS (
+        VALUES (date ?)
+      ),
+      day_of_week(derived_day_of_week) AS (
+        SELECT 
+          CASE 
+            WHEN extract(dow from query_date) = 0 THEN 'sunday' :: day_of_week
+            WHEN extract(dow from query_date) = 1 THEN 'monday' :: day_of_week
+            WHEN extract(dow from query_date) = 2 THEN 'tuesday' :: day_of_week
+            WHEN extract(dow from query_date) = 3 THEN 'wednesday' :: day_of_week
+            WHEN extract(dow from query_date) = 4 THEN 'thursday' :: day_of_week
+            WHEN extract(dow from query_date) = 5 THEN 'friday' :: day_of_week
+            WHEN extract(dow from query_date) = 6 THEN 'saturday' :: day_of_week
+          END
+        FROM constants
+      ),
+      operating_today AS (
+        SELECT 
+          vehicle_journey_code
+        FROM 
+          days_of_operation, constants
+        WHERE 
+          query_date >= start_date
+          AND
+          query_date <= end_date
+
+      ),
+      not_operating_today AS (
+        SELECT 
+          vehicle_journey_code
+        FROM 
+          days_of_non_operation, constants
+        WHERE 
+          query_date >= start_date
+          AND
+          query_date <= end_date
+      )
+      SELECT 
+        fl.location_id AS from_location_id, tl.location_id AS to_location_id, tl.name, tl.latitude, tl.longitude, vj.departure_time, jptl.run_time
+      FROM 
+        vehicle_journeys vj
+      CROSS JOIN
+        constants
+      CROSS JOIN
+        day_of_week
+      INNER JOIN 
+        transxchange_services txcs ON txcs.service_code = vj.service_code
+      INNER JOIN 
+        services s ON s.transxchange_service_code = txcs.service_code
+      INNER JOIN 
+        journey_patterns jp ON vj.journey_pattern_id = jp.journey_pattern_id
+      INNER JOIN 
+        journey_pattern_timing_links jptl ON jptl.journey_pattern_section_id = jp.journey_pattern_section_id
+      INNER JOIN
+        locations fl ON fl.stop_point_id = jptl.from_stop_point
+      INNER JOIN
+        locations tl ON tl.stop_point_id = jptl.to_stop_point
+      WHERE 
+        s.service_id = ?
+        AND
+        (
+          query_date >= txcs.start_date AND query_date <= txcs.end_date
+          OR
+          vj.vehicle_journey_code IN (SELECT * FROM operating_today)
+        )
+        AND
+        vj.vehicle_journey_code NOT IN (SELECT * FROM not_operating_today)
+        AND
+        derived_day_of_week = ANY (vj.days_of_week)
+    |]
+    (date, serviceID)
 
 updateTransxchangeData :: MonadIO m => [TransXChangeData] -> m ()
 updateTransxchangeData transxchangeData = withConnection $ \connection ->

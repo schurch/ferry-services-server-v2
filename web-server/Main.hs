@@ -75,7 +75,7 @@ main = do
         setPort (read port) . setOnException exceptionHandler $ defaultSettings
   let options = Options { verbose = 0, settings = settings }
   requestLogger <- mkRequestLogger $ loggerSettings logger
-  scottyOptsT options (flip runReaderT (Env logger)) (app requestLogger)
+  scottyOptsT options (`runReaderT` Env logger) (app requestLogger)
 
 app :: Middleware -> Scotty
 app requestLogger = do
@@ -135,10 +135,10 @@ recordUpdate env (Just request) exception record = record
   { srServerName  = Data.ByteString.Char8.unpack <$> requestHeaderHost request
   , srEnvironment = Just env
   , srExtra       = HM.fromList
-    [ ("method"      , (String $ decodeUtf8 $ requestMethod request))
-    , ("path"        , (String $ decodeUtf8 $ rawPathInfo request))
-    , ("query-string", (String $ decodeUtf8 $ rawQueryString request))
-    ]
+                      [ ("method", String $ decodeUtf8 $ requestMethod request)
+                      , ("path", String $ decodeUtf8 $ rawPathInfo request)
+                      , ("query-string", String $ decodeUtf8 $ rawQueryString request)
+                      ]
   }
 
 instance Parsable UUID where

@@ -165,9 +165,28 @@ data ServiceLocation = ServiceLocation
   , serviceLocationLocationID :: Int
   , serviceLocationName       :: String
   , serviceLocationLatitude   :: Scientific
-  , serviceLocationLonitude   :: Scientific
+  , serviceLocationLongitude  :: Scientific
   }
   deriving (Generic, Show, ToRow, FromRow)
+
+data Location = Location
+  { locationLocationID :: Int
+  , locationName       :: String
+  , locationatitude    :: Scientific
+  , locationLongitude  :: Scientific
+  }
+  deriving (Generic, Show, ToRow, FromRow)
+
+data LocationDeparture = LocationDeparture
+  { locationDepartureSourceLocationID      :: Int
+  , locationDepartureDestinationLocationID :: Int
+  , locationDepartureDestinationName       :: String
+  , locationDepartureDestinationLatitude   :: Scientific
+  , locationDepartureDestinationLongitude  :: Scientific
+  , locationDepartureTime                  :: TimeOfDay
+  , locationDepartureDuration              :: String
+  }
+  deriving (Generic, Show, FromRow)
 
 -- API Types
 data ServiceResponse = ServiceResponse
@@ -219,6 +238,7 @@ instance ToJSON LocationResponse where
 data DepatureReponse = DepatureReponse
   { depatureReponseDestination :: LocationResponse
   , depatureReponseTime        :: TimeOfDay
+  , depatureReponseDuration    :: Int
   }
   deriving (Generic, Show)
 
