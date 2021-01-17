@@ -225,75 +225,108 @@ getLocationDeparturesForServiceID serviceID date = do
   withConnection $ \connection -> query
     connection
     [sql| 
-      WITH constants(query_date) AS (
-        VALUES (date ?)
+      with constants(query_date) AS (
+          VALUES (date ?)
+      ),
+      timings as (
+          select 
+              journey_pattern_timing_link_id,
+              coalesce(nullif(regexp_replace(from_wait_time, '\D','','g'), '') :: interval, '0 seconds') as wait_time,
+              coalesce(nullif(regexp_replace(run_time, '\D','','g'), '') :: interval, '0 seconds') as run_time
+          from
+              journey_pattern_timing_links
       ),
       day_of_week(derived_day_of_week) AS (
-        SELECT 
-          CASE 
-            WHEN extract(dow from query_date) = 0 THEN 'sunday' :: day_of_week
-            WHEN extract(dow from query_date) = 1 THEN 'monday' :: day_of_week
-            WHEN extract(dow from query_date) = 2 THEN 'tuesday' :: day_of_week
-            WHEN extract(dow from query_date) = 3 THEN 'wednesday' :: day_of_week
-            WHEN extract(dow from query_date) = 4 THEN 'thursday' :: day_of_week
-            WHEN extract(dow from query_date) = 5 THEN 'friday' :: day_of_week
-            WHEN extract(dow from query_date) = 6 THEN 'saturday' :: day_of_week
-          END
-        FROM constants
+          SELECT 
+              CASE 
+              WHEN extract(dow from query_date) = 0 THEN 'sunday' :: day_of_week
+              WHEN extract(dow from query_date) = 1 THEN 'monday' :: day_of_week
+              WHEN extract(dow from query_date) = 2 THEN 'tuesday' :: day_of_week
+              WHEN extract(dow from query_date) = 3 THEN 'wednesday' :: day_of_week
+              WHEN extract(dow from query_date) = 4 THEN 'thursday' :: day_of_week
+              WHEN extract(dow from query_date) = 5 THEN 'friday' :: day_of_week
+              WHEN extract(dow from query_date) = 6 THEN 'saturday' :: day_of_week
+              END
+          FROM constants
       ),
       operating_today AS (
-        SELECT 
-          vehicle_journey_code
-        FROM 
-          days_of_operation, constants
-        WHERE 
-          query_date >= start_date
-          AND
-          query_date <= end_date
+          SELECT 
+              vehicle_journey_code
+          FROM 
+              days_of_operation, constants
+          WHERE 
+              query_date >= start_date
+              AND
+              query_date <= end_date
 
       ),
       not_operating_today AS (
-        SELECT 
-          vehicle_journey_code
-        FROM 
-          days_of_non_operation, constants
-        WHERE 
-          query_date >= start_date
-          AND
-          query_date <= end_date
+          SELECT 
+              vehicle_journey_code
+          FROM 
+              days_of_non_operation, constants
+          WHERE 
+              query_date >= start_date
+              AND
+              query_date <= end_date
+      ),
+      multi_journeys as (
+          select 
+              journey_pattern_section_id 
+          from 
+              journey_pattern_timing_links 
+          group by 
+              (journey_pattern_section_id) having count(*) > 1
       )
-      SELECT 
-        fl.location_id AS from_location_id, tl.location_id AS to_location_id, tl.name, tl.latitude, tl.longitude, vj.departure_time, jptl.run_time
-      FROM 
-        vehicle_journeys vj
+      select
+          fl.location_id AS from_location_id, 
+          tl.location_id AS to_location_id, 
+          tl.name, tl.latitude, 
+          tl.longitude, 
+          case 
+              when jptl.journey_pattern_section_id in (select * from multi_journeys) then
+                  coalesce(
+                      lag (departure_time + t.run_time, 1) over (
+                          partition by jptl.journey_pattern_section_id
+                          order by jptl.journey_pattern_timing_link_id asc
+                      ) + t.wait_time, 
+                      departure_time
+                  )
+              else departure_time
+          end as departure_time,
+          jptl.run_time
+      from 
+          vehicle_journeys vj
+      inner join 
+          journey_patterns jp on vj.journey_pattern_id = jp.journey_pattern_id
+      inner join 
+          journey_pattern_timing_links jptl on jp.journey_pattern_section_id = jptl.journey_pattern_section_id
+      inner join
+          timings t on t.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
+      INNER JOIN 
+          transxchange_services txcs ON txcs.service_code = vj.service_code
+      INNER JOIN 
+          services s ON s.transxchange_service_code = txcs.service_code
       CROSS JOIN
-        constants
+          constants
       CROSS JOIN
-        day_of_week
-      INNER JOIN 
-        transxchange_services txcs ON txcs.service_code = vj.service_code
-      INNER JOIN 
-        services s ON s.transxchange_service_code = txcs.service_code
-      INNER JOIN 
-        journey_patterns jp ON vj.journey_pattern_id = jp.journey_pattern_id
-      INNER JOIN 
-        journey_pattern_timing_links jptl ON jptl.journey_pattern_section_id = jp.journey_pattern_section_id
+          day_of_week
       INNER JOIN
-        locations fl ON fl.stop_point_id = jptl.from_stop_point
+          locations fl ON fl.stop_point_id = jptl.from_stop_point
       INNER JOIN
-        locations tl ON tl.stop_point_id = jptl.to_stop_point
-      WHERE 
-        s.service_id = ?
-        AND
-        (
-          query_date >= txcs.start_date AND query_date <= txcs.end_date
-          OR
-          vj.vehicle_journey_code IN (SELECT * FROM operating_today)
-        )
-        AND
-        vj.vehicle_journey_code NOT IN (SELECT * FROM not_operating_today)
-        AND
-        derived_day_of_week = ANY (vj.days_of_week)
+          locations tl ON tl.stop_point_id = jptl.to_stop_point
+      where 
+          s.service_id = ?
+          and
+          (
+              query_date >= txcs.start_date AND query_date <= txcs.end_date
+              OR
+              vj.vehicle_journey_code IN (SELECT * FROM operating_today)
+          )
+          and
+          derived_day_of_week = ANY (vj.days_of_week)
+          AND
+          vj.vehicle_journey_code NOT IN (SELECT * FROM not_operating_today)
     |]
     (date, serviceID)
 
