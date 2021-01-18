@@ -134,7 +134,7 @@ main = do
   forever $ do
     info logger (msg @String "Fetching transxchangedata...")
     catch (fetchAndProcessData logger) (handleException logger)
-    threadDelay (1440 * 60 * 1000 * 1000) -- 1440 mins (24 hours)
+    threadDelay (7 * 1440 * 60 * 1000 * 1000) -- Every 7 days
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do
