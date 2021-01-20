@@ -29,7 +29,7 @@ services:
       - "db-prod"
     restart: always
     env_file:
-      - envfile.docker-test
+      - envfile.docker-prod
     tty: true
     command: /opt/ferry-services/transxchange-fetcher-exe
   db-prod:
