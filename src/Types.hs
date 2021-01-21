@@ -224,11 +224,9 @@ instance FromJSON AddServiceRequest where
   parseJSON = genericParseJSON $ jsonOptions 17
 
 data LocationResponse = LocationResponse
-  { locationResponseID         :: Int
-  , locationResponseName       :: String
+  { locationResponseName       :: String
   , locationResponseLatitude   :: Scientific
   , locationResponseLongitude  :: Scientific
-  , locationResponseDepartures :: Maybe [DepatureReponse]
   }
   deriving (Generic, Show)
 
@@ -248,7 +246,7 @@ instance ToJSON DepatureReponse where
 jsonOptions :: Int -> Data.Aeson.Options
 jsonOptions prefixLength = defaultOptions
   { fieldLabelModifier = camelTo2 '_' . drop prefixLength
-  , omitNothingFields  = True
+  , omitNothingFields  = False
   }
 
 -- Scraper Types

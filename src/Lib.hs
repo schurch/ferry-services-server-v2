@@ -10,7 +10,8 @@ module Lib
   , getServicesForInstallation
   , fetchStatusesAndNotify
   , AddServiceRequest(..)
-  ) where
+  )
+where
 
 import           Control.Monad                  ( void
                                                 , when
@@ -350,7 +351,7 @@ getLocationsForServiceID serviceID date = do
  where
   locationToLocationResponse :: Location -> LocationResponse
   locationToLocationResponse (Location id name latitude longitude) =
-    LocationResponse id name latitude longitude Nothing
+    LocationResponse name latitude longitude
 
   locationToLocationResponseWithDepartures
     :: M.Map Int [DepatureReponse] -> Location -> LocationResponse
@@ -362,18 +363,16 @@ getLocationsForServiceID serviceID date = do
               (\a b -> compare (depatureReponseTime a) (depatureReponseTime b))
             <$> departures
       in
-        LocationResponse id name latitude longitude sortedDepartures
+        LocationResponse name latitude longitude
 
   createDeparturesLookup :: [LocationDeparture] -> M.Map Int [DepatureReponse]
   createDeparturesLookup departures =
     M.fromListWith (++)
       $ [ ( locationID
           , [ DepatureReponse
-                (LocationResponse destinationLocationID
-                                  destinationLocationName
+                (LocationResponse destinationLocationName
                                   destinationLocationLatitude
                                   destinationLocationLatitudeLongitude
-                                  Nothing
                 )
                 departureTime
                 (runtimeToSeconds departureDuration)
@@ -392,9 +391,7 @@ getLocationLookup = do
   serviceLocations <- liftIO DB.getServiceLocations
   return
     $ M.fromListWith (++)
-    $ [ ( serviceID
-        , [LocationResponse locationID name latitude longitude Nothing]
-        )
+    $ [ (serviceID, [LocationResponse name latitude longitude])
       | (ServiceLocation serviceID locationID name latitude longitude) <-
         serviceLocations
       ]
