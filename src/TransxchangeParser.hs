@@ -2,8 +2,7 @@
 
 module TransxchangeParser
   ( parseTransxchangeXML
-  )
-where
+  ) where
 
 import           Data.Maybe                     ( fromMaybe
                                                 , fromJust
@@ -300,15 +299,14 @@ getVehicleJourneys element = do
     , noteCode = maybe ""
                        strContent
                        (findChild "Note" element >>= findChild "NoteCode")
-    , daysOfNonOperationServicedOrganisationRef = maybe
-      ""
+    , daysOfNonOperationServicedOrganisationRef =
       strContent
-      (   findChild "OperatingProfile" element
-      >>= findChild "ServicedOrganisationDayType"
-      >>= findChild "DaysOfNonOperation"
-      >>= findChild "WorkingDays"
-      >>= findChild "ServicedOrganisationRef"
-      )
+        <$> (   findChild "OperatingProfile" element
+            >>= findChild "ServicedOrganisationDayType"
+            >>= findChild "DaysOfNonOperation"
+            >>= findChild "WorkingDays"
+            >>= findChild "ServicedOrganisationRef"
+            )
     }
 
   nonOperationDays :: Element -> Maybe [DateRange]

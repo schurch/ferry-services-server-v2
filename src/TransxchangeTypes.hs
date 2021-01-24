@@ -20,11 +20,12 @@ data TransXChangeData = TransXChangeData
   }
   deriving Show
 
-data ServicedOrganisation = ServicedOrganisation {
-    organisationCode         :: String
-  , organisationName         :: String
-  , organisationWorkingDays  :: [DateRange]
-} deriving (Show)
+data ServicedOrganisation = ServicedOrganisation
+  { organisationCode        :: String
+  , organisationName        :: String
+  , organisationWorkingDays :: [DateRange]
+  }
+  deriving Show
 
 data AnnotatedStopPointRef = AnnotatedStopPointRef
   { stopPointRef :: String
@@ -123,7 +124,7 @@ data VehicleJourney = VehicleJourney
   , specialDaysOfNonOperation :: [DateRange]
   , note                      :: String
   , noteCode                  :: String
-  , daysOfNonOperationServicedOrganisationRef :: String
+  , daysOfNonOperationServicedOrganisationRef :: Maybe String
   }
   deriving Show
 
