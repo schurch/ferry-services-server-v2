@@ -10,6 +10,7 @@ import           Data.Char                      ( toLower )
 
 data TransXChangeData = TransXChangeData
   { stopPoints             :: [AnnotatedStopPointRef]
+  , servicedOrganisations  :: [ServicedOrganisation]
   , routeSections          :: [RouteSection]
   , routes                 :: [Route]
   , journeyPatternSections :: [JourneyPatternSection]
@@ -18,6 +19,12 @@ data TransXChangeData = TransXChangeData
   , vehicleJourneys        :: [VehicleJourney]
   }
   deriving Show
+
+data ServicedOrganisation = ServicedOrganisation {
+    organisationCode         :: String
+  , organisationName         :: String
+  , organisationWorkingDays  :: [DateRange]
+} deriving (Show)
 
 data AnnotatedStopPointRef = AnnotatedStopPointRef
   { stopPointRef :: String
@@ -116,6 +123,7 @@ data VehicleJourney = VehicleJourney
   , specialDaysOfNonOperation :: [DateRange]
   , note                      :: String
   , noteCode                  :: String
+  , daysOfNonOperationServicedOrganisationRef :: String
   }
   deriving Show
 

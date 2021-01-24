@@ -16,7 +16,8 @@ module Database
   , getLocationsForServiceID
   , getLocationDeparturesForServiceID
   , updateTransxchangeData
-  ) where
+  )
+where
 
 import           Control.Monad                  ( void
                                                 , forM_
@@ -148,8 +149,7 @@ getInstallationWithID installationID = do
     (Only installationID)
   return $ listToMaybe results
 
-getIntererestedInstallationsForServiceID
-  :: MonadIO m => Int -> m [Installation]
+getIntererestedInstallationsForServiceID :: MonadIO m => Int -> m [Installation]
 getIntererestedInstallationsForServiceID serviceID =
   withConnection $ \connection -> query
     connection
@@ -358,7 +358,7 @@ updateTransxchangeData transxchangeData = withConnection $ \connection ->
       |]
 
 updateSingleTransxchangeData :: Connection -> TransXChangeData -> IO ()
-updateSingleTransxchangeData connection (TransXChangeData stopPoints routeSections routes journeyPatternSections operators services vehicleJourneys)
+updateSingleTransxchangeData connection (TransXChangeData stopPoints servicedOrganisations routeSections routes journeyPatternSections operators services vehicleJourneys)
   = do
     insertStopPoints connection stopPoints
     insertRouteSections connection routeSections
@@ -429,8 +429,7 @@ updateSingleTransxchangeData connection (TransXChangeData stopPoints routeSectio
             <$> routes
     void $ executeMany connection statement values
 
-  insertJourneyPatternSections
-    :: Connection -> [JourneyPatternSection] -> IO ()
+  insertJourneyPatternSections :: Connection -> [JourneyPatternSection] -> IO ()
   insertJourneyPatternSections connection journeyPatternSections = do
     let statement = [sql| 
                       INSERT INTO journey_pattern_sections (journey_pattern_section_id) 
@@ -600,7 +599,7 @@ updateSingleTransxchangeData connection (TransXChangeData stopPoints routeSectio
                     |]
     let
       values =
-        (\(VehicleJourney operatorRef vehicleJourneyCode serviceRef lineRef journeyPatternRef departureTime daysOfWeek _ _ note noteCode) ->
+        (\(VehicleJourney operatorRef vehicleJourneyCode serviceRef lineRef journeyPatternRef departureTime daysOfWeek _ _ note noteCode daysOfNonOperationServicedOrganisationRef) ->
             ( vehicleJourneyCode
             , serviceRef
             , lineRef

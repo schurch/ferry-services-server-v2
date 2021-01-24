@@ -2,7 +2,8 @@
 
 module TransxchangeParser
   ( parseTransxchangeXML
-  ) where
+  )
+where
 
 import           Data.Maybe                     ( fromMaybe
                                                 , fromJust
@@ -28,6 +29,8 @@ import           TransxchangeTypes
 parseTransxchangeXML :: String -> TransXChangeData
 parseTransxchangeXML input = TransXChangeData
   { stopPoints             = fromMaybe [] $ getStopPoints transXChangeElement
+  , servicedOrganisations  = fromMaybe []
+                               $ getServicedOrganisations transXChangeElement
   , routeSections          = fromMaybe [] $ getRouteSections transXChangeElement
   , routes                 = fromMaybe [] $ getRoutes transXChangeElement
   , journeyPatternSections = fromMaybe []
@@ -64,6 +67,29 @@ getStopPoints element = do
                            (findChild "StopPointRef" stopPointElement)
     , commonName = maybe "" strContent (findChild "CommonName" stopPointElement)
     }
+
+-- Serviced organisations
+getServicedOrganisations :: Element -> Maybe [ServicedOrganisation]
+getServicedOrganisations element = do
+  servicedOrganisationsElement <- findChild "ServicedOrganisations" element
+  let servicedOrganisationElements =
+        findChildren "ServicedOrganisation" servicedOrganisationsElement
+  return $ elementToServicedOrganisation <$> servicedOrganisationElements
+ where
+  elementToServicedOrganisation :: Element -> ServicedOrganisation
+  elementToServicedOrganisation element = ServicedOrganisation
+    { organisationCode        = maybe ""
+                                      strContent
+                                      (findChild "OrganisationCode" element)
+    , organisationName        = maybe "" strContent (findChild "Name" element)
+    , organisationWorkingDays = fromMaybe [] $ dateRangeElements element
+    }
+
+  dateRangeElements :: Element -> Maybe [DateRange]
+  dateRangeElements element = do
+    workingDays <- findChild "WorkingDays" element
+    let dateRangeElements = findChildren "DateRange" workingDays
+    return $ elementToDateRange <$> dateRangeElements
 
 -- Route Sections
 getRouteSections :: Element -> Maybe [RouteSection]
@@ -274,6 +300,15 @@ getVehicleJourneys element = do
     , noteCode = maybe ""
                        strContent
                        (findChild "Note" element >>= findChild "NoteCode")
+    , daysOfNonOperationServicedOrganisationRef = maybe
+      ""
+      strContent
+      (   findChild "OperatingProfile" element
+      >>= findChild "ServicedOrganisationDayType"
+      >>= findChild "DaysOfNonOperation"
+      >>= findChild "WorkingDays"
+      >>= findChild "ServicedOrganisationRef"
+      )
     }
 
   nonOperationDays :: Element -> Maybe [DateRange]
