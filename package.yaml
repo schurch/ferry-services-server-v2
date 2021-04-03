@@ -44,7 +44,6 @@ library:
     - text
     - unordered-containers
     - uuid
-    - xml
     - zlib
 
 executables:
@@ -85,26 +84,6 @@ executables:
     - ferry-services-server
     - raven-haskell
     - tinylog
-
-  transxchange-fetcher-exe:
-    main:                Main.hs
-    source-dirs:         transxchange-fetcher
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - ferry-services-server
-    - bytestring
-    - cassava
-    - containers
-    - directory
-    - network
-    - tinylog
-    - raven-haskell
-    - time
-    - vector
-    - zip
 
 tests:
   ferry-services-server-test:

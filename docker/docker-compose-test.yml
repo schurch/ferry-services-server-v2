@@ -22,16 +22,6 @@ services:
       - envfile.docker-test
     tty: true
     command: /opt/ferry-services/ferry-services-scraper-exe
-  transxchange-fetcher-test:
-    image: stefanchurch/transxchange-fetcher:latest
-    container_name: transxchange-fetcher-test
-    depends_on:
-      - "db-test"
-    restart: always
-    env_file:
-      - envfile.docker-test
-    tty: true
-    command: /opt/ferry-services/transxchange-fetcher-exe
   db-test:
     image: "mdillon/postgis"
     container_name: ferry-services-db-test

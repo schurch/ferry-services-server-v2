@@ -66,12 +66,14 @@ import           Debug.Trace
 -- Lookup locations for a service ID
 type ServiceLocationLookup = M.Map Int [LocationResponse]
 
-getService :: Int -> Maybe Day -> Action (Maybe ServiceResponse)
-getService serviceID timetableDate = do
-  service   <- DB.getService serviceID
-  time      <- liftIO getCurrentTime
-  locations <- getLocationsForServiceID serviceID timetableDate
-  return $ serviceToServiceResponseWithLocations locations time <$> service
+getService :: Int -> Action (Maybe ServiceResponse)
+getService serviceID = do
+  service        <- DB.getService serviceID
+  time           <- liftIO getCurrentTime
+  locationLookup <- getLocationLookup
+  return
+    $   serviceToServiceResponseWithLocationLookup locationLookup time
+    <$> service
 
 getServices :: Action [ServiceResponse]
 getServices = do
@@ -115,24 +117,6 @@ getServicesForInstallation installationID = do
   return
     $   serviceToServiceResponseWithLocationLookup locationLookup time
     <$> services
-
-serviceToServiceResponseWithLocations
-  :: [LocationResponse] -> UTCTime -> Service -> ServiceResponse
-serviceToServiceResponseWithLocations locations currentTime Service {..} =
-  ServiceResponse
-    { serviceResponseServiceID        = serviceID
-    , serviceResponseSortOrder        = serviceSortOrder
-    , serviceResponseArea             = serviceArea
-    , serviceResponseRoute            = serviceRoute
-    , serviceResponseStatus           = serviceStatusForTime currentTime
-                                                             serviceUpdated
-                                                             serviceStatus
-    , serviceResponseLocations        = locations
-    , serviceResponseAdditionalInfo   = serviceAdditionalInfo
-    , serviceResponseDisruptionReason = serviceDisruptionReason
-    , serviceResponseLastUpdatedDate  = serviceLastUpdatedDate
-    , serviceResponseUpdated          = serviceUpdated
-    }
 
 serviceToServiceResponseWithLocationLookup
   :: ServiceLocationLookup -> UTCTime -> Service -> ServiceResponse
@@ -336,65 +320,12 @@ fetchStatusesAndNotify logger = do
     stringToUTCTime time =
       posixSecondsToUTCTime $ fromInteger (read time) / 1000
 
-getLocationsForServiceID :: Int -> Maybe Day -> Action [LocationResponse]
-getLocationsForServiceID serviceID date = do
-  serviceLocations <- DB.getLocationsForServiceID serviceID
-  case date of
-    Just date' -> do
-      locationDepartures <- DB.getLocationDeparturesForServiceID serviceID date'
-      let departuresLookup = createDeparturesLookup locationDepartures
-      return
-        $   locationToLocationResponseWithDepartures departuresLookup
-        <$> serviceLocations
-    Nothing -> return $ locationToLocationResponse <$> serviceLocations
- where
-  locationToLocationResponse :: Location -> LocationResponse
-  locationToLocationResponse (Location id name latitude longitude) =
-    LocationResponse id name latitude longitude Nothing
-
-  locationToLocationResponseWithDepartures
-    :: M.Map Int [DepatureReponse] -> Location -> LocationResponse
-  locationToLocationResponseWithDepartures departureLookup (Location id name latitude longitude)
-    = let
-        departures = M.lookup id departureLookup
-        sortedDepartures =
-          sortBy
-              (\a b -> compare (depatureReponseTime a) (depatureReponseTime b))
-            <$> departures
-      in
-        LocationResponse id name latitude longitude sortedDepartures
-
-  createDeparturesLookup :: [LocationDeparture] -> M.Map Int [DepatureReponse]
-  createDeparturesLookup departures =
-    M.fromListWith (++)
-      $ [ ( locationID
-          , [ DepatureReponse
-                (LocationResponse destinationLocationID
-                                  destinationLocationName
-                                  destinationLocationLatitude
-                                  destinationLocationLatitudeLongitude
-                                  Nothing
-                )
-                departureTime
-                (runtimeToSeconds departureDuration)
-            ]
-          )
-        | (LocationDeparture locationID destinationLocationID destinationLocationName destinationLocationLatitude destinationLocationLatitudeLongitude departureTime departureDuration) <-
-          departures
-        ]
-
-  runtimeToSeconds :: String -> Int
-  runtimeToSeconds runtime =
-    read . drop 2 . take (length runtime - 1) $ runtime
-
 getLocationLookup :: Action ServiceLocationLookup
 getLocationLookup = do
   serviceLocations <- liftIO DB.getServiceLocations
   return
     $ M.fromListWith (++)
-    $ [ ( serviceID
-        , [LocationResponse locationID name latitude longitude Nothing]
-        )
+    $ [ (serviceID, [LocationResponse locationID name latitude longitude])
       | (ServiceLocation serviceID locationID name latitude longitude) <-
         serviceLocations
       ]

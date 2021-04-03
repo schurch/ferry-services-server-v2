@@ -16,10 +16,8 @@ build-release:
 	stack --docker build
 	docker build -f docker/server.Dockerfile -t stefanchurch/ferry-services-server:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-server-exe/ferry-services-server-exe" .
 	docker build -f docker/scraper.Dockerfile -t stefanchurch/ferry-services-scraper:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-scraper-exe/ferry-services-scraper-exe" .
-	docker build -f docker/transxchange-fetcher.Dockerfile -t stefanchurch/transxchange-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/transxchange-fetcher-exe/transxchange-fetcher-exe" .
 	docker push stefanchurch/ferry-services-server:latest
 	docker push stefanchurch/ferry-services-scraper:latest
-	docker push stefanchurch/transxchange-fetcher:latest
 
 .PHONY: watch
 watch:
@@ -32,7 +30,3 @@ server: build
 .PHONY: scraper
 scraper: build
 	stack exec ferry-services-scraper-exe
-
-.PHONY: transxchange-fetcher
-transxchange-fetcher: build
-	stack exec transxchange-fetcher-exe

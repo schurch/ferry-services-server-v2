@@ -62,7 +62,6 @@ import           Network.Wai.Middleware.Static  ( staticPolicy
                                                 , addBase
                                                 )
 import           Data.Time.Calendar             ( Day )
-import           Utility                        ( stringToDay )
 
 import qualified Data.HashMap.Strict           as HM
 
@@ -87,9 +86,8 @@ app requestLogger = do
     setHeader "Access-Control-Allow-Origin" "*"
     json services
   get "/api/services/:serviceID" $ do
-    serviceID     <- param "serviceID"
-    timetableDate <- param "timetableDate" `rescue` (\_ -> return Nothing)
-    service       <- getService serviceID timetableDate
+    serviceID <- param "serviceID"
+    service   <- getService serviceID
     setHeader "Access-Control-Allow-Origin" "*"
     json service
   post "/api/installations/:installationID" $ do
@@ -143,9 +141,6 @@ recordUpdate env (Just request) exception record = record
 
 instance Parsable UUID where
   parseParam = maybeToEither "Error parsing UUID" . fromText . toStrict
-
-instance Parsable (Maybe Day) where
-  parseParam = Right . stringToDay . Data.Text.Lazy.unpack
 
 maybeToEither :: Text -> Maybe a -> Either Text a
 maybeToEither errorMessage Nothing      = Left errorMessage

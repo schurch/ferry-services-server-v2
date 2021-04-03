@@ -40,7 +40,6 @@ import           System.Logger.Class            ( MonadLogger
 import           Web.Scotty.Trans               ( ScottyT
                                                 , ActionT
                                                 )
-import           Data.Time.LocalTime            ( TimeOfDay )
 import           GHC.Generics                   ( Generic )
 
 -- Web server
@@ -177,17 +176,6 @@ data Location = Location
   }
   deriving (Generic, Show, ToRow, FromRow)
 
-data LocationDeparture = LocationDeparture
-  { locationDepartureSourceLocationID      :: Int
-  , locationDepartureDestinationLocationID :: Int
-  , locationDepartureDestinationName       :: String
-  , locationDepartureDestinationLatitude   :: Scientific
-  , locationDepartureDestinationLongitude  :: Scientific
-  , locationDepartureTime                  :: TimeOfDay
-  , locationDepartureDuration              :: String
-  }
-  deriving (Generic, Show, FromRow)
-
 -- API Types
 data ServiceResponse = ServiceResponse
   { serviceResponseServiceID        :: Int
@@ -224,26 +212,15 @@ instance FromJSON AddServiceRequest where
   parseJSON = genericParseJSON $ jsonOptions 17
 
 data LocationResponse = LocationResponse
-  { locationResponseID         :: Int
-  , locationResponseName       :: String
-  , locationResponseLatitude   :: Scientific
-  , locationResponseLongitude  :: Scientific
-  , locationResponseDepartures :: Maybe [DepatureReponse]
+  { locationResponseID        :: Int
+  , locationResponseName      :: String
+  , locationResponseLatitude  :: Scientific
+  , locationResponseLongitude :: Scientific
   }
   deriving (Generic, Show)
 
 instance ToJSON LocationResponse where
   toJSON = genericToJSON $ jsonOptions 16
-
-data DepatureReponse = DepatureReponse
-  { depatureReponseDestination :: LocationResponse
-  , depatureReponseTime        :: TimeOfDay
-  , depatureReponseDuration    :: Int
-  }
-  deriving (Generic, Show)
-
-instance ToJSON DepatureReponse where
-  toJSON = genericToJSON $ jsonOptions 15
 
 jsonOptions :: Int -> Data.Aeson.Options
 jsonOptions prefixLength = defaultOptions
