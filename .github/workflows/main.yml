@@ -1,0 +1,23 @@
+on: [push]
+name: build
+jobs:
+  build:
+    name: Build API
+    runs-on: ubuntu-latest # or macOS-latest, or windows-latest
+    env: 
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-haskell@v1.1
+        with:
+          ghc-version: '8.8.3' # Exact version of ghc to use
+          stack-version: 'latest'
+      - name: Cache stack data
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.stack
+            ./.stack-work
+          key: v1-stack-${{ github.ref }}-${{ hashFiles('stack.yaml') }}
+      - run: make build-release
