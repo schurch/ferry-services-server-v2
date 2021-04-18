@@ -184,88 +184,11 @@ registerDeviceToken installationID deviceToken deviceType = do
 
 fetchStatusesAndNotify :: Logger -> IO ()
 fetchStatusesAndNotify logger = do
-  services <- fetchServices
-  notifyForServices services
-  DB.saveServices services
+  newServices <- fetchServices
+  oldServices <- DB.getServices
+  DB.saveServices newServices
+  notifyForServices logger newServices oldServices
  where
-  notifyForServices :: [Service] -> IO ()
-  notifyForServices services = forM_ services $ \service -> do
-    savedService <- DB.getService $ serviceID service
-    case savedService of
-      Just savedService -> do
-        let statusesDifferent =
-              serviceStatus service /= serviceStatus savedService
-        let statusValid  = serviceStatus service /= Unknown
-        let shouldNotify = statusesDifferent && statusValid
-        when shouldNotify $ do
-          let message = serviceToNotificationMessage service
-          interestedInstallations <- DB.getIntererestedInstallationsForServiceID
-            $ serviceID service
-          let iOSInterestedInstallations = filter
-                ((==) IOS . installationDeviceType)
-                interestedInstallations
-          let androidInterestedInstallations = filter
-                ((==) Android . installationDeviceType)
-                interestedInstallations
-          forM_ iOSInterestedInstallations
-            $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
-                do
-                  let
-                    payload = applePushPayloadWithMessageAndServiceID
-                      message
-                      (serviceID service)
-                  sendNotification logger installationID endpointARN payload
-          forM_ androidInterestedInstallations
-            $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
-                do
-                  let
-                    payload = androidPushPayloadWithMessageAndServiceID
-                      message
-                      (serviceID service)
-                  sendNotification logger installationID endpointARN payload
-      Nothing -> return ()
-   where
-    sendNotification :: Logger -> UUID -> String -> PushPayload -> IO ()
-    sendNotification logger installationID endpointARN payload = do
-      result <- sendNotificationWihPayload logger endpointARN payload
-      case result of
-        SendNotificationEndpointDisabled -> do
-          void $ DB.deleteInstallationWithID installationID
-          deletePushEndpoint logger endpointARN
-        SendNotificationResultSuccess -> return ()
-
-    serviceToNotificationMessage :: Service -> String
-    serviceToNotificationMessage Service { serviceRoute = serviceRoute, serviceStatus = serviceStatus }
-      | serviceStatus == Normal
-      = "Normal services have resumed for " <> serviceRoute
-      | serviceStatus == Disrupted
-      = "There is a disruption to the service " <> serviceRoute
-      | serviceStatus == Cancelled
-      = "Sailings have been cancelled for " <> serviceRoute
-      | serviceStatus == Unknown
-      = error "Do not message for unknow service"
-
-    applePushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
-    applePushPayloadWithMessageAndServiceID message serviceID =
-      let apsPayload    = APSPayload (APSPayloadBody message) serviceID
-          stringPayload = C.unpack . encode $ apsPayload
-      in  PushPayload { pushPayloadDefault     = message
-                      , pushPayloadApns        = Just stringPayload
-                      , pushPayloadApnsSandbox = Just stringPayload
-                      , pushPayloadGcm         = Nothing
-                      }
-
-    androidPushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
-    androidPushPayloadWithMessageAndServiceID message serviceID =
-      let gcmPayload = CGMPayload (GCMPaylodNotification message)
-                                  (GCMPayloadData serviceID)
-          stringPayload = C.unpack . encode $ gcmPayload
-      in  PushPayload { pushPayloadDefault     = message
-                      , pushPayloadApns        = Nothing
-                      , pushPayloadApnsSandbox = Nothing
-                      , pushPayloadGcm         = Just stringPayload
-                      }
-
   fetchServices :: IO [Service]
   fetchServices = do
     let uri = fromJust $ parseURI "http://status.calmac.info/?ajax=json"
@@ -319,6 +242,90 @@ fetchStatusesAndNotify logger = do
     stringToUTCTime :: String -> UTCTime
     stringToUTCTime time =
       posixSecondsToUTCTime $ fromInteger (read time) / 1000
+
+notifyForServices :: Logger -> [Service] -> [Service] -> IO ()
+notifyForServices logger newServices oldServices =
+  forM_ newServices $ \service -> do
+    let oldService = find (\s -> serviceID s == serviceID service) oldServices
+    case oldService of
+      Just oldService -> do
+        let statusesDifferent =
+              serviceStatus service /= serviceStatus oldService
+        let statusValid  = serviceStatus service /= Unknown
+        let shouldNotify = statusesDifferent && statusValid
+        when shouldNotify $ do
+          let message = serviceToNotificationMessage service
+          interestedInstallations <- DB.getIntererestedInstallationsForServiceID
+            $ serviceID service
+          let iOSInterestedInstallations = filter
+                ((==) IOS . installationDeviceType)
+                interestedInstallations
+          let androidInterestedInstallations = filter
+                ((==) Android . installationDeviceType)
+                interestedInstallations
+          forM_ iOSInterestedInstallations
+            $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
+                do
+                  let
+                    payload = applePushPayloadWithMessageAndServiceID
+                      message
+                      (serviceID service)
+                  sendNotification logger installationID endpointARN payload
+          forM_ androidInterestedInstallations
+            $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
+                do
+                  let
+                    payload = androidPushPayloadWithMessageAndServiceID
+                      message
+                      (serviceID service)
+                  sendNotification logger installationID endpointARN payload
+      Nothing -> return ()
+ where
+  sendNotification :: Logger -> UUID -> String -> PushPayload -> IO ()
+  sendNotification logger installationID endpointARN payload = do
+    result <- sendNotificationWihPayload logger endpointARN payload
+    case result of
+      SendNotificationEndpointDisabled -> do
+        void $ DB.deleteInstallationWithID installationID
+        deletePushEndpoint logger endpointARN
+      SendNotificationResultSuccess -> return ()
+
+  serviceToNotificationMessage :: Service -> String
+  serviceToNotificationMessage Service { serviceRoute = serviceRoute, serviceStatus = serviceStatus }
+    | serviceStatus == Normal
+    = "Normal services have resumed for " <> serviceRoute
+    | serviceStatus == Disrupted
+    = "There is a disruption to the service " <> serviceRoute
+    | serviceStatus == Cancelled
+    = "Sailings have been cancelled for " <> serviceRoute
+    | serviceStatus == Unknown
+    = error "Do not message for unknow service"
+
+  applePushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
+  applePushPayloadWithMessageAndServiceID message serviceID =
+    let apsPayload = APSPayload
+          (APSPayloadBody { apsPayloadBodyAlert = message
+                          , apsPayloadBodySound = "default"
+                          }
+          )
+          serviceID
+        stringPayload = C.unpack . encode $ apsPayload
+    in  PushPayload { pushPayloadDefault     = message
+                    , pushPayloadApns        = Just stringPayload
+                    , pushPayloadApnsSandbox = Just stringPayload
+                    , pushPayloadGcm         = Nothing
+                    }
+
+  androidPushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
+  androidPushPayloadWithMessageAndServiceID message serviceID =
+    let gcmPayload = CGMPayload (GCMPaylodNotification message)
+                                (GCMPayloadData serviceID)
+        stringPayload = C.unpack . encode $ gcmPayload
+    in  PushPayload { pushPayloadDefault     = message
+                    , pushPayloadApns        = Nothing
+                    , pushPayloadApnsSandbox = Nothing
+                    , pushPayloadGcm         = Just stringPayload
+                    }
 
 getLocationLookup :: Action ServiceLocationLookup
 getLocationLookup = do

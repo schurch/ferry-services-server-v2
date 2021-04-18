@@ -68,6 +68,7 @@ instance ToJSON APSPayload where
 
 data APSPayloadBody = APSPayloadBody
   { apsPayloadBodyAlert :: String
+  , apsPayloadBodySound :: String
   }
   deriving (Generic, Show)
 
