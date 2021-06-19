@@ -69,6 +69,7 @@ INSERT INTO services (service_id, sort_order, area, route, status, updated) VALU
 INSERT INTO services (service_id, sort_order, area, route, status, updated) VALUES (19, '27', 'SMALL ISLES', 'Mallaig (MAL) - Small Isles (SIS)', -99, now());
 INSERT INTO services (service_id, sort_order, area, route, status, updated) VALUES (37, '28', 'SOUTH UIST', 'Mallaig (MAL) / Oban (OBA) - Lochboisdale (LBO)', -99, now());
 INSERT INTO services (service_id, sort_order, area, route, status, updated) VALUES (39, '29', 'KILCREGGAN & ROSNEATH', 'Gourock (GOU) - Kilcreggan (KIL)', -99, now());
+INSERT INTO services (service_id, sort_order, area, route, status, updated) VALUES (36, '30', 'KINTYRE', 'Ardrossan (ARD) - Campbeltown (CAM)', -99, now());
 INSERT INTO locations (location_id, name, latitude, longitude) VALUES (1, 'Glasgow Central', 55.860524, -4.258041);
 INSERT INTO locations (location_id, name, latitude, longitude) VALUES (2, 'Ardrossan Harbour', 55.639868, -4.821088);
 INSERT INTO locations (location_id, name, latitude, longitude) VALUES (3, 'Ardrossan', 55.640516, -4.823062);
