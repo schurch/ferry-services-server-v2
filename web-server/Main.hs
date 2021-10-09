@@ -62,7 +62,9 @@ import           Network.Wai.Middleware.Static  ( staticPolicy
                                                 , addBase
                                                 )
 import           Data.Time.Calendar             ( Day )
+import           Data.Char                      ( ord )
 
+import           Data.ByteString               as BS
 import qualified Data.HashMap.Strict           as HM
 
 main :: IO ()
@@ -167,4 +169,10 @@ loggerSettings logger = case currentLogLevel of
 
   callbackLog :: LogStr -> IO ()
   callbackLog str =
-    System.Logger.log logger currentLogLevel $ msg $ fromLogStr str
+    System.Logger.log logger currentLogLevel
+      $ msg
+      $ (removeTrailingNewline . fromLogStr) str
+
+  removeTrailingNewline :: BS.ByteString -> BS.ByteString
+  removeTrailingNewline =
+    BS.reverse . BS.dropWhile (== fromIntegral (ord '\n')) . BS.reverse
