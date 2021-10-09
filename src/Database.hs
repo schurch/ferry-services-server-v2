@@ -4,6 +4,7 @@
 module Database
   ( getService
   , getServices
+  , hideServicesWithIDs
   , createInstallation
   , addServiceToInstallation
   , deleteServiceForInstallation
@@ -33,6 +34,7 @@ import           Database.PostgreSQL.Simple     ( Connection
                                                 , close
                                                 , connectPostgreSQL
                                                 , Only(Only)
+                                                , In(In)
                                                 , withTransaction
                                                 )
 import           Database.PostgreSQL.Simple.SqlQQ
@@ -45,7 +47,7 @@ import           Control.Monad.IO.Class         ( MonadIO
                                                 )
 import           Types                          ( ServiceLocation
                                                 , Installation
-                                                , Service
+                                                , Service(..)
                                                 , DeviceType
                                                 , Location
                                                 )
@@ -70,7 +72,7 @@ getService serviceID = do
     [sql| 
       SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated 
       FROM services 
-      WHERE service_id = ? 
+      WHERE service_id = ? AND visible = TRUE
     |]
     (Only serviceID)
   return $ listToMaybe results
@@ -81,7 +83,16 @@ getServices = withConnection $ \connection -> query_
   [sql| 
     SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated
     FROM services 
+    WHERE visible = TRUE
   |]
+
+hideServicesWithIDs :: MonadIO m => [Int] -> m ()
+hideServicesWithIDs serviceIDs = void $ withConnection $ \connection -> execute
+  connection
+  [sql|
+      UPDATE services SET visible = FALSE WHERE service_id IN ?
+    |]
+  (Only $ In serviceIDs)
 
 createInstallation
   :: MonadIO m => UUID -> String -> DeviceType -> String -> UTCTime -> m ()
@@ -128,7 +139,7 @@ getServicesForInstallation installationID = withConnection $ \connection ->
       SELECT s.service_id, s.sort_order, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.last_updated_date, s.updated 
       FROM services s
       JOIN installation_services i ON s.service_id = i.service_id
-      WHERE i.installation_id = ?
+      WHERE i.installation_id = ? AND s.visible = TRUE
     |]
     (Only installationID)
 
@@ -158,23 +169,31 @@ getIntererestedInstallationsForServiceID serviceID =
     (Only serviceID)
 
 saveServices :: MonadIO m => [Types.Service] -> m ()
-saveServices services = void $ withConnection $ \connection -> executeMany
-  connection
-  [sql| 
-    INSERT INTO services (service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated) 
-    VALUES (?,?,?,?,?,?,?,?,?)
-    ON CONFLICT (service_id) DO UPDATE 
-      SET service_id = excluded.service_id, 
-          sort_order = excluded.sort_order, 
-          area = excluded.area, 
-          route = excluded.route, 
-          status = excluded.status, 
-          additional_info = excluded.additional_info, 
-          disruption_reason = excluded.disruption_reason,
-          last_updated_date = excluded.last_updated_date,
-          updated = excluded.updated
-    |]
-  services
+saveServices services = void $ withConnection $ \connection -> do
+  executeMany
+    connection
+    [sql| 
+      INSERT INTO services (service_id, sort_order, area, route, status, additional_info, disruption_reason, last_updated_date, updated) 
+      VALUES (?,?,?,?,?,?,?,?,?)
+      ON CONFLICT (service_id) DO UPDATE 
+        SET service_id = excluded.service_id, 
+            sort_order = excluded.sort_order, 
+            area = excluded.area, 
+            route = excluded.route, 
+            status = excluded.status, 
+            additional_info = excluded.additional_info, 
+            disruption_reason = excluded.disruption_reason,
+            last_updated_date = excluded.last_updated_date,
+            updated = excluded.updated
+      |]
+    services
+  let serviceIDs = serviceID <$> services
+  execute
+    connection
+    [sql|
+        UPDATE services SET visible = TRUE WHERE service_id IN ?
+      |]
+    (Only $ In serviceIDs)
 
 deleteInstallationWithID :: MonadIO m => UUID -> m ()
 deleteInstallationWithID installationID = do

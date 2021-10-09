@@ -28,6 +28,8 @@ import           Data.Maybe                     ( fromMaybe
                                                 )
 import           Data.List                      ( find
                                                 , sortBy
+                                                , nub
+                                                , (\\)
                                                 )
 import           Data.Text.Lazy                 ( pack )
 import           Data.Time.Clock                ( UTCTime
@@ -187,8 +189,16 @@ fetchStatusesAndNotify logger = do
   newServices <- fetchServices
   oldServices <- DB.getServices
   DB.saveServices newServices
+  let removedServiceIDs = generateRemovedServiceIDs oldServices newServices
+  DB.hideServicesWithIDs removedServiceIDs
   notifyForServices logger newServices oldServices
  where
+  generateRemovedServiceIDs :: [Service] -> [Service] -> [Int]
+  generateRemovedServiceIDs oldServices newServices =
+    let newServiceIDs = serviceID <$> newServices
+        oldServiceIDs = serviceID <$> oldServices
+    in  nub $ oldServiceIDs \\ newServiceIDs
+
   fetchServices :: IO [Service]
   fetchServices = do
     let uri = fromJust $ parseURI "http://status.calmac.info/?ajax=json"
