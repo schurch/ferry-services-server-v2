@@ -48,6 +48,7 @@ import           System.Logger.Class            ( Logger
                                                 , debug
                                                 , msg
                                                 )
+import           System.Timeout                 ( timeout )
 import           Control.Monad.Reader           ( asks )
 import           Network.URI                    ( parseURI )
 import           Network.HTTP.Headers           ( Header(..)
@@ -215,13 +216,20 @@ fetchStatusesAndNotify logger = do
         , Header HdrHost "status.calmac.info"
         ]
         ""
-    responseBody <- simpleHTTP request >>= getResponseBody
-    let result = eitherDecode (decompress responseBody)
-    case result of
-      Left  decodingError         -> error decodingError
-      Right serviceDetailsResults -> do
-        time <- getCurrentTime
-        return $ ajaxResultToService time <$> zip [1 ..] serviceDetailsResults
+    responseBody <-
+      timeout (1000000 * 20) $ simpleHTTP request >>= getResponseBody -- 20 second timeout
+    case responseBody of
+      Just responseBody' -> do
+        let result = eitherDecode (decompress responseBody')
+        case result of
+          Left  decodingError         -> error decodingError
+          Right serviceDetailsResults -> do
+            time <- getCurrentTime
+            return
+              $   ajaxResultToService time
+              <$> zip [1 ..] serviceDetailsResults
+      Nothing -> error "Timeout while waiting for services response"
+
 
   ajaxResultToService :: UTCTime -> (Int, AjaxServiceDetails) -> Service
   ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
