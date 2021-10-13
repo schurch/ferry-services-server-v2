@@ -190,8 +190,7 @@ fetchStatusesAndNotify logger = do
   newServices <- fetchServices
   oldServices <- DB.getServices
   DB.saveServices newServices
-  let removedServiceIDs = generateRemovedServiceIDs oldServices newServices
-  DB.hideServicesWithIDs removedServiceIDs
+  DB.hideServicesWithIDs $ generateRemovedServiceIDs oldServices newServices
   notifyForServices logger newServices oldServices
  where
   generateRemovedServiceIDs :: [Service] -> [Service] -> [Int]
@@ -216,20 +215,19 @@ fetchStatusesAndNotify logger = do
         , Header HdrHost "status.calmac.info"
         ]
         ""
-    responseBody <-
-      timeout (1000000 * 20) $ simpleHTTP request >>= getResponseBody -- 20 second timeout
-    case responseBody of
-      Just responseBody' -> do
-        let result = eitherDecode (decompress responseBody')
-        case result of
-          Left  decodingError         -> error decodingError
-          Right serviceDetailsResults -> do
-            time <- getCurrentTime
-            return
-              $   ajaxResultToService time
-              <$> zip [1 ..] serviceDetailsResults
-      Nothing -> error "Timeout while waiting for services response"
+    responseBody <- checkResponseBody
+      <$> timeout (1000000 * 20) (simpleHTTP request >>= getResponseBody) -- 20 second timeout
+    time <- getCurrentTime
+    let result = do
+          ajaxResult <- responseBody >>= eitherDecode . decompress
+          Right $ ajaxResultToService time <$> zip [1 ..] ajaxResult
+    case result of
+      Left  errorMessage -> error errorMessage
+      Right result'      -> return result'
 
+  checkResponseBody :: Maybe a -> Either String a
+  checkResponseBody =
+    maybe (Left "Timeout while waiting for services response") Right
 
   ajaxResultToService :: UTCTime -> (Int, AjaxServiceDetails) -> Service
   ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
