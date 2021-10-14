@@ -105,10 +105,10 @@ instance ToJSON GCMPayloadData where
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
 
 instance Enum ServiceStatus where
-  toEnum 0     = Normal
-  toEnum 1     = Disrupted
-  toEnum 2     = Cancelled
-  toEnum (-99) = Unknown
+  toEnum 0 = Normal
+  toEnum 1 = Disrupted
+  toEnum 2 = Cancelled
+  toEnum _ = Unknown
 
   fromEnum Normal    = 0
   fromEnum Disrupted = 1
