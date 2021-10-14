@@ -9,30 +9,32 @@ module AWS
   , getAttributesForEndpoint
   , updateDeviceTokenForEndpoint
   , deletePushEndpoint
-  )
-where
+  ) where
 
+import           Control.Exception.Lens         ( trying )
 import           Control.Lens                   ( (&)
                                                 , (.~)
                                                 , (?~)
                                                 , (^.)
                                                 )
 import           Control.Lens.At                ( at )
-import           Control.Exception.Lens         ( trying )
 import           Control.Monad                  ( void )
-import           Data.Maybe                     ( fromJust )
-import           Data.Text                      ( pack
-                                                , unpack
-                                                )
 import           Data.Aeson                     ( ToJSON
                                                 , toJSON
                                                 , (.=)
                                                 , encode
                                                 , object
                                                 )
+import           Data.Binary.Builder            ( Builder
+                                                , toLazyByteString
+                                                )
 import           Data.Char                      ( toLower )
-import           Data.String                    ( fromString )
 import           Data.HashMap.Strict            ( fromList )
+import           Data.Maybe                     ( fromJust )
+import           Data.String                    ( fromString )
+import           Data.Text                      ( pack
+                                                , unpack
+                                                )
 import           Network.AWS                    ( Credentials(..)
                                                 , LogLevel(..)
                                                 , Region(..)
@@ -60,22 +62,19 @@ import           Network.AWS.SNS.GetEndpointAttributes
                                                 ( getEndpointAttributes
                                                 , gearsAttributes
                                                 )
-import           Network.AWS.SNS.SetEndpointAttributes
-                                                ( setEndpointAttributes
-                                                , seaAttributes
-                                                )
 import           Network.AWS.SNS.Publish        ( pMessageStructure
                                                 , pTargetARN
                                                 , publish
+                                                )
+import           Network.AWS.SNS.SetEndpointAttributes
+                                                ( setEndpointAttributes
+                                                , seaAttributes
                                                 )
 import           Network.AWS.Types              ( AWSRequest
                                                 , Rs
                                                 )
 import           System.Environment             ( getEnv )
 import           System.IO                      ( stdout )
-import           Data.Binary.Builder            ( Builder
-                                                , toLazyByteString
-                                                )
 
 import qualified Data.Text.Lazy                as T
 import qualified Data.Text.Lazy.Encoding       as TE
@@ -92,11 +91,12 @@ import           Types                          ( DeviceType(..) )
 --   "ADM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}" 
 -- }            
 data PushPayload = PushPayload
-  { pushPayloadDefault :: String
-  , pushPayloadApns :: Maybe String
+  { pushPayloadDefault     :: String
+  , pushPayloadApns        :: Maybe String
   , pushPayloadApnsSandbox :: Maybe String
-  , pushPayloadGcm :: Maybe String
-  } deriving (Show)
+  , pushPayloadGcm         :: Maybe String
+  }
+  deriving Show
 
 instance ToJSON PushPayload where
   toJSON (PushPayload text apns apnsSandbox gcm) = object

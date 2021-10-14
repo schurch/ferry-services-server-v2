@@ -20,10 +20,15 @@ module Database
 import           Control.Monad                  ( void
                                                 , forM_
                                                 )
+import           Control.Monad.IO.Class         ( MonadIO
+                                                , liftIO
+                                                )
 import           Data.ByteString                ( ByteString )
 import           Data.Maybe                     ( listToMaybe )
-import           Data.Time.Clock                ( UTCTime )
 import           Data.String                    ( fromString )
+import           Data.Time.Calendar             ( Day )
+import           Data.Time.Clock                ( UTCTime )
+import           Data.Time.LocalTime            ( TimeOfDay(..) )
 import           Data.UUID                      ( UUID )
 import           Database.PostgreSQL.Simple     ( Connection
                                                 , execute
@@ -42,18 +47,13 @@ import           Database.PostgreSQL.Simple.SqlQQ
 import           Database.PostgreSQL.Simple.Types
                                                 ( PGArray(..) )
 import           System.Environment             ( getEnv )
-import           Control.Monad.IO.Class         ( MonadIO
-                                                , liftIO
-                                                )
 import           Types                          ( ServiceLocation
                                                 , Installation
                                                 , Service(..)
                                                 , DeviceType
                                                 , Location
                                                 )
-import           Data.Time.LocalTime            ( TimeOfDay(..) )
 import           Utility                        ( splitOn )
-import           Data.Time.Calendar             ( Day )
 
 connectionString :: IO ByteString
 connectionString = fromString <$> getEnv "DB_CONNECTION"

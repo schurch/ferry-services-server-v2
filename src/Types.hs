@@ -24,13 +24,14 @@ import           Data.Scientific                ( Scientific )
 import           Data.Text.Lazy                 ( Text )
 import           Data.Time.Clock                ( UTCTime )
 import           Data.UUID                      ( UUID )
-import           Database.PostgreSQL.Simple.ToField
-                                                ( ToField(..) )
-import           Database.PostgreSQL.Simple.FromField
-                                                ( FromField(..) )
 import           Database.PostgreSQL.Simple     ( ToRow
                                                 , FromRow
                                                 )
+import           Database.PostgreSQL.Simple.FromField
+                                                ( FromField(..) )
+import           Database.PostgreSQL.Simple.ToField
+                                                ( ToField(..) )
+import           GHC.Generics                   ( Generic )
 import           System.Logger                  ( Logger
                                                 , log
                                                 )
@@ -40,7 +41,6 @@ import           System.Logger.Class            ( MonadLogger
 import           Web.Scotty.Trans               ( ScottyT
                                                 , ActionT
                                                 )
-import           GHC.Generics                   ( Generic )
 
 -- Web server
 data Env = Env
