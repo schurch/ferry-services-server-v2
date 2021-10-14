@@ -30,21 +30,16 @@ library:
     - amazonka-sns
     - binary
     - bytestring
-    - containers
-    - HTTP
     - lens
     - mtl
-    - network-uri
     - postgresql-simple
     - scientific
     - scotty
-    - split
     - time
     - tinylog
     - text
     - unordered-containers
     - uuid
-    - zlib
 
 executables:
   ferry-services-server-exe:
@@ -57,6 +52,7 @@ executables:
     dependencies:
     - aeson
     - bytestring
+    - containers
     - data-default
     - fast-logger
     - ferry-services-server
@@ -67,11 +63,11 @@ executables:
     - tinylog
     - text
     - unordered-containers
+    - uuid
     - wai
     - wai-extra
     - wai-middleware-static
     - warp
-    - uuid
 
   ferry-services-scraper-exe:
     main:                Main.hs
@@ -81,9 +77,16 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - aeson
+    - bytestring
     - ferry-services-server
+    - HTTP
+    - network-uri
     - raven-haskell
+    - time
     - tinylog
+    - uuid
+    - zlib
 
 tests:
   ferry-services-server-test:

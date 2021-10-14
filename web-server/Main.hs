@@ -1,18 +1,37 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main where
 
-import           Lib
-import           Types
-import           Web.Scotty.Trans
-import           Control.Monad.Reader           ( runReaderT )
+import           Control.Exception.Base         ( SomeException )
+import           Control.Monad                  ( void
+                                                , when
+                                                )
 import           Control.Monad.IO.Class         ( liftIO )
-import           Network.Wai.Handler.Warp       ( Settings
-                                                , defaultOnException
-                                                , defaultSettings
-                                                , setOnException
-                                                , setPort
+import           Control.Monad.Reader           ( runReaderT
+                                                , asks
+                                                )
+import           Data.Aeson                     ( Value(..) )
+import           Data.ByteString.Char8          ( unpack )
+import           Data.Char                      ( ord )
+import           Data.Default                   ( def )
+import           Data.Maybe                     ( fromMaybe
+                                                , isNothing
+                                                , fromJust
+                                                )
+import           Data.Text.Encoding             ( decodeUtf8 )
+import           Data.Text.Lazy                 ( Text
+                                                , toStrict
+                                                , unpack
+                                                )
+import           Data.Time.Calendar             ( Day )
+import           Data.Time.Clock                ( UTCTime
+                                                , getCurrentTime
+                                                , diffUTCTime
+                                                )
+import           Data.UUID                      ( UUID
+                                                , fromText
                                                 )
 import           Network.Wai                    ( Request
                                                 , Middleware
@@ -21,8 +40,22 @@ import           Network.Wai                    ( Request
                                                 , requestHeaderHost
                                                 , requestMethod
                                                 )
+import           Network.Wai.Handler.Warp       ( Settings
+                                                , defaultOnException
+                                                , defaultSettings
+                                                , setOnException
+                                                , setPort
+                                                )
 import           Network.Wai.Middleware.RequestLogger
-import           Control.Exception.Base         ( SomeException )
+import           Network.Wai.Middleware.Static  ( staticPolicy
+                                                , noDots
+                                                , isNotAbsolute
+                                                , addBase
+                                                )
+import           System.Environment             ( getEnv )
+import           System.Log.FastLogger.Internal ( LogStr
+                                                , fromLogStr
+                                                )
 import           System.Log.Raven               ( initRaven
                                                 , register
                                                 , silentFallback
@@ -32,10 +65,6 @@ import           System.Log.Raven.Transport.HttpConduit
 import           System.Log.Raven.Types         ( SentryLevel(Error)
                                                 , SentryRecord(..)
                                                 )
-import           Data.ByteString.Char8          ( unpack )
-import           Data.Aeson                     ( Value(..) )
-import           Data.Text.Encoding             ( decodeUtf8 )
-import           System.Environment             ( getEnv )
 import           System.Logger                  ( create
                                                 , Output(StdOut)
                                                 , info
@@ -45,27 +74,15 @@ import           System.Logger                  ( create
                                                 , log
                                                 )
 import           System.Logger.Message          ( msg )
-import           Data.UUID                      ( UUID
-                                                , fromText
-                                                )
-import           Data.Text.Lazy                 ( Text
-                                                , toStrict
-                                                , unpack
-                                                )
-import           Data.Default                   ( def )
-import           System.Log.FastLogger.Internal ( LogStr
-                                                , fromLogStr
-                                                )
-import           Network.Wai.Middleware.Static  ( staticPolicy
-                                                , noDots
-                                                , isNotAbsolute
-                                                , addBase
-                                                )
-import           Data.Time.Calendar             ( Day )
-import           Data.Char                      ( ord )
 
-import           Data.ByteString               as BS
+import           Web.Scotty.Trans
+import           Types
+import           AWS
+
+import qualified Data.ByteString               as BS
+import qualified Database                      as DB
 import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map                      as M
 
 main :: IO ()
 main = do
@@ -176,3 +193,132 @@ loggerSettings logger = case currentLogLevel of
   removeTrailingNewline :: BS.ByteString -> BS.ByteString
   removeTrailingNewline =
     BS.reverse . BS.dropWhile (== fromIntegral (ord '\n')) . BS.reverse
+
+-- Lookup locations for a service ID
+type ServiceLocationLookup = M.Map Int [LocationResponse]
+
+getService :: Int -> Action (Maybe ServiceResponse)
+getService serviceID = do
+  service        <- DB.getService serviceID
+  time           <- liftIO getCurrentTime
+  locationLookup <- getLocationLookup
+  return
+    $   serviceToServiceResponseWithLocationLookup locationLookup time
+    <$> service
+
+getServices :: Action [ServiceResponse]
+getServices = do
+  services       <- DB.getServices
+  time           <- liftIO getCurrentTime
+  locationLookup <- getLocationLookup
+  return
+    $   serviceToServiceResponseWithLocationLookup locationLookup time
+    <$> services
+
+createInstallation
+  :: UUID -> CreateInstallationRequest -> Action [ServiceResponse]
+createInstallation installationID (CreateInstallationRequest deviceToken deviceType)
+  = do
+    awsSNSEndpointARN <- registerDeviceToken installationID
+                                             deviceToken
+                                             deviceType
+    time <- liftIO getCurrentTime
+    DB.createInstallation installationID
+                          deviceToken
+                          deviceType
+                          awsSNSEndpointARN
+                          time
+    getServicesForInstallation installationID
+
+addServiceToInstallation :: UUID -> Int -> Action [ServiceResponse]
+addServiceToInstallation installationID serviceID = do
+  DB.addServiceToInstallation installationID serviceID
+  getServicesForInstallation installationID
+
+deleteServiceForInstallation :: UUID -> Int -> Action [ServiceResponse]
+deleteServiceForInstallation installationID serviceID = do
+  DB.deleteServiceForInstallation installationID serviceID
+  getServicesForInstallation installationID
+
+getServicesForInstallation :: UUID -> Action [ServiceResponse]
+getServicesForInstallation installationID = do
+  services       <- DB.getServicesForInstallation installationID
+  time           <- liftIO getCurrentTime
+  locationLookup <- getLocationLookup
+  return
+    $   serviceToServiceResponseWithLocationLookup locationLookup time
+    <$> services
+
+serviceToServiceResponseWithLocationLookup
+  :: ServiceLocationLookup -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponseWithLocationLookup locationLookup currentTime Service {..}
+  = ServiceResponse
+    { serviceResponseServiceID        = serviceID
+    , serviceResponseSortOrder        = serviceSortOrder
+    , serviceResponseArea             = serviceArea
+    , serviceResponseRoute            = serviceRoute
+    , serviceResponseStatus           = serviceStatusForTime currentTime
+                                                             serviceUpdated
+                                                             serviceStatus
+    , serviceResponseLocations        = fromMaybe []
+                                          $ M.lookup serviceID locationLookup
+    , serviceResponseAdditionalInfo   = serviceAdditionalInfo
+    , serviceResponseDisruptionReason = serviceDisruptionReason
+    , serviceResponseLastUpdatedDate  = serviceLastUpdatedDate
+    , serviceResponseUpdated          = serviceUpdated
+    }
+
+-- Unknown status if over 30 mins ago
+serviceStatusForTime :: UTCTime -> UTCTime -> ServiceStatus -> ServiceStatus
+serviceStatusForTime currentTime serviceUpdated serviceStatus =
+  let diff = diffUTCTime currentTime serviceUpdated
+  in  if diff > 1800 then Unknown else serviceStatus
+
+-- Pseudo code from AWS docs:
+-- retrieve the latest device token from the mobile operating system
+-- if (the platform endpoint ARN is not stored)
+--   # this is a first-time registration
+--   call create platform endpoint
+--   store the returned platform endpoint ARN
+-- endif
+
+-- call get endpoint attributes on the platform endpoint ARN 
+
+-- if (while getting the attributes a not-found exception is thrown)
+--   # the platform endpoint was deleted 
+--   call create platform endpoint with the latest device token
+--   store the returned platform endpoint ARN
+-- else 
+--   if (the device token in the endpoint does not match the latest one) or 
+--       (get endpoint attributes shows the endpoint as disabled)
+--     call set endpoint attributes to set the latest device token and then enable the platform endpoint
+--   endif
+-- endif
+registerDeviceToken :: UUID -> String -> DeviceType -> Action String
+registerDeviceToken installationID deviceToken deviceType = do
+  logger'            <- asks logger
+  storedInstallation <- DB.getInstallationWithID installationID
+  currentEndpointARN <- if isNothing storedInstallation
+    then liftIO $ createPushEndpoint logger' deviceToken deviceType
+    else return $ installationEndpointARN . fromJust $ storedInstallation
+  endpointAttributesResult <- liftIO
+    $ getAttributesForEndpoint logger' currentEndpointARN
+  case endpointAttributesResult of
+    EndpointAttributesEndpointNotFound ->
+      liftIO $ createPushEndpoint logger' deviceToken deviceType
+    AttributeResults awsDeviceToken isEnabled -> do
+      when (awsDeviceToken /= deviceToken || not isEnabled)
+        $ liftIO
+        . void
+        $ updateDeviceTokenForEndpoint logger' currentEndpointARN deviceToken
+      return currentEndpointARN
+
+getLocationLookup :: Action ServiceLocationLookup
+getLocationLookup = do
+  serviceLocations <- liftIO DB.getServiceLocations
+  return
+    $ M.fromListWith (++)
+    $ [ (serviceID, [LocationResponse locationID name latitude longitude])
+      | (ServiceLocation serviceID locationID name latitude longitude) <-
+        serviceLocations
+      ]
