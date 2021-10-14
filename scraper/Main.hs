@@ -69,7 +69,6 @@ import qualified Database                      as DB
 main :: IO ()
 main = do
   logger <- create StdOut
-  info logger (msg @String "Starting scraper...")
   forever $ do
     info logger (msg @String "Fetching statuses...")
     catch (fetchStatusesAndNotify logger) (handleException logger)

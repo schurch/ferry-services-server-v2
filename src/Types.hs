@@ -253,3 +253,5 @@ instance FromJSON AjaxServiceDetails where
 toLowerFirstLetter :: String -> String
 toLowerFirstLetter []       = []
 toLowerFirstLetter (x : xs) = toLower x : xs
+
+-- Weather Fetcher Types

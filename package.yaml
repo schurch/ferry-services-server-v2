@@ -88,6 +88,17 @@ executables:
     - uuid
     - zlib
 
+  ferry-services-weather-fetcher-exe:
+    main:                Main.hs
+    source-dirs:         weather-fetcher
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - raven-haskell
+    - tinylog
+
 tests:
   ferry-services-server-test:
     main:                Spec.hs

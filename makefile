@@ -30,3 +30,7 @@ server: build
 .PHONY: scraper
 scraper: build
 	stack exec ferry-services-scraper-exe
+
+.PHONY: weather-fetcher
+weather-fetcher: build
+	stack exec ferry-services-weather-fetcher-exe
