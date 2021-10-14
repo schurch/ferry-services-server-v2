@@ -90,21 +90,25 @@ handleException logger exception = do
 recordUpdate :: String -> SentryRecord -> SentryRecord
 recordUpdate env record = record { srEnvironment = Just env }
 
+newtype ScrapedServices = ScrapedServices { unScrapedServices :: [Service] }
+newtype DatabaseServices = DatabaseServices { unDatabaseServices :: [Service] }
+
 fetchStatusesAndNotify :: Logger -> IO ()
 fetchStatusesAndNotify logger = do
-  newServices <- fetchServices
-  oldServices <- DB.getServices
-  DB.saveServices newServices
-  DB.hideServicesWithIDs $ generateRemovedServiceIDs oldServices newServices
-  notifyForServices logger newServices oldServices
+  scrapedServices  <- fetchServices
+  databaseServices <- DatabaseServices <$> DB.getServices
+  DB.saveServices $ unScrapedServices scrapedServices
+  DB.hideServicesWithIDs
+    $ generateRemovedServiceIDs scrapedServices databaseServices
+  notifyForServices logger scrapedServices databaseServices
  where
-  generateRemovedServiceIDs :: [Service] -> [Service] -> [Int]
-  generateRemovedServiceIDs oldServices newServices =
-    let newServiceIDs = serviceID <$> newServices
-        oldServiceIDs = serviceID <$> oldServices
-    in  nub $ oldServiceIDs \\ newServiceIDs
+  generateRemovedServiceIDs :: ScrapedServices -> DatabaseServices -> [Int]
+  generateRemovedServiceIDs (ScrapedServices newServices) (DatabaseServices oldServices)
+    = let newServiceIDs = serviceID <$> newServices
+          oldServiceIDs = serviceID <$> oldServices
+      in  nub $ oldServiceIDs \\ newServiceIDs
 
-  fetchServices :: IO [Service]
+  fetchServices :: IO ScrapedServices
   fetchServices = do
     let uri = fromJust $ parseURI "http://status.calmac.info/?ajax=json"
     let
@@ -128,7 +132,7 @@ fetchStatusesAndNotify logger = do
           Right $ ajaxResultToService time <$> zip [1 ..] ajaxResult
     case result of
       Left  errorMessage -> error errorMessage
-      Right result'      -> return result'
+      Right result'      -> return $ ScrapedServices result'
 
   checkResponseBody :: Maybe a -> Either String a
   checkResponseBody =
@@ -163,9 +167,9 @@ ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
   stringToUTCTime :: String -> UTCTime
   stringToUTCTime time = posixSecondsToUTCTime $ fromInteger (read time) / 1000
 
-notifyForServices :: Logger -> [Service] -> [Service] -> IO ()
-notifyForServices logger newServices oldServices =
-  forM_ newServices $ \service -> do
+notifyForServices :: Logger -> ScrapedServices -> DatabaseServices -> IO ()
+notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServices)
+  = forM_ newServices $ \service -> do
     let oldService = find (\s -> serviceID s == serviceID service) oldServices
     case oldService of
       Just oldService -> do
