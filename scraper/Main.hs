@@ -134,35 +134,34 @@ fetchStatusesAndNotify logger = do
   checkResponseBody =
     maybe (Left "Timeout while waiting for services response") Right
 
-  ajaxResultToService :: UTCTime -> (Int, AjaxServiceDetails) -> Service
-  ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
-    { serviceID               = read ajaxServiceDetailsCode
-    , serviceUpdated          = time
-    , serviceSortOrder        = sortOrder
-    , serviceArea             = ajaxServiceDetailsDestName
-    , serviceRoute            = ajaxServiceDetailsRouteName
-    , serviceStatus           = imageToStatus ajaxServiceDetailsImage
-    , serviceAdditionalInfo   = Just
-                                $  ajaxServiceDetailsWebDetail
-                                <> fromMaybe "" ajaxServiceDetailsInfoMsg
-    , serviceDisruptionReason = reasonToMaybe ajaxServiceDetailsReason
-    , serviceLastUpdatedDate  = Just $ stringToUTCTime ajaxServiceDetailsUpdated
-    }
-   where
-    reasonToMaybe :: String -> Maybe String
-    reasonToMaybe reason | reason == "NONE" = Nothing
-                         | otherwise        = Just reason
+ajaxResultToService :: UTCTime -> (Int, AjaxServiceDetails) -> Service
+ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
+  { serviceID               = read ajaxServiceDetailsCode
+  , serviceUpdated          = time
+  , serviceSortOrder        = sortOrder
+  , serviceArea             = ajaxServiceDetailsDestName
+  , serviceRoute            = ajaxServiceDetailsRouteName
+  , serviceStatus           = imageToStatus ajaxServiceDetailsImage
+  , serviceAdditionalInfo   = Just
+                              $  ajaxServiceDetailsWebDetail
+                              <> fromMaybe "" ajaxServiceDetailsInfoMsg
+  , serviceDisruptionReason = reasonToMaybe ajaxServiceDetailsReason
+  , serviceLastUpdatedDate  = Just $ stringToUTCTime ajaxServiceDetailsUpdated
+  }
+ where
+  reasonToMaybe :: String -> Maybe String
+  reasonToMaybe reason | reason == "NONE" = Nothing
+                       | otherwise        = Just reason
 
-    imageToStatus :: String -> ServiceStatus
-    imageToStatus image | image == "normal"    = Normal
-                        | image == "beware"    = Disrupted
-                        | image == "affected"  = Disrupted
-                        | image == "cancelled" = Cancelled
-                        | otherwise            = error "Unknown image status"
+  imageToStatus :: String -> ServiceStatus
+  imageToStatus image | image == "normal"    = Normal
+                      | image == "beware"    = Disrupted
+                      | image == "affected"  = Disrupted
+                      | image == "cancelled" = Cancelled
+                      | otherwise            = error "Unknown image status"
 
-    stringToUTCTime :: String -> UTCTime
-    stringToUTCTime time =
-      posixSecondsToUTCTime $ fromInteger (read time) / 1000
+  stringToUTCTime :: String -> UTCTime
+  stringToUTCTime time = posixSecondsToUTCTime $ fromInteger (read time) / 1000
 
 notifyForServices :: Logger -> [Service] -> [Service] -> IO ()
 notifyForServices logger newServices oldServices =
