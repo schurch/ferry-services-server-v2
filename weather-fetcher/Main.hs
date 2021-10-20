@@ -4,11 +4,19 @@
 
 module Main where
 
+import           Data.Aeson                     ( eitherDecode )
 import           Control.Concurrent             ( threadDelay )
 import           Control.Exception              ( SomeException
                                                 , catch
                                                 )
 import           Control.Monad                  ( forever )
+import           Data.Maybe                     ( fromJust )
+import           Network.HTTP                   ( simpleHTTP
+                                                , getResponseBody
+                                                , Request(..)
+                                                , RequestMethod(..)
+                                                )
+import           Network.URI                    ( parseURI )
 import           System.Environment             ( getEnv )
 import           System.Log.Raven               ( initRaven
                                                 , register
@@ -29,6 +37,9 @@ import           System.Logger.Class            ( Logger
                                                 , debug
                                                 )
 import           System.Logger.Message          ( msg )
+import           System.Timeout                 ( timeout )
+
+import Types
 
 main :: IO ()
 main = do
@@ -54,4 +65,20 @@ recordUpdate :: String -> SentryRecord -> SentryRecord
 recordUpdate env record = record { srEnvironment = Just env }
 
 fetchWeather :: Logger -> IO ()
-fetchWeather logger = undefined
+fetchWeather logger = do
+  appID <- getEnv "OPENWEATHERMAP_APPID"
+  let uri = fromJust $ parseURI $ "http://api.openweathermap.org/data/2.5/weather?lat=55.576606&lon=-5.139172&APPID=" <> appID
+  let request = Request uri GET [] ""
+  responseBody <- checkResponseBody
+      <$> timeout (1000000 * 20) (simpleHTTP request >>= getResponseBody) -- 20 second timeout
+  let result = do
+        ajaxResult <- responseBody >>= eitherDecode
+        Right $ resultToDatabase ajaxResult
+  print result
+
+resultToDatabase :: WeatherFetcherResult -> WeatherFetcherResult
+resultToDatabase result = result
+
+checkResponseBody :: Maybe a -> Either String a
+checkResponseBody =
+  maybe (Left "Timeout while waiting for services response") Right

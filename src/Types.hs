@@ -250,8 +250,37 @@ instance FromJSON AjaxServiceDetails where
   parseJSON = genericParseJSON
     $ defaultOptions { fieldLabelModifier = toLowerFirstLetter . drop 18 }
 
+-- Weather Fetcher Types
+data WeatherFetcherResult = WeatherFetcherResult
+  { weatherFetcherResultWeather :: [WeatherFetcherResultWeather]
+  , weatherFetcherResultMain :: WeatherFetcherResultMain
+  }
+  deriving (Generic, Show)
+
+instance FromJSON WeatherFetcherResult where
+  parseJSON = genericParseJSON
+    $ defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 20 }
+
+data WeatherFetcherResultWeather = WeatherFetcherResultWeather
+  { weatherFetcherResultWeatherIcon         :: String
+  , weatherFetcherResultWeatherDescription  :: String
+  }
+  deriving (Generic, Show)
+
+instance FromJSON WeatherFetcherResultWeather where
+  parseJSON = genericParseJSON
+    $ defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 27 }
+
+data WeatherFetcherResultMain = WeatherFetcherResultMain
+  { weatherFetcherResultMainTemp :: Scientific
+  }
+  deriving (Generic, Show)
+  
+instance FromJSON WeatherFetcherResultMain where
+  parseJSON = genericParseJSON
+    $ defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 24 }
+
+-- Helpers
 toLowerFirstLetter :: String -> String
 toLowerFirstLetter []       = []
 toLowerFirstLetter (x : xs) = toLower x : xs
-
--- Weather Fetcher Types

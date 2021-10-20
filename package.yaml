@@ -96,6 +96,11 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - aeson
+    - bytestring
+    - ferry-services-server
+    - HTTP
+    - network-uri
     - raven-haskell
     - tinylog
 
