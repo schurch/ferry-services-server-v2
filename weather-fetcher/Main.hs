@@ -39,7 +39,9 @@ import           System.Logger.Class            ( Logger
 import           System.Logger.Message          ( msg )
 import           System.Timeout                 ( timeout )
 
-import Types
+import Types                                    ( WeatherFetcherResult )
+
+import qualified Database as DB
 
 main :: IO ()
 main = do
@@ -71,14 +73,14 @@ fetchWeather logger = do
   let request = Request uri GET [] ""
   responseBody <- checkResponseBody
       <$> timeout (1000000 * 20) (simpleHTTP request >>= getResponseBody) -- 20 second timeout
-  let result = do
-        ajaxResult <- responseBody >>= eitherDecode
-        Right $ resultToDatabase ajaxResult
-  print result
+  let result = responseBody >>= eitherDecode
+  case result of 
+    Left errorMessage -> error errorMessage
+    Right weather -> DB.insertLocationWeather 4 weather
 
 resultToDatabase :: WeatherFetcherResult -> WeatherFetcherResult
 resultToDatabase result = result
 
 checkResponseBody :: Maybe a -> Either String a
 checkResponseBody =
-  maybe (Left "Timeout while waiting for services response") Right
+  maybe (Left "Timeout while waiting for weather response") Right

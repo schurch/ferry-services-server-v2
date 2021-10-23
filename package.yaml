@@ -58,6 +58,7 @@ executables:
     - ferry-services-server
     - mtl
     - raven-haskell
+    - scientific
     - scotty
     - time
     - tinylog

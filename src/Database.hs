@@ -2,7 +2,9 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Database
-  ( getService
+  ( insertLocationWeather
+  , getLocationWeathers
+  , getService
   , getServices
   , hideServicesWithIDs
   , createInstallation
@@ -52,6 +54,11 @@ import           Types                          ( ServiceLocation
                                                 , Service(..)
                                                 , DeviceType
                                                 , Location
+                                                , WeatherFetcherResult(..)
+                                                , WeatherFetcherResultWeather(..)
+                                                , WeatherFetcherResultMain(..)
+                                                , WeatherFetcherResultWind(..)
+                                                , LocationWeather(..)
                                                 )
 import           Utility                        ( splitOn )
 
@@ -64,6 +71,33 @@ withConnection action = do
   result       <- liftIO $ action dbConnection
   liftIO $ close dbConnection
   return result
+
+insertLocationWeather :: MonadIO m => Int -> WeatherFetcherResult -> m ()
+insertLocationWeather locationID 
+  (WeatherFetcherResult (
+    (WeatherFetcherResultWeather icon description) : _) 
+    (WeatherFetcherResultMain temperature) 
+    (WeatherFetcherResultWind windSpeed windDirection)) = void $ withConnection $ \connection -> execute
+      connection
+      [sql|
+        INSERT INTO location_weather (location_id, description, icon, temperature, wind_speed, wind_direction) 
+          VALUES (?,?,?,?,?,?)
+          ON CONFLICT (location_id) DO UPDATE 
+            SET description = excluded.description, 
+                icon = excluded.icon, 
+                temperature = excluded.temperature, 
+                wind_speed = excluded.wind_speed, 
+                wind_direction = excluded.wind_direction
+      |]
+      (locationID, description, icon, temperature, windSpeed, windDirection)
+
+getLocationWeathers :: MonadIO m => m [LocationWeather]
+getLocationWeathers = withConnection $ \connection -> query_
+  connection
+  [sql| 
+    SELECT location_weather_id, location_id, description, icon, temperature, wind_speed, wind_direction, created
+    FROM location_weather
+  |]
 
 getService :: MonadIO m => Int -> m (Maybe Types.Service)
 getService serviceID = do

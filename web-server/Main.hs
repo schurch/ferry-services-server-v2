@@ -20,6 +20,9 @@ import           Data.Maybe                     ( fromMaybe
                                                 , isNothing
                                                 , fromJust
                                                 )
+import           Data.Scientific                ( Scientific(..)
+                                                , toRealFloat 
+                                                )
 import           Data.Text.Encoding             ( decodeUtf8 )
 import           Data.Text.Lazy                 ( Text
                                                 , toStrict
@@ -80,9 +83,10 @@ import           Types
 import           AWS
 
 import qualified Data.ByteString               as BS
-import qualified Database                      as DB
+import qualified Data.Char                     as Char
 import qualified Data.HashMap.Strict           as HM
 import qualified Data.Map                      as M
+import qualified Database                      as DB
 
 main :: IO ()
 main = do
@@ -316,9 +320,39 @@ registerDeviceToken installationID deviceToken deviceType = do
 getLocationLookup :: Action ServiceLocationLookup
 getLocationLookup = do
   serviceLocations <- liftIO DB.getServiceLocations
+  locationWeatherLookup <- getLocationWeatherLookup
   return
     $ M.fromListWith (++)
-    $ [ (serviceID, [LocationResponse locationID name latitude longitude])
+    $ [ (serviceID, [LocationResponse locationID name latitude longitude (M.lookup locationID locationWeatherLookup)])
       | (ServiceLocation serviceID locationID name latitude longitude) <-
         serviceLocations
       ]
+
+getLocationWeatherLookup :: Action (M.Map Int LocationWeatherResponse)
+getLocationWeatherLookup = do
+  locationWeathers <- liftIO DB.getLocationWeathers
+  return
+    $ M.fromList
+    $ [ (locationID
+        , LocationWeatherResponse icon (capitalized description) (kelvinToCelsius temperature) (mpsToMPH windSpeed) windDirection (directionToCardinal windDirection)
+        )
+      | (LocationWeather locationWeatherID locationID description icon temperature windSpeed windDirection updated) <-
+        locationWeathers
+      ]
+  where
+    kelvinToCelsius :: Scientific -> Int
+    kelvinToCelsius kelvin =  round . toRealFloat $ kelvin - 273.15
+
+    mpsToMPH :: Scientific -> Int
+    mpsToMPH mps =  round . toRealFloat $ mps * 2.236936284
+
+    directionToCardinal :: Scientific -> String
+    directionToCardinal degrees =  
+      let 
+        index = floor ((toRealFloat degrees + 11.25) / 22.5)
+        cardinals = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+      in cardinals !! (index `mod` 16)
+
+    capitalized :: String -> String
+    capitalized (x : xs) = Char.toUpper x : map Char.toLower xs
+    capitalized [] = []

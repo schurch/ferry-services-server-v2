@@ -20,9 +20,11 @@ import           Data.Aeson                     ( genericParseJSON
                                                 , ToJSON(toJSON)
                                                 )
 import           Data.Char                      ( toLower )
+import           Data.Proxy
 import           Data.Scientific                ( Scientific )
 import           Data.Text.Lazy                 ( Text )
 import           Data.Time.Clock                ( UTCTime )
+import           Data.Typeable                  (Typeable, typeRep)
 import           Data.UUID                      ( UUID )
 import           Database.PostgreSQL.Simple     ( ToRow
                                                 , FromRow
@@ -177,6 +179,18 @@ data Location = Location
   }
   deriving (Generic, Show, ToRow, FromRow)
 
+data LocationWeather = LocationWeather
+  { locationWeatherID :: Int
+  , locationWeatherLocationID :: Int
+  , locationWeatherDescription :: String
+  , locationWeatherIcon :: String
+  , locationWeatherTemperature :: Scientific
+  , locationWeatherWindSpeed :: Scientific
+  , locationWeatherWindDirection :: Scientific
+  , locationWeatherUpdated :: UTCTime
+  }
+  deriving (Generic, Show, ToRow, FromRow)
+
 -- API Types
 data ServiceResponse = ServiceResponse
   { serviceResponseServiceID        :: Int
@@ -217,11 +231,25 @@ data LocationResponse = LocationResponse
   , locationResponseName      :: String
   , locationResponseLatitude  :: Scientific
   , locationResponseLongitude :: Scientific
+  , locationResponseWeather   :: Maybe LocationWeatherResponse
   }
   deriving (Generic, Show)
 
 instance ToJSON LocationResponse where
   toJSON = genericToJSON $ jsonOptions 16
+
+data LocationWeatherResponse = LocationWeatherResponse
+  { locationWeatherResponseIcon :: String
+  , locationWeatherResponseDescription :: String
+  , locationWeatherResponseTemperatureCelsius :: Int
+  , locationWeatherResponseWindSpeedMPH :: Int
+  , locationWeatherResponseWindDirection :: Scientific
+  , locationWeatherResponseWindDirectionCardinal :: String
+  }
+  deriving (Generic, Show)
+
+instance ToJSON LocationWeatherResponse where
+  toJSON = genericToJSON $ jsonOptions 23
 
 jsonOptions :: Int -> Data.Aeson.Options
 jsonOptions prefixLength = defaultOptions
@@ -254,12 +282,12 @@ instance FromJSON AjaxServiceDetails where
 data WeatherFetcherResult = WeatherFetcherResult
   { weatherFetcherResultWeather :: [WeatherFetcherResultWeather]
   , weatherFetcherResultMain :: WeatherFetcherResultMain
+  , weatherFetcherResultWind :: WeatherFetcherResultWind
   }
   deriving (Generic, Show)
 
 instance FromJSON WeatherFetcherResult where
-  parseJSON = genericParseJSON
-    $ defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 20 }
+  parseJSON = genericParseJSON $ weatherFetcherJsonOptions (Proxy :: Proxy WeatherFetcherResult)
 
 data WeatherFetcherResultWeather = WeatherFetcherResultWeather
   { weatherFetcherResultWeatherIcon         :: String
@@ -268,8 +296,7 @@ data WeatherFetcherResultWeather = WeatherFetcherResultWeather
   deriving (Generic, Show)
 
 instance FromJSON WeatherFetcherResultWeather where
-  parseJSON = genericParseJSON
-    $ defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 27 }
+  parseJSON = genericParseJSON $ weatherFetcherJsonOptions (Proxy :: Proxy WeatherFetcherResultWeather)
 
 data WeatherFetcherResultMain = WeatherFetcherResultMain
   { weatherFetcherResultMainTemp :: Scientific
@@ -277,8 +304,23 @@ data WeatherFetcherResultMain = WeatherFetcherResultMain
   deriving (Generic, Show)
   
 instance FromJSON WeatherFetcherResultMain where
-  parseJSON = genericParseJSON
-    $ defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 24 }
+  parseJSON = genericParseJSON $ weatherFetcherJsonOptions (Proxy :: Proxy WeatherFetcherResultMain)
+
+data WeatherFetcherResultWind = WeatherFetcherResultWind
+  { weatherFetcherResultWindSpeed :: Scientific
+  , weatherFetcherResultWindDeg :: Scientific
+  }
+  deriving (Generic, Show)
+  
+instance FromJSON WeatherFetcherResultWind where
+  parseJSON = genericParseJSON $ weatherFetcherJsonOptions (Proxy :: Proxy WeatherFetcherResultWind)
+
+weatherFetcherJsonOptions :: Typeable a => Proxy a -> Options
+weatherFetcherJsonOptions type' = 
+  let 
+    typeName = show $ typeRep type'
+  in 
+    defaultOptions { fieldLabelModifier = camelTo2 '_' . drop (length typeName) }
 
 -- Helpers
 toLowerFirstLetter :: String -> String

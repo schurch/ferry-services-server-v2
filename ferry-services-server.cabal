@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6db88b3a0700935aa9304f932a6aafbf2956f93ef020e9791944bbc768be15df
+-- hash: f90fe1141973e9a40c7c26bb017a367398046e7988c5804b5f22b7a28b53e628
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -92,6 +92,7 @@ executable ferry-services-server-exe
     , ferry-services-server
     , mtl
     , raven-haskell
+    , scientific
     , scotty
     , text
     , time
