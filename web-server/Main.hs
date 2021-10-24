@@ -334,17 +334,17 @@ getLocationWeatherLookup = do
   return
     $ M.fromList
     $ [ (locationID
-        , LocationWeatherResponse icon (capitalized description) (kelvinToCelsius temperature) (mpsToMPH windSpeed) windDirection (directionToCardinal windDirection)
+        , LocationWeatherResponse icon (capitalized description) (kelvinToCelsius temperature) (metersPerSecondToMilesPerHour windSpeed) windDirection (directionToCardinal windDirection)
         )
-      | (LocationWeather locationWeatherID locationID description icon temperature windSpeed windDirection updated) <-
+      | (LocationWeather locationID description icon temperature windSpeed windDirection _ _) <-
         locationWeathers
       ]
   where
     kelvinToCelsius :: Scientific -> Int
     kelvinToCelsius kelvin =  round . toRealFloat $ kelvin - 273.15
 
-    mpsToMPH :: Scientific -> Int
-    mpsToMPH mps =  round . toRealFloat $ mps * 2.236936284
+    metersPerSecondToMilesPerHour :: Scientific -> Int
+    metersPerSecondToMilesPerHour mps =  round . toRealFloat $ mps * 2.236936284
 
     directionToCardinal :: Scientific -> String
     directionToCardinal degrees =  

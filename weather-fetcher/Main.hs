@@ -9,7 +9,8 @@ import           Control.Concurrent             ( threadDelay )
 import           Control.Exception              ( SomeException
                                                 , catch
                                                 )
-import           Control.Monad                  ( forever )
+import           Control.Monad                  ( forever
+                                                , forM_ )
 import           Data.Maybe                     ( fromJust )
 import           Network.HTTP                   ( simpleHTTP
                                                 , getResponseBody
@@ -31,6 +32,7 @@ import           System.Logger                  ( Output(StdOut)
                                                 , Logger
                                                 , create
                                                 , info
+                                                , debug
                                                 , err
                                                 )
 import           System.Logger.Class            ( Logger
@@ -39,7 +41,7 @@ import           System.Logger.Class            ( Logger
 import           System.Logger.Message          ( msg )
 import           System.Timeout                 ( timeout )
 
-import Types                                    ( WeatherFetcherResult )
+import Types
 
 import qualified Database as DB
 
@@ -47,7 +49,7 @@ main :: IO ()
 main = do
   logger <- create StdOut
   forever $ do
-    info logger (msg @String "Fetching weather...")
+    info logger (msg @String "Fetching weather")
     catch (fetchWeather logger) (handleException logger)
     threadDelay (15 * 60 * 1000 * 1000) -- 15 mins
 
@@ -68,18 +70,24 @@ recordUpdate env record = record { srEnvironment = Just env }
 
 fetchWeather :: Logger -> IO ()
 fetchWeather logger = do
+  locations <- DB.getLocations
+  forM_ locations $ \location -> do
+    fetchWeatherForLocation logger location
+    threadDelay (2 * 1000 * 1000) -- 2 second delay
+
+fetchWeatherForLocation :: Logger -> Location -> IO ()
+fetchWeatherForLocation logger (Location locationID name latitude longitude created) = do
   appID <- getEnv "OPENWEATHERMAP_APPID"
-  let uri = fromJust $ parseURI $ "http://api.openweathermap.org/data/2.5/weather?lat=55.576606&lon=-5.139172&APPID=" <> appID
+  let url = "http://api.openweathermap.org/data/2.5/weather?lat=" <> show latitude <> "&lon=" <> show longitude <> "&APPID=" <> appID
+  System.Logger.debug logger (msg  $ "Fetching " <> name)
+  let uri = fromJust . parseURI $ url
   let request = Request uri GET [] ""
   responseBody <- checkResponseBody
-      <$> timeout (1000000 * 20) (simpleHTTP request >>= getResponseBody) -- 20 second timeout
+      <$> timeout (20 * 1000 * 1000) (simpleHTTP request >>= getResponseBody) -- 20 second timeout
   let result = responseBody >>= eitherDecode
   case result of 
     Left errorMessage -> error errorMessage
-    Right weather -> DB.insertLocationWeather 4 weather
-
-resultToDatabase :: WeatherFetcherResult -> WeatherFetcherResult
-resultToDatabase result = result
+    Right weather -> DB.insertLocationWeather locationID weather
 
 checkResponseBody :: Maybe a -> Either String a
 checkResponseBody =

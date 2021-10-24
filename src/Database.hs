@@ -16,7 +16,7 @@ module Database
   , saveServices
   , deleteInstallationWithID
   , getServiceLocations
-  , getLocationsForServiceID
+  , getLocations
   ) where
 
 import           Control.Monad                  ( void
@@ -87,15 +87,17 @@ insertLocationWeather locationID
                 icon = excluded.icon, 
                 temperature = excluded.temperature, 
                 wind_speed = excluded.wind_speed, 
-                wind_direction = excluded.wind_direction
+                wind_direction = excluded.wind_direction,
+                updated = CURRENT_TIMESTAMP
       |]
       (locationID, description, icon, temperature, windSpeed, windDirection)
+insertLocationWeather _ _ = return ()
 
 getLocationWeathers :: MonadIO m => m [LocationWeather]
 getLocationWeathers = withConnection $ \connection -> query_
   connection
   [sql| 
-    SELECT location_weather_id, location_id, description, icon, temperature, wind_speed, wind_direction, created
+    SELECT location_id, description, icon, temperature, wind_speed, wind_direction, updated, created
     FROM location_weather
   |]
 
@@ -257,13 +259,10 @@ getServiceLocations = withConnection $ \connection -> query_
     JOIN locations l ON l.location_id = sl.location_id 
   |]
 
-getLocationsForServiceID :: MonadIO m => Int -> m [Location]
-getLocationsForServiceID serviceID = withConnection $ \connection -> query
+getLocations :: MonadIO m => m [Location]
+getLocations = withConnection $ \connection -> query_
   connection
   [sql| 
-    SELECT l.location_id, l.name, l.latitude, l.longitude
-    FROM service_locations sl
-    JOIN locations l ON l.location_id = sl.location_id 
-    WHERE sl.service_id = ?
+    SELECT location_id, name, latitude, longitude, created
+    FROM locations
   |]
-  (Only serviceID)

@@ -174,20 +174,21 @@ data ServiceLocation = ServiceLocation
 data Location = Location
   { locationLocationID :: Int
   , locationName       :: String
-  , locationatitude    :: Scientific
+  , locationLatitude   :: Scientific
   , locationLongitude  :: Scientific
+  , locationCreated    :: UTCTime 
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data LocationWeather = LocationWeather
-  { locationWeatherID :: Int
-  , locationWeatherLocationID :: Int
+  { locationWeatherLocationID :: Int
   , locationWeatherDescription :: String
   , locationWeatherIcon :: String
   , locationWeatherTemperature :: Scientific
   , locationWeatherWindSpeed :: Scientific
   , locationWeatherWindDirection :: Scientific
   , locationWeatherUpdated :: UTCTime
+  , locationWeatherCreated :: UTCTime 
   }
   deriving (Generic, Show, ToRow, FromRow)
 
