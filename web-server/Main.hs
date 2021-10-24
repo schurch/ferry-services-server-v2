@@ -183,7 +183,7 @@ loggerSettings logger = case currentLogLevel of
 
   infoSettings :: RequestLoggerSettings
   infoSettings =
-    def { outputFormat = Apache FromSocket, destination = Callback callbackLog }
+    def { outputFormat = Apache FromFallback, destination = Callback callbackLog }
 
   currentLogLevel :: Level
   currentLogLevel = level logger
