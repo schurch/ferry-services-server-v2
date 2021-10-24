@@ -9,4 +9,4 @@ CREATE TABLE location_weather (
     created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-DELETE FROM locations WHERE location_id IN (1,2,5);
+DELETE FROM locations WHERE location_id IN (1,2,5,6);
