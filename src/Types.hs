@@ -66,7 +66,7 @@ data APSPayload = APSPayload
   deriving (Generic, Show)
 
 instance ToJSON APSPayload where
-  toJSON = genericToJSON $ jsonOptions 10
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayload)
 
 data APSPayloadBody = APSPayloadBody
   { apsPayloadBodyAlert :: String
@@ -75,7 +75,7 @@ data APSPayloadBody = APSPayloadBody
   deriving (Generic, Show)
 
 instance ToJSON APSPayloadBody where
-  toJSON = genericToJSON $ jsonOptions 14
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayloadBody)
 
 -- Google
 data CGMPayload = CGMPayload
@@ -85,7 +85,7 @@ data CGMPayload = CGMPayload
   deriving (Generic, Show)
 
 instance ToJSON CGMPayload where
-  toJSON = genericToJSON $ jsonOptions 10
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy CGMPayload)
 
 data GCMPaylodNotification = GCMPaylodNotification
   { gcmPaylodNotificationTitle :: String
@@ -93,7 +93,7 @@ data GCMPaylodNotification = GCMPaylodNotification
   deriving (Generic, Show)
 
 instance ToJSON GCMPaylodNotification where
-  toJSON = genericToJSON $ jsonOptions 21
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPaylodNotification)
 
 data GCMPayloadData = GCMPayloadData
   { gcmPayloadDataServiceID :: Int
@@ -101,7 +101,7 @@ data GCMPayloadData = GCMPayloadData
   deriving (Generic, Show)
 
 instance ToJSON GCMPayloadData where
-  toJSON = genericToJSON $ jsonOptions 14
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPayloadData)
 
 -- General
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
@@ -208,7 +208,7 @@ data ServiceResponse = ServiceResponse
   deriving (Generic, Show)
 
 instance ToJSON ServiceResponse where
-  toJSON = genericToJSON $ jsonOptions 15
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy ServiceResponse)
 
 data CreateInstallationRequest = CreateInstallationRequest
   { createInstallationRequestDeviceToken :: String
@@ -217,7 +217,7 @@ data CreateInstallationRequest = CreateInstallationRequest
   deriving (Generic, Show)
 
 instance FromJSON CreateInstallationRequest where
-  parseJSON = genericParseJSON $ jsonOptions 25
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy CreateInstallationRequest)
 
 data AddServiceRequest = AddServiceRequest
   { addServiceRequestServiceID :: Int
@@ -225,7 +225,7 @@ data AddServiceRequest = AddServiceRequest
   deriving (Generic, Show)
 
 instance FromJSON AddServiceRequest where
-  parseJSON = genericParseJSON $ jsonOptions 17
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy AddServiceRequest)
 
 data LocationResponse = LocationResponse
   { locationResponseID        :: Int
@@ -237,7 +237,7 @@ data LocationResponse = LocationResponse
   deriving (Generic, Show)
 
 instance ToJSON LocationResponse where
-  toJSON = genericToJSON $ jsonOptions 16
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy LocationResponse)
 
 data LocationWeatherResponse = LocationWeatherResponse
   { locationWeatherResponseIcon :: String
@@ -250,13 +250,17 @@ data LocationWeatherResponse = LocationWeatherResponse
   deriving (Generic, Show)
 
 instance ToJSON LocationWeatherResponse where
-  toJSON = genericToJSON $ jsonOptions 23
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy LocationWeatherResponse)
 
-jsonOptions :: Int -> Data.Aeson.Options
-jsonOptions prefixLength = defaultOptions
-  { fieldLabelModifier = camelTo2 '_' . drop prefixLength
-  , omitNothingFields  = True
-  }
+jsonOptions :: Typeable a => Proxy a -> Data.Aeson.Options
+jsonOptions type' = 
+  let 
+    typeName = show $ typeRep type'
+  in 
+    defaultOptions
+    { fieldLabelModifier = camelTo2 '_' . drop (length typeName)
+    , omitNothingFields  = True
+    }
 
 -- Scraper Types
 data AjaxServiceDetails = AjaxServiceDetails
@@ -277,7 +281,9 @@ data AjaxServiceDetails = AjaxServiceDetails
 
 instance FromJSON AjaxServiceDetails where
   parseJSON = genericParseJSON
-    $ defaultOptions { fieldLabelModifier = toLowerFirstLetter . drop 18 }
+    $ defaultOptions { 
+      fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxServiceDetails)) 
+      }
 
 -- Weather Fetcher Types
 data WeatherFetcherResult = WeatherFetcherResult
