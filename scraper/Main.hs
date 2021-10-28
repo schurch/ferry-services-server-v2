@@ -177,31 +177,29 @@ notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServ
         let statusValid  = serviceStatus service /= Unknown
         let shouldNotify = statusesDifferent && statusValid
         when shouldNotify $ do
-          let message = serviceToNotificationMessage service
           interestedInstallations <- DB.getIntererestedInstallationsForServiceID
             $ serviceID service
+
           let iOSInterestedInstallations = filter
                 ((==) IOS . installationDeviceType)
                 interestedInstallations
-          let androidInterestedInstallations = filter
-                ((==) Android . installationDeviceType)
-                interestedInstallations
+          let iOSMessage = serviceToIOSNotificationMessage service
           forM_ iOSInterestedInstallations
             $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
                 do
-                  let
-                    payload = applePushPayloadWithMessageAndServiceID
-                      message
-                      (serviceID service)
+                  let payload = createApplePushPayload iOSMessage (serviceID service)
                   sendNotification logger installationID endpointARN payload
+
+          let androidInterestedInstallations = filter
+                ((==) Android . installationDeviceType)
+                interestedInstallations
+          let androidMessage = serviceToAndroidNotificationMessage service
           forM_ androidInterestedInstallations
             $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
                 do
-                  let
-                    payload = androidPushPayloadWithMessageAndServiceID
-                      message
-                      (serviceID service)
+                  let payload = createAndroidPushPayload androidMessage (serviceID service)
                   sendNotification logger installationID endpointARN payload
+
       Nothing -> return ()
  where
   sendNotification :: Logger -> UUID -> String -> PushPayload -> IO ()
@@ -213,8 +211,8 @@ notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServ
         deletePushEndpoint logger endpointARN
       SendNotificationResultSuccess -> return ()
 
-  serviceToNotificationMessage :: Service -> String
-  serviceToNotificationMessage Service { serviceRoute = serviceRoute, serviceStatus = serviceStatus }
+  serviceToIOSNotificationMessage :: Service -> String
+  serviceToIOSNotificationMessage Service { serviceRoute = serviceRoute, serviceStatus = serviceStatus }
     | serviceStatus == Normal
     = "Normal services have resumed for " <> serviceRoute
     | serviceStatus == Disrupted
@@ -224,8 +222,19 @@ notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServ
     | serviceStatus == Unknown
     = error "Do not message for unknow service"
 
-  applePushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
-  applePushPayloadWithMessageAndServiceID message serviceID =
+  serviceToAndroidNotificationMessage :: Service -> String
+  serviceToAndroidNotificationMessage Service { serviceRoute = serviceRoute, serviceStatus = serviceStatus }
+    | serviceStatus == Normal
+    = "Normal services have resumed for " <> serviceRoute
+    | serviceStatus == Disrupted
+    = "There is a disruption to the service " <> serviceRoute
+    | serviceStatus == Cancelled
+    = "Sailings have been cancelled for " <> serviceRoute
+    | serviceStatus == Unknown
+    = error "Do not message for unknow service"
+
+  createApplePushPayload :: String -> Int -> PushPayload
+  createApplePushPayload message serviceID =
     let apsPayload = APSPayload
           (APSPayloadBody { apsPayloadBodyAlert = message
                           , apsPayloadBodySound = "default"
@@ -239,9 +248,9 @@ notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServ
                     , pushPayloadGcm         = Nothing
                     }
 
-  androidPushPayloadWithMessageAndServiceID :: String -> Int -> PushPayload
-  androidPushPayloadWithMessageAndServiceID message serviceID =
-    let gcmPayload = CGMPayload (GCMPaylodNotification message)
+  createAndroidPushPayload :: String -> Int -> PushPayload
+  createAndroidPushPayload message serviceID =
+    let gcmPayload = CGMPayload (GCMPaylodNotification message "default")
                                 (GCMPayloadData serviceID)
         stringPayload = C.unpack . encode $ gcmPayload
     in  PushPayload { pushPayloadDefault     = message
