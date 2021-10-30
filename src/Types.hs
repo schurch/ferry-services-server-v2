@@ -89,6 +89,7 @@ instance ToJSON CGMPayload where
 
 data GCMPaylodNotification = GCMPaylodNotification
   { gcmPaylodNotificationTitle :: String
+  , gcmPaylodNotificationBody :: String
   , gcmPaylodNotificationSound :: String
   }
   deriving (Generic, Show)
