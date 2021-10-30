@@ -70,7 +70,7 @@ main :: IO ()
 main = do
   logger <- create StdOut
   forever $ do
-    info logger (msg @String "Fetching statuses...")
+    info logger (msg @String "Fetching statuses")
     catch (fetchStatusesAndNotify logger) (handleException logger)
     threadDelay (15 * 60 * 1000 * 1000) -- 15 mins
 
