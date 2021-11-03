@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f90fe1141973e9a40c7c26bb017a367398046e7988c5804b5f22b7a28b53e628
+-- hash: 4b4f4ef1d1cca94fdbd91893fbdb2b440fa3fb7ccb2cedc3a63e61f10f234efb
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -62,17 +62,17 @@ executable ferry-services-scraper-exe
       scraper
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      HTTP
-    , aeson
+      aeson
     , base >=4.7 && <5
     , bytestring
     , ferry-services-server
-    , network-uri
+    , http-conduit
+    , http-types
     , raven-haskell
+    , tagsoup
     , time
     , tinylog
     , uuid
-    , zlib
   default-language: Haskell2010
 
 executable ferry-services-server-exe

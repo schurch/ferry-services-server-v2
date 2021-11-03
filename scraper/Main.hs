@@ -4,7 +4,6 @@
 
 module Main where
 
-import           Codec.Compression.GZip         ( decompress )
 import           Control.Concurrent             ( threadDelay )
 import           Control.Exception              ( SomeException
                                                 , catch
@@ -29,15 +28,17 @@ import           Data.Time.Clock                ( UTCTime
                                                 )
 import           Data.Time.Clock.POSIX          ( posixSecondsToUTCTime )
 import           Data.UUID                      ( UUID )
-import           Network.HTTP                   ( simpleHTTP
+import           Network.HTTP.Simple            ( parseRequest
                                                 , getResponseBody
-                                                , Request(..)
-                                                , RequestMethod(..)
+                                                , httpBS
+                                                , setRequestHeaders 
                                                 )
-import           Network.HTTP.Headers           ( Header(..)
-                                                , HeaderName(..)
+import           Network.HTTP.Types.Header      ( hAccept
+                                                , hContentType
+                                                , hAcceptEncoding
+                                                , hHost
+                                                , hUserAgent 
                                                 )
-import           Network.URI                    ( parseURI )
 import           System.Environment             ( getEnv )
 import           System.Log.Raven               ( initRaven
                                                 , register
@@ -59,10 +60,16 @@ import           System.Logger.Class            ( Logger
                                                 )
 import           System.Logger.Message          ( msg )
 import           System.Timeout                 ( timeout )
+import           Text.HTML.TagSoup              ( renderTags
+                                                , (~/=)
+                                                , fromAttrib
+                                                , parseTags 
+                                                )
 
 import           Types
 import           AWS
 
+import qualified Data.ByteString.Char8         as B8
 import qualified Data.ByteString.Lazy.Char8    as C
 import qualified Database                      as DB
 
@@ -71,7 +78,8 @@ main = do
   logger <- create StdOut
   forever $ do
     info logger (msg @String "Fetching statuses")
-    catch (fetchStatusesAndNotify logger) (handleException logger)
+    catch (fetchCalMacStatusesAndNotify logger) (handleException logger)
+    catch (fetchNorthLinkServicesAndNotify logger) (handleException logger)
     threadDelay (15 * 60 * 1000 * 1000) -- 15 mins
 
 handleException :: Logger -> SomeException -> IO ()
@@ -92,10 +100,44 @@ recordUpdate env record = record { srEnvironment = Just env }
 newtype ScrapedServices = ScrapedServices { unScrapedServices :: [Service] }
 newtype DatabaseServices = DatabaseServices { unDatabaseServices :: [Service] }
 
-fetchStatusesAndNotify :: Logger -> IO ()
-fetchStatusesAndNotify logger = do
-  scrapedServices  <- fetchServices
-  databaseServices <- DatabaseServices <$> DB.getServices
+fetchNorthLinkServicesAndNotify :: Logger -> IO ()
+fetchNorthLinkServicesAndNotify logger = do
+  info logger (msg @String "Fetching NorthLink service")
+  scrapedServices <- ScrapedServices . (: []) <$> fetchNorthLinkService logger
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation "NorthLink"
+  DB.saveServices $ unScrapedServices scrapedServices
+  notifyForServices logger scrapedServices databaseServices
+
+fetchNorthLinkService :: Logger -> IO Service
+fetchNorthLinkService logger = do
+  htmlTags <- parseTags .  B8.unpack . getResponseBody <$> httpBS "https://www.northlinkferries.co.uk/opsnews/"
+  let statusText = last . words . fromAttrib "class" . head . dropWhile (~/= ("<div id=page>" :: String)) $ htmlTags
+  let disruptionInfo = renderTags . takeWhile (~/= ("<!-- .entry-content -->" :: String)) . dropWhile (~/= ("<div class=entry-content>" :: String)) $ htmlTags
+  time <- getCurrentTime
+  return Service
+    { serviceID               = 1000
+    , serviceUpdated          = time
+    , serviceSortOrder        = 24
+    , serviceArea             = "ORKNEY & SHETLAND"
+    , serviceRoute            = "Scrabster - Stromness / Aberdeen - Kirkwall - Lerwick"
+    , serviceStatus           = textToStatus statusText
+    , serviceAdditionalInfo   = Just disruptionInfo
+    , serviceDisruptionReason = Nothing
+    , serviceOrganisation     = "NorthLink"
+    , serviceLastUpdatedDate  = Nothing
+    }
+  where
+    textToStatus :: String -> ServiceStatus
+    textToStatus text | text == "green"    = Normal
+                      | text == "amber"    = Disrupted
+                      | text == "red"      = Cancelled
+                      | otherwise          = error "Unknown image status"
+
+fetchCalMacStatusesAndNotify :: Logger -> IO ()
+fetchCalMacStatusesAndNotify logger = do
+  info logger (msg @String "Fetching CalMac services")
+  scrapedServices  <- fetchCalMacServices
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation "CalMac"
   DB.saveServices $ unScrapedServices scrapedServices
   DB.hideServicesWithIDs
     $ generateRemovedServiceIDs scrapedServices databaseServices
@@ -107,27 +149,21 @@ fetchStatusesAndNotify logger = do
           oldServiceIDs = serviceID <$> oldServices
       in  nub $ oldServiceIDs \\ newServiceIDs
 
-  fetchServices :: IO ScrapedServices
-  fetchServices = do
-    let uri = fromJust $ parseURI "http://status.calmac.info/?ajax=json"
-    let
-      request = Request
-        uri
-        GET
-        [ Header HdrContentType "application/json; charset=utf-8"
-        , Header HdrAcceptEncoding "gzip, deflate"
-        , Header HdrAccept "application/json, text/javascript, */*; q=0.01"
-        , Header
-          HdrUserAgent
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Safari/605.1.15"
-        , Header HdrHost "status.calmac.info"
-        ]
-        ""
+  fetchCalMacServices :: IO ScrapedServices
+  fetchCalMacServices = do
+    let headers = 
+          [ (hContentType, "application/json; charset=utf-8")
+          , (hAcceptEncoding, "gzip, deflate")
+          , (hAccept, "application/json, text/javascript, */*; q=0.01")
+          , (hUserAgent, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Safari/605.1.15")
+          , (hHost, "status.calmac.info")
+          ]
+    request <- setRequestHeaders headers <$> parseRequest "http://status.calmac.info/?ajax=json"
     responseBody <- checkResponseBody
-      <$> timeout (1000000 * 20) (simpleHTTP request >>= getResponseBody) -- 20 second timeout
+      <$> timeout (1000000 * 20) (C.fromStrict . getResponseBody <$> httpBS request) -- 20 second timeout
     time <- getCurrentTime
     let result = do
-          ajaxResult <- responseBody >>= eitherDecode . decompress
+          ajaxResult <- responseBody >>= eitherDecode
           Right $ ajaxResultToService time <$> zip [1 ..] ajaxResult
     case result of
       Left  errorMessage -> error errorMessage
@@ -149,6 +185,7 @@ ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
                               $  ajaxServiceDetailsWebDetail
                               <> fromMaybe "" ajaxServiceDetailsInfoMsg
   , serviceDisruptionReason = reasonToMaybe ajaxServiceDetailsReason
+  , serviceOrganisation     = "CalMac"
   , serviceLastUpdatedDate  = Just $ stringToUTCTime ajaxServiceDetailsUpdated
   }
  where

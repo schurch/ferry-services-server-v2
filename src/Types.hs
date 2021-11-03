@@ -150,6 +150,7 @@ data Service = Service
   , serviceStatus           :: ServiceStatus
   , serviceAdditionalInfo   :: Maybe String
   , serviceDisruptionReason :: Maybe String
+  , serviceOrganisation     :: String
   , serviceLastUpdatedDate  :: Maybe UTCTime
   , serviceUpdated          :: UTCTime
   }
