@@ -1,9 +1,6 @@
 ALTER TABLE services ADD COLUMN organisation TEXT NOT NULL DEFAULT 'CalMac';
 ALTER TABLE services ALTER COLUMN organisation DROP DEFAULT;
 
-ALTER TABLE installation_services DROP CONSTRAINT installation_services_installation_id_fkey,
-ADD CONSTRAINT installation_services_installation_id_fkey FOREIGN KEY (installation_id) REFERENCES installations(installation_id) ON DELETE CASCADE;
-
 INSERT INTO services (service_id, sort_order, area, route, organisation, status, updated) VALUES (1000, '24', 'ORKNEY & SHETLAND', 'Scrabster - Stromness / Aberdeen - Kirkwall - Lerwick', 'NorthLink', -99, now());
 
 INSERT INTO locations (location_id, name, latitude, longitude) VALUES (59, 'Scrabster', 58.61252430922174, -3.545534457670658);
