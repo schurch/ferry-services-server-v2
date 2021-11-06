@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4b4f4ef1d1cca94fdbd91893fbdb2b440fa3fb7ccb2cedc3a63e61f10f234efb
+-- hash: 72f3a4aaceaed39ef523480f81cc53397a013fd86cb0252c627d30329734471d
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -103,6 +103,28 @@ executable ferry-services-server-exe
     , wai-extra
     , wai-middleware-static
     , warp
+  default-language: Haskell2010
+
+executable ferry-services-vessel-fetcher-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_ferry_services_server
+  hs-source-dirs:
+      vessel-fetcher
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , ferry-services-server
+    , http-conduit
+    , http-types
+    , raven-haskell
+    , tagsoup
+    , time
+    , tinylog
+    , uuid
+    , zlib
   default-language: Haskell2010
 
 executable ferry-services-weather-fetcher-exe

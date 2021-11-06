@@ -19,7 +19,7 @@ import           Data.Aeson                     ( genericParseJSON
                                                   )
                                                 , ToJSON(toJSON)
                                                 )
-import           Data.Char                      ( toLower )
+import           Data.Char                      ( toLower, toUpper )
 import           Data.Proxy
 import           Data.Scientific                ( Scientific )
 import           Data.Text.Lazy                 ( Text )
@@ -179,7 +179,7 @@ data Location = Location
   , locationName       :: String
   , locationLatitude   :: Scientific
   , locationLongitude  :: Scientific
-  , locationCreated    :: UTCTime 
+  , locationCreated    :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
 
@@ -191,7 +191,19 @@ data LocationWeather = LocationWeather
   , locationWeatherWindSpeed :: Scientific
   , locationWeatherWindDirection :: Scientific
   , locationWeatherUpdated :: UTCTime
-  , locationWeatherCreated :: UTCTime 
+  , locationWeatherCreated :: UTCTime
+  }
+  deriving (Generic, Show, ToRow, FromRow)
+
+data Vessel = Vessel
+  { vesselMmsi :: Int
+  , vesselName :: String
+  , vesselSpeed :: Scientific
+  , vesselCourse :: Scientific
+  , vesselLatitude :: Scientific
+  , vesselLongitude :: Scientific
+  , vesselLastReceived :: UTCTime
+  , vesselUpdated :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
 
@@ -255,11 +267,25 @@ data LocationWeatherResponse = LocationWeatherResponse
 instance ToJSON LocationWeatherResponse where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy LocationWeatherResponse)
 
+data VesselResponse = VesselResponse
+  { vesselResponseMmsi :: Int
+  , vesselResponseName :: String
+  , vesselResponseSpeed :: Scientific
+  , vesselResponseCourse :: Scientific
+  , vesselResponseLatitude :: Scientific
+  , vesselResponseLongitude :: Scientific
+  , vesselResponseLastReceived :: UTCTime
+  }
+  deriving (Generic, Show)
+
+instance ToJSON VesselResponse where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy VesselResponse)
+
 jsonOptions :: Typeable a => Proxy a -> Data.Aeson.Options
-jsonOptions type' = 
-  let 
+jsonOptions type' =
+  let
     typeName = show $ typeRep type'
-  in 
+  in
     defaultOptions
     { fieldLabelModifier = camelTo2 '_' . drop (length typeName)
     , omitNothingFields  = True
@@ -284,8 +310,8 @@ data AjaxServiceDetails = AjaxServiceDetails
 
 instance FromJSON AjaxServiceDetails where
   parseJSON = genericParseJSON
-    $ defaultOptions { 
-      fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxServiceDetails)) 
+    $ defaultOptions {
+      fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxServiceDetails))
       }
 
 -- Weather Fetcher Types
@@ -312,7 +338,7 @@ data WeatherFetcherResultMain = WeatherFetcherResultMain
   { weatherFetcherResultMainTemp :: Scientific
   }
   deriving (Generic, Show)
-  
+
 instance FromJSON WeatherFetcherResultMain where
   parseJSON = genericParseJSON $ weatherFetcherJsonOptions (Proxy :: Proxy WeatherFetcherResultMain)
 
@@ -321,16 +347,46 @@ data WeatherFetcherResultWind = WeatherFetcherResultWind
   , weatherFetcherResultWindDeg :: Scientific
   }
   deriving (Generic, Show)
-  
+
 instance FromJSON WeatherFetcherResultWind where
   parseJSON = genericParseJSON $ weatherFetcherJsonOptions (Proxy :: Proxy WeatherFetcherResultWind)
 
 weatherFetcherJsonOptions :: Typeable a => Proxy a -> Options
-weatherFetcherJsonOptions type' = 
-  let 
+weatherFetcherJsonOptions type' =
+  let
     typeName = show $ typeRep type'
-  in 
+  in
     defaultOptions { fieldLabelModifier = camelTo2 '_' . drop (length typeName) }
+
+-- Vessel Fetcher Types
+data AjaxVessels = AjaxVessels
+  { ajaxVesselsData :: [AjaxVessel]
+  , ajaxVesselsTotalCount :: Int
+  }
+  deriving (Generic, Show)
+
+instance FromJSON AjaxVessels where
+  parseJSON = genericParseJSON
+    $ defaultOptions {
+      fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessels))
+      }
+
+data AjaxVessel = AjaxVessel
+  { ajaxVesselShipname :: String
+  , ajaxVesselMmsi :: String
+  , ajaxVesselLat :: String
+  , ajaxVesselLon :: String
+  , ajaxVesselSpeed :: String
+  , ajaxVesselCourse :: String
+  , ajaxVesselLastPos :: Int -- Unix timestamp
+  }
+  deriving (Generic, Show)
+
+instance FromJSON AjaxVessel where
+  parseJSON = genericParseJSON
+    $ defaultOptions {
+      fieldLabelModifier = map toUpper . camelTo2 '_' . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessel))
+      }
 
 -- Helpers
 toLowerFirstLetter :: String -> String

@@ -32,6 +32,16 @@ services:
       - envfile.docker-test
     tty: true
     command: /opt/ferry-services/ferry-services-weather-fetcher-exe
+  vessel-fetcher-test:
+    image: stefanchurch/ferry-services-vessel-fetcher:latest
+    container_name: ferry-services-vessel-fetcher-test
+    depends_on:
+      - "db-test"
+    restart: always
+    env_file:
+      - envfile.docker-test
+    tty: true
+    command: /opt/ferry-services/ferry-services-vessel-fetcher-exe
   db-test:
     image: "mdillon/postgis"
     container_name: ferry-services-db-test

@@ -136,6 +136,10 @@ app requestLogger = do
     services       <- deleteServiceForInstallation installationID serviceID
     setHeader "Access-Control-Allow-Origin" "*"
     json services
+  get "/api/vessels" $ do
+    vessels <- getVessels
+    setHeader "Access-Control-Allow-Origin" "*"
+    json vessels
 
 exceptionHandler :: Maybe Request -> SomeException -> IO ()
 exceptionHandler request exception = do
@@ -207,7 +211,7 @@ getService serviceID = do
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   return
-    $   serviceToServiceResponseWithLocationLookup locationLookup time
+    $ serviceToServiceResponseWithLocationLookup locationLookup time
     <$> service
 
 getServices :: Action [ServiceResponse]
@@ -216,7 +220,7 @@ getServices = do
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   return
-    $   serviceToServiceResponseWithLocationLookup locationLookup time
+    $ serviceToServiceResponseWithLocationLookup locationLookup time
     <$> services
 
 createInstallation
@@ -250,8 +254,31 @@ getServicesForInstallation installationID = do
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   return
-    $   serviceToServiceResponseWithLocationLookup locationLookup time
+    $ serviceToServiceResponseWithLocationLookup locationLookup time
     <$> services
+
+getVessels :: Action [VesselResponse]
+getVessels = do
+  time <- liftIO getCurrentTime
+  vessels <- filter (vesselFilter time) <$> DB.getVessels
+  return $ vesselToVesselResponse <$> vessels
+
+vesselFilter :: UTCTime -> Vessel -> Bool
+vesselFilter currentTime Vessel { vesselLastReceived = vesselLastReceived} = 
+  let diff = diffUTCTime currentTime vesselLastReceived
+  in diff < 1800
+
+vesselToVesselResponse :: Vessel -> VesselResponse
+vesselToVesselResponse Vessel {..} = 
+  VesselResponse
+  { vesselResponseMmsi = vesselMmsi
+  , vesselResponseName = vesselName
+  , vesselResponseSpeed = vesselSpeed
+  , vesselResponseCourse = vesselCourse
+  , vesselResponseLatitude = vesselLatitude
+  , vesselResponseLongitude = vesselLongitude
+  , vesselResponseLastReceived = vesselLastReceived
+  }
 
 serviceToServiceResponseWithLocationLookup
   :: ServiceLocationLookup -> UTCTime -> Service -> ServiceResponse

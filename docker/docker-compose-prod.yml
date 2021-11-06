@@ -32,6 +32,16 @@ services:
       - envfile.docker-prod
     tty: true
     command: /opt/ferry-services/ferry-services-weather-fetcher-exe
+  vessel-fetcher-prod:
+    image: stefanchurch/ferry-services-vessel-fetcher:latest
+    container_name: ferry-services-vessel-fetcher-prod
+    depends_on:
+      - "db-prod"
+    restart: always
+    env_file:
+      - envfile.docker-prod
+    tty: true
+    command: /opt/ferry-services/ferry-services-vessel-fetcher-exe
   db-prod:
     image: "mdillon/postgis"
     container_name: ferry-services-db-prod

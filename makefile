@@ -17,9 +17,11 @@ build-release:
 	docker build -f docker/server.Dockerfile -t stefanchurch/ferry-services-server:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-server-exe/ferry-services-server-exe" .
 	docker build -f docker/scraper.Dockerfile -t stefanchurch/ferry-services-scraper:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-scraper-exe/ferry-services-scraper-exe" .
 	docker build -f docker/weather-fetcher.Dockerfile -t stefanchurch/ferry-services-weather-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-weather-fetcher-exe/ferry-services-weather-fetcher-exe" .
+	docker build -f docker/vessel-fetcher.Dockerfile -t stefanchurch/ferry-services-vessel-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-vessel-fetcher-exe/ferry-services-vessel-fetcher-exe" .
 	docker push stefanchurch/ferry-services-server:latest
 	docker push stefanchurch/ferry-services-scraper:latest
 	docker push stefanchurch/ferry-services-weather-fetcher:latest
+	docker push stefanchurch/ferry-services-vessel-fetcher:latest
 
 .PHONY: watch
 watch:
@@ -36,3 +38,7 @@ scraper: build
 .PHONY: weather-fetcher
 weather-fetcher: build
 	stack exec ferry-services-weather-fetcher-exe
+
+.PHONY: vessel-fetcher
+vessel-fetcher: build
+	stack exec ferry-services-vessel-fetcher-exe
