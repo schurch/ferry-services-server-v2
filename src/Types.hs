@@ -199,7 +199,7 @@ data Vessel = Vessel
   { vesselMmsi :: Int
   , vesselName :: String
   , vesselSpeed :: Scientific
-  , vesselCourse :: Scientific
+  , vesselCourse :: Maybe Scientific
   , vesselLatitude :: Scientific
   , vesselLongitude :: Scientific
   , vesselLastReceived :: UTCTime
@@ -271,7 +271,7 @@ data VesselResponse = VesselResponse
   { vesselResponseMmsi :: Int
   , vesselResponseName :: String
   , vesselResponseSpeed :: Scientific
-  , vesselResponseCourse :: Scientific
+  , vesselResponseCourse :: Maybe Scientific
   , vesselResponseLatitude :: Scientific
   , vesselResponseLongitude :: Scientific
   , vesselResponseLastReceived :: UTCTime
@@ -377,7 +377,7 @@ data AjaxVessel = AjaxVessel
   , ajaxVesselLat :: String
   , ajaxVesselLon :: String
   , ajaxVesselSpeed :: String
-  , ajaxVesselCourse :: String
+  , ajaxVesselCourse :: Maybe String
   , ajaxVesselLastPos :: Int -- Unix timestamp
   }
   deriving (Generic, Show)
