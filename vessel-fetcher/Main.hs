@@ -82,7 +82,7 @@ fetchVessels logger = do
     vessel <- fetchVessel mmsi
     debug logger (msg  $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
     DB.saveVessel vessel
-    threadDelay (4 * 1000 * 1000) -- 2 second delay
+    threadDelay (4 * 1000 * 1000) -- 4 second delay
 
 fetchVessel :: Int -> IO Vessel
 fetchVessel mmsi = do
