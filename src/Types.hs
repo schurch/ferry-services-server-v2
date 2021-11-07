@@ -376,7 +376,7 @@ data AjaxVessel = AjaxVessel
   , ajaxVesselMmsi :: String
   , ajaxVesselLat :: String
   , ajaxVesselLon :: String
-  , ajaxVesselSpeed :: String
+  , ajaxVesselSpeed :: Maybe String
   , ajaxVesselCourse :: Maybe String
   , ajaxVesselLastPos :: Int -- Unix timestamp
   }
