@@ -198,7 +198,7 @@ data LocationWeather = LocationWeather
 data Vessel = Vessel
   { vesselMmsi :: Int
   , vesselName :: String
-  , vesselSpeed :: Scientific
+  , vesselSpeed :: Maybe Scientific
   , vesselCourse :: Maybe Scientific
   , vesselLatitude :: Scientific
   , vesselLongitude :: Scientific
@@ -270,7 +270,7 @@ instance ToJSON LocationWeatherResponse where
 data VesselResponse = VesselResponse
   { vesselResponseMmsi :: Int
   , vesselResponseName :: String
-  , vesselResponseSpeed :: Scientific
+  , vesselResponseSpeed :: Maybe Scientific
   , vesselResponseCourse :: Maybe Scientific
   , vesselResponseLatitude :: Scientific
   , vesselResponseLongitude :: Scientific

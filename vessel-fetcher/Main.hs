@@ -59,7 +59,7 @@ main = do
   forever $ do
     info logger (msg @String "Fetching vessels")
     catch (fetchVessels logger) (handleException logger)
-    threadDelay (15 * 60 * 1000 * 1000) -- 15 mins
+    threadDelay (10 * 60 * 1000 * 1000) -- 15 mins
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do
@@ -110,7 +110,7 @@ fetchVessel mmsi = do
       ajaxToVessel time AjaxVessels {..} = Vessel 
         { vesselMmsi = read . ajaxVesselMmsi . head $ ajaxVesselsData
         , vesselName = capitaliseWords . ajaxVesselShipname . head $ ajaxVesselsData
-        , vesselSpeed = maybe (read "0.0") read (ajaxVesselSpeed . head $ ajaxVesselsData)
+        , vesselSpeed = read <$> (ajaxVesselSpeed . head $ ajaxVesselsData)
         , vesselCourse = read <$> (ajaxVesselCourse . head $ ajaxVesselsData)
         , vesselLatitude = read . ajaxVesselLat . head $ ajaxVesselsData
         , vesselLongitude = read . ajaxVesselLon . head $ ajaxVesselsData
