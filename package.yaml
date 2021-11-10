@@ -83,7 +83,9 @@ executables:
     - ferry-services-server
     - http-types
     - http-conduit
+    - MissingH
     - raven-haskell
+    - regex-compat
     - tagsoup
     - time
     - tinylog

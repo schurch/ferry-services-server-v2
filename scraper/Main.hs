@@ -20,6 +20,7 @@ import           Data.List                      ( find
                                                 , nub
                                                 , (\\)
                                                 )
+import           Data.List.Utils                ( replace )
 import           Data.Maybe                     ( fromMaybe
                                                 , fromJust
                                                 )
@@ -38,6 +39,9 @@ import           Network.HTTP.Types.Header      ( hAccept
                                                 , hAcceptEncoding
                                                 , hHost
                                                 , hUserAgent 
+                                                )
+import           Text.Regex                     ( mkRegex
+                                                , subRegex 
                                                 )
 import           System.Environment             ( getEnv )
 import           System.Log.Raven               ( initRaven
@@ -113,6 +117,8 @@ fetchNorthLinkService logger = do
   htmlTags <- parseTags .  B8.unpack . getResponseBody <$> httpBS "https://www.northlinkferries.co.uk/opsnews/"
   let statusText = last . words . fromAttrib "class" . head . dropWhile (~/= ("<div id=page>" :: String)) $ htmlTags
   let disruptionInfo = renderTags . takeWhile (~/= ("<!-- .entry-content -->" :: String)) . dropWhile (~/= ("<div class=entry-content>" :: String)) $ htmlTags
+  let strippedNewlines = replace "\194\160" "" . replace "\t" "" . replace "\n" ""
+  let strippedStyles string = subRegex (mkRegex " style=\"[^\"]*\"") string ""
   time <- getCurrentTime
   return Service
     { serviceID               = 1000
@@ -121,7 +127,7 @@ fetchNorthLinkService logger = do
     , serviceArea             = "ORKNEY & SHETLAND"
     , serviceRoute            = "Scrabster - Stromness / Aberdeen - Kirkwall - Lerwick"
     , serviceStatus           = textToStatus statusText
-    , serviceAdditionalInfo   = Just disruptionInfo
+    , serviceAdditionalInfo   = Just $ strippedNewlines . strippedStyles $ disruptionInfo
     , serviceDisruptionReason = Nothing
     , serviceOrganisation     = "NorthLink"
     , serviceLastUpdatedDate  = Nothing
