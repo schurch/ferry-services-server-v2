@@ -79,26 +79,17 @@ instance ToJSON APSPayloadBody where
 
 -- Google
 data CGMPayload = CGMPayload
-  { gcmPayloadNotification :: GCMPaylodNotification
-  , gcmPayloadData         :: GCMPayloadData
+  { gcmPayloadData         :: GCMPayloadData
   }
   deriving (Generic, Show)
 
 instance ToJSON CGMPayload where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy CGMPayload)
 
-data GCMPaylodNotification = GCMPaylodNotification
-  { gcmPaylodNotificationTitle :: String
-  , gcmPaylodNotificationBody :: String
-  , gcmPaylodNotificationSound :: String
-  }
-  deriving (Generic, Show)
-
-instance ToJSON GCMPaylodNotification where
-  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPaylodNotification)
-
 data GCMPayloadData = GCMPayloadData
   { gcmPayloadDataServiceID :: Int
+  , gcmPayloadDataTitle :: String
+  , gcmPayloadDataBody :: String
   }
   deriving (Generic, Show)
 
