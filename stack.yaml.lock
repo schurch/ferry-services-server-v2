@@ -11,9 +11,37 @@ packages:
       sha256: 19c2aaf9c09d341108777e3a4de975841f81518ed271b156983d25ec622dd266
   original:
     hackage: raven-haskell-0.1.4.0
+- completed:
+    hackage: MissingH-1.4.3.0@sha256:32f9892ec98cd21df4f4d3ed8d95a3831ae74287ea0641d6f09b2dc6ef061d39,4859
+    pantry-tree:
+      size: 5271
+      sha256: 6cd6a7213615d72a7db3234c7fcd4346ceb4889bc8fb14b302b5878768018fcd
+  original:
+    hackage: MissingH-1.4.3.0
+- completed:
+    hackage: amazonka-1.6.1@sha256:f58b63e83876f93aa03c54e54b3eb8ba9358af93819d41f4a5a8f8b7d8b8399c,3544
+    pantry-tree:
+      size: 992
+      sha256: d792656a70ee42df262a599bc6608bda069e33092d665c3438a6eeeaf7db4fb2
+  original:
+    hackage: amazonka-1.6.1
+- completed:
+    hackage: random-1.1@sha256:7b67624fd76ddf97c206de0801dc7e888097e9d572974be9b9ea6551d76965df,1777
+    pantry-tree:
+      size: 637
+      sha256: 14a1b01728c5584e87c9fa00746a66e28ffd89dd2c0eabd334c8463953496e1b
+  original:
+    hackage: random-1.1
+- completed:
+    hackage: unliftio-core-0.1.2.0@sha256:b0a7652ffce2284a6cebe05c99eb60573a8fb6631163f34b0b30a80b4a78cb23,1081
+    pantry-tree:
+      size: 328
+      sha256: 9d970bf5f98e68e8fc129b04d6c9d8eb1e641c7556ffd0f0a168a259335b6fd7
+  original:
+    hackage: unliftio-core-0.1.2.0
 snapshots:
 - completed:
-    size: 532380
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/9.yaml
-    sha256: 14a7cec114424e4286adde73364438927a553ed248cc50f069a30a67e3ee1e69
-  original: lts-16.9
+    size: 587393
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/25.yaml
+    sha256: 1b74fb5e970497b5aefae56703f1bd44aa648bd1a5ef95c1eb8c29775087e2bf
+  original: lts-18.25
