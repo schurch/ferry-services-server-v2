@@ -20,5 +20,5 @@ jobs:
 #             ~/.stack
 #             ./.stack-work
 #           key: v1-stack-${{ github.ref }}-${{ hashFiles('stack.yaml') }}
-      - run: sudo apt install libpq-dev
+      - run: sudo apt-get update && sudo apt-get install libpq-dev
 #       - run: make build-release
