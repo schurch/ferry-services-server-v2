@@ -8,11 +8,11 @@ jobs:
       DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
       DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: haskell/actions/setup@v1
-        with:
-          ghc-version: '8.10.7' # Exact version of ghc to use
-          stack-version: 'latest'
+#       - uses: actions/checkout@v2
+#       - uses: haskell/actions/setup@v1
+#         with:
+#           ghc-version: '8.10.7' # Exact version of ghc to use
+#           stack-version: 'latest'
 #       - name: Cache stack data
 #         uses: actions/cache@v2
 #         with:
