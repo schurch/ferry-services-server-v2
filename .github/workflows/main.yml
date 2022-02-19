@@ -8,17 +8,17 @@ jobs:
       DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
       DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: haskell/actions/setup@v1
-        with:
-          ghc-version: '8.10.7' # Exact version of ghc to use
-          stack-version: 'latest'
-      - name: Cache stack data
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.stack
-            ./.stack-work
-          key: v1-stack-${{ github.ref }}-${{ hashFiles('stack.yaml') }}
-      - run: sudo apt-get update && sudo apt-get install libpq-dev
-      - run: make build-release
+#       - uses: actions/checkout@v2
+#       - uses: haskell/actions/setup@v1
+#         with:
+#           ghc-version: '8.10.7' # Exact version of ghc to use
+#           stack-version: 'latest'
+#       - name: Cache stack data
+#         uses: actions/cache@v2
+#         with:
+#           path: |
+#             ~/.stack
+#             ./.stack-work
+#           key: v1-stack-${{ github.ref }}-${{ hashFiles('stack.yaml') }}
+      - run: pg_config
+#       - run: make build-release
