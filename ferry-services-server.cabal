@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a8a08b4db2d063f30ac776f21e3b16e50fc69049b0b022e15c4a010107f4fb54
+-- hash: 823f40441b7f752473b57c3dc62c4d3673248dfd445e74bbefabb0705f38622d
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -28,30 +28,44 @@ library
   exposed-modules:
       AWS
       Database
+      Scraper
       Types
       Utility
+      WebServer
   other-modules:
       Paths_ferry_services_server
   hs-source-dirs:
       src
   build-depends:
-      aeson
+      MissingH
+    , aeson
     , amazonka
     , amazonka-core
     , amazonka-sns
     , base >=4.7 && <5
     , binary
     , bytestring
+    , containers
+    , data-default
+    , fast-logger
+    , http-conduit
+    , http-types
     , lens
     , mtl
     , postgresql-simple
+    , regex-compat
     , scientific
     , scotty
+    , tagsoup
     , text
     , time
     , tinylog
     , unordered-containers
     , uuid
+    , wai
+    , wai-extra
+    , wai-middleware-static
+    , warp
   default-language: Haskell2010
 
 executable ferry-services-scraper-exe
@@ -62,19 +76,10 @@ executable ferry-services-scraper-exe
       scraper
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      MissingH
-    , aeson
-    , base >=4.7 && <5
-    , bytestring
+      base >=4.7 && <5
     , ferry-services-server
-    , http-conduit
-    , http-types
     , raven-haskell
-    , regex-compat
-    , tagsoup
-    , time
     , tinylog
-    , uuid
   default-language: Haskell2010
 
 executable ferry-services-server-exe
@@ -88,22 +93,15 @@ executable ferry-services-server-exe
       aeson
     , base >=4.7 && <5
     , bytestring
-    , containers
-    , data-default
-    , fast-logger
     , ferry-services-server
     , mtl
     , raven-haskell
-    , scientific
     , scotty
     , text
-    , time
     , tinylog
     , unordered-containers
-    , uuid
     , wai
     , wai-extra
-    , wai-middleware-static
     , warp
   default-language: Haskell2010
 
@@ -156,6 +154,15 @@ test-suite ferry-services-server-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , ferry-services-server
+    , hspec
+    , hspec-wai
+    , hspec-wai-json
+    , mtl
+    , scotty
+    , tinylog
+    , wai
+    , wai-extra
   default-language: Haskell2010

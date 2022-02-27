@@ -1,57 +1,42 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Main where
 
-import           Control.Concurrent             ( threadDelay )
-import           Control.Exception              ( SomeException
-                                                , catch
-                                                )
-import           Control.Monad                  ( forM_, forever )
-import           Data.Aeson                     ( eitherDecode )
-import           Data.Char                      ( toLower, toUpper )
-import           Data.Time.Clock                ( UTCTime (..)
-                                                , getCurrentTime
-                                                )
-import           Data.Time.Clock.POSIX          ( posixSecondsToUTCTime )
-import           Network.HTTP.Simple            ( parseRequest
-                                                , getResponseBody
-                                                , httpBS
-                                                , setRequestHeaders 
-                                                )
-import           Network.HTTP.Types.Header      ( hAccept
-                                                , hAcceptLanguage
-                                                , hCookie
-                                                , hHost
-                                                , hReferer
-                                                , hUserAgent 
-                                                )      
-import           System.Environment             ( getEnv )
-import           System.Log.Raven               ( initRaven
-                                                , register
-                                                , silentFallback
-                                                )
-import           System.Log.Raven.Transport.HttpConduit
-                                                ( sendRecord )
-import           System.Log.Raven.Types         ( SentryLevel(Error)
-                                                , SentryRecord(..)
-                                                )
-import           System.Logger                  ( Output(StdOut)
-                                                , Logger
-                                                , create
-                                                , info
-                                                , debug
-                                                , err
-                                                )
-import           System.Logger.Message          ( msg )
-import           System.Timeout                 ( timeout )
+import           Control.Concurrent                     (threadDelay)
+import           Control.Exception                      (SomeException, catch)
+import           Control.Monad                          (forM_, forever)
+import           Data.Aeson                             (eitherDecode)
+import           Data.Char                              (toLower, toUpper)
+import           Data.Time.Clock                        (UTCTime (..),
+                                                         getCurrentTime)
+import           Data.Time.Clock.POSIX                  (posixSecondsToUTCTime)
+import           Network.HTTP.Simple                    (getResponseBody,
+                                                         httpBS, parseRequest,
+                                                         setRequestHeaders)
+import           Network.HTTP.Types.Header              (hAccept,
+                                                         hAcceptLanguage,
+                                                         hCookie, hHost,
+                                                         hReferer, hUserAgent)
+import           System.Environment                     (getEnv)
+import           System.Log.Raven                       (initRaven, register,
+                                                         silentFallback)
+import           System.Log.Raven.Transport.HttpConduit (sendRecord)
+import           System.Log.Raven.Types                 (SentryLevel (Error),
+                                                         SentryRecord (..))
+import           System.Logger                          (Logger,
+                                                         Output (StdOut),
+                                                         create, debug, err,
+                                                         info)
+import           System.Logger.Message                  (msg)
+import           System.Timeout                         (timeout)
 
-import Types
+import           Types
 
-import qualified Data.ByteString.Char8         as B8
-import qualified Data.ByteString.Lazy.Char8    as C
-import qualified Database                      as DB
+import qualified Data.ByteString.Char8                  as B8
+import qualified Data.ByteString.Lazy.Char8             as C
+import qualified Database                               as DB
 
 main :: IO ()
 main = do
@@ -87,7 +72,7 @@ fetchVessels logger = do
 fetchVessel :: Int -> IO Vessel
 fetchVessel mmsi = do
     let requestParameters = "asset_type=vessels&columns=shipname,mmsi,time_of_latest_position,lat_of_latest_position,lon_of_latest_position,speed,course&mmsi|eq|mmsi=" <> B8.pack (show mmsi)
-    let headers = 
+    let headers =
             [ (hAccept, "*/*")
             , (hCookie, "SERVERID=app4")
             , (hAcceptLanguage, "en-au")
@@ -107,7 +92,7 @@ fetchVessel mmsi = do
       Right result'      -> return $ ajaxToVessel time result'
     where
       ajaxToVessel :: UTCTime -> AjaxVessels -> Vessel
-      ajaxToVessel time AjaxVessels {..} = Vessel 
+      ajaxToVessel time AjaxVessels {..} = Vessel
         { vesselMmsi = read . ajaxVesselMmsi . head $ ajaxVesselsData
         , vesselName = capitaliseWords . ajaxVesselShipname . head $ ajaxVesselsData
         , vesselSpeed = read <$> (ajaxVesselSpeed . head $ ajaxVesselsData)
@@ -116,14 +101,14 @@ fetchVessel mmsi = do
         , vesselLongitude = read . ajaxVesselLon . head $ ajaxVesselsData
         , vesselLastReceived = toUTC . ajaxVesselLastPos . head $ ajaxVesselsData
         , vesselUpdated = time
-        } 
+        }
       toUTC :: Int -> UTCTime
       toUTC = posixSecondsToUTCTime . fromInteger . toInteger
       capitaliseWords :: String -> String
       capitaliseWords string = unwords $ toUpperFirstLetter <$> words string
       toUpperFirstLetter :: String -> String
       toUpperFirstLetter [] = []
-      toUpperFirstLetter string@(x : xs) = 
+      toUpperFirstLetter string@(x : xs) =
         if string == "OF" || string == "THE" then toLower <$> string else toUpper x : (toLower <$> xs)
 
 checkResponseBody :: Maybe a -> Either String a

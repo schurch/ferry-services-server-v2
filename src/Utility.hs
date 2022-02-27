@@ -4,7 +4,7 @@ module Utility
   ( splitOn
   ) where
 
-import           Text.Read                      ( readMaybe )
+import           Text.Read (readMaybe)
 
 splitOn :: (Foldable t, Eq a) => a -> t a -> [[a]]
 splitOn delimiter = foldr f [[]]

@@ -1,48 +1,31 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Types where
 
-import           Control.Monad.Reader           ( ReaderT
-                                                , asks
-                                                )
-import           Data.Aeson                     ( genericParseJSON
-                                                , camelTo2
-                                                , defaultOptions
-                                                , genericToJSON
-                                                , FromJSON(parseJSON)
-                                                , Options
-                                                  ( fieldLabelModifier
-                                                  , omitNothingFields
-                                                  )
-                                                , ToJSON(toJSON)
-                                                )
-import           Data.Char                      ( toLower, toUpper )
+import           Control.Monad.Reader                 (ReaderT, asks)
+import           Data.Aeson                           (FromJSON (parseJSON),
+                                                       Options (fieldLabelModifier, omitNothingFields),
+                                                       ToJSON (toJSON),
+                                                       camelTo2, defaultOptions,
+                                                       genericParseJSON,
+                                                       genericToJSON)
+import           Data.Char                            (toLower, toUpper)
 import           Data.Proxy
-import           Data.Scientific                ( Scientific )
-import           Data.Text.Lazy                 ( Text )
-import           Data.Time.Clock                ( UTCTime )
-import           Data.Typeable                  (Typeable, typeRep)
-import           Data.UUID                      ( UUID )
-import           Database.PostgreSQL.Simple     ( ToRow
-                                                , FromRow
-                                                )
-import           Database.PostgreSQL.Simple.FromField
-                                                ( FromField(..) )
-import           Database.PostgreSQL.Simple.ToField
-                                                ( ToField(..) )
-import           GHC.Generics                   ( Generic )
-import           System.Logger                  ( Logger
-                                                , log
-                                                )
-import           System.Logger.Class            ( MonadLogger
-                                                , log
-                                                )
-import           Web.Scotty.Trans               ( ScottyT
-                                                , ActionT
-                                                )
+import           Data.Scientific                      (Scientific)
+import           Data.Text.Lazy                       (Text)
+import           Data.Time.Clock                      (UTCTime)
+import           Data.Typeable                        (Typeable, typeRep)
+import           Data.UUID                            (UUID)
+import           Database.PostgreSQL.Simple           (FromRow, ToRow)
+import           Database.PostgreSQL.Simple.FromField (FromField (..))
+import           Database.PostgreSQL.Simple.ToField   (ToField (..))
+import           GHC.Generics                         (Generic)
+import           System.Logger                        (Logger, log)
+import           System.Logger.Class                  (MonadLogger, log)
+import           Web.Scotty.Trans                     (ActionT, ScottyT)
 
 -- Web server
 data Env = Env
@@ -88,8 +71,8 @@ instance ToJSON CGMPayload where
 
 data GCMPayloadData = GCMPayloadData
   { gcmPayloadDataServiceID :: Int
-  , gcmPayloadDataTitle :: String
-  , gcmPayloadDataBody :: String
+  , gcmPayloadDataTitle     :: String
+  , gcmPayloadDataBody      :: String
   }
   deriving (Generic, Show)
 
@@ -175,26 +158,26 @@ data Location = Location
   deriving (Generic, Show, ToRow, FromRow)
 
 data LocationWeather = LocationWeather
-  { locationWeatherLocationID :: Int
-  , locationWeatherDescription :: String
-  , locationWeatherIcon :: String
-  , locationWeatherTemperature :: Scientific
-  , locationWeatherWindSpeed :: Scientific
+  { locationWeatherLocationID    :: Int
+  , locationWeatherDescription   :: String
+  , locationWeatherIcon          :: String
+  , locationWeatherTemperature   :: Scientific
+  , locationWeatherWindSpeed     :: Scientific
   , locationWeatherWindDirection :: Scientific
-  , locationWeatherUpdated :: UTCTime
-  , locationWeatherCreated :: UTCTime
+  , locationWeatherUpdated       :: UTCTime
+  , locationWeatherCreated       :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data Vessel = Vessel
-  { vesselMmsi :: Int
-  , vesselName :: String
-  , vesselSpeed :: Maybe Scientific
-  , vesselCourse :: Maybe Scientific
-  , vesselLatitude :: Scientific
-  , vesselLongitude :: Scientific
+  { vesselMmsi         :: Int
+  , vesselName         :: String
+  , vesselSpeed        :: Maybe Scientific
+  , vesselCourse       :: Maybe Scientific
+  , vesselLatitude     :: Scientific
+  , vesselLongitude    :: Scientific
   , vesselLastReceived :: UTCTime
-  , vesselUpdated :: UTCTime
+  , vesselUpdated      :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
 
@@ -225,6 +208,9 @@ data CreateInstallationRequest = CreateInstallationRequest
 instance FromJSON CreateInstallationRequest where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy CreateInstallationRequest)
 
+instance ToJSON CreateInstallationRequest where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy CreateInstallationRequest)
+
 data AddServiceRequest = AddServiceRequest
   { addServiceRequestServiceID :: Int
   }
@@ -232,6 +218,9 @@ data AddServiceRequest = AddServiceRequest
 
 instance FromJSON AddServiceRequest where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy AddServiceRequest)
+
+instance ToJSON AddServiceRequest where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy AddServiceRequest)
 
 data LocationResponse = LocationResponse
   { locationResponseID        :: Int
@@ -246,11 +235,11 @@ instance ToJSON LocationResponse where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy LocationResponse)
 
 data LocationWeatherResponse = LocationWeatherResponse
-  { locationWeatherResponseIcon :: String
-  , locationWeatherResponseDescription :: String
-  , locationWeatherResponseTemperatureCelsius :: Int
-  , locationWeatherResponseWindSpeedMPH :: Int
-  , locationWeatherResponseWindDirection :: Scientific
+  { locationWeatherResponseIcon                  :: String
+  , locationWeatherResponseDescription           :: String
+  , locationWeatherResponseTemperatureCelsius    :: Int
+  , locationWeatherResponseWindSpeedMPH          :: Int
+  , locationWeatherResponseWindDirection         :: Scientific
   , locationWeatherResponseWindDirectionCardinal :: String
   }
   deriving (Generic, Show)
@@ -259,12 +248,12 @@ instance ToJSON LocationWeatherResponse where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy LocationWeatherResponse)
 
 data VesselResponse = VesselResponse
-  { vesselResponseMmsi :: Int
-  , vesselResponseName :: String
-  , vesselResponseSpeed :: Maybe Scientific
-  , vesselResponseCourse :: Maybe Scientific
-  , vesselResponseLatitude :: Scientific
-  , vesselResponseLongitude :: Scientific
+  { vesselResponseMmsi         :: Int
+  , vesselResponseName         :: String
+  , vesselResponseSpeed        :: Maybe Scientific
+  , vesselResponseCourse       :: Maybe Scientific
+  , vesselResponseLatitude     :: Scientific
+  , vesselResponseLongitude    :: Scientific
   , vesselResponseLastReceived :: UTCTime
   }
   deriving (Generic, Show)
@@ -308,8 +297,8 @@ instance FromJSON AjaxServiceDetails where
 -- Weather Fetcher Types
 data WeatherFetcherResult = WeatherFetcherResult
   { weatherFetcherResultWeather :: [WeatherFetcherResultWeather]
-  , weatherFetcherResultMain :: WeatherFetcherResultMain
-  , weatherFetcherResultWind :: WeatherFetcherResultWind
+  , weatherFetcherResultMain    :: WeatherFetcherResultMain
+  , weatherFetcherResultWind    :: WeatherFetcherResultWind
   }
   deriving (Generic, Show)
 
@@ -317,8 +306,8 @@ instance FromJSON WeatherFetcherResult where
   parseJSON = genericParseJSON $ weatherFetcherJsonOptions (Proxy :: Proxy WeatherFetcherResult)
 
 data WeatherFetcherResultWeather = WeatherFetcherResultWeather
-  { weatherFetcherResultWeatherIcon         :: String
-  , weatherFetcherResultWeatherDescription  :: String
+  { weatherFetcherResultWeatherIcon        :: String
+  , weatherFetcherResultWeatherDescription :: String
   }
   deriving (Generic, Show)
 
@@ -335,7 +324,7 @@ instance FromJSON WeatherFetcherResultMain where
 
 data WeatherFetcherResultWind = WeatherFetcherResultWind
   { weatherFetcherResultWindSpeed :: Scientific
-  , weatherFetcherResultWindDeg :: Scientific
+  , weatherFetcherResultWindDeg   :: Scientific
   }
   deriving (Generic, Show)
 
@@ -351,7 +340,7 @@ weatherFetcherJsonOptions type' =
 
 -- Vessel Fetcher Types
 data AjaxVessels = AjaxVessels
-  { ajaxVesselsData :: [AjaxVessel]
+  { ajaxVesselsData       :: [AjaxVessel]
   , ajaxVesselsTotalCount :: Int
   }
   deriving (Generic, Show)
@@ -364,12 +353,12 @@ instance FromJSON AjaxVessels where
 
 data AjaxVessel = AjaxVessel
   { ajaxVesselShipname :: String
-  , ajaxVesselMmsi :: String
-  , ajaxVesselLat :: String
-  , ajaxVesselLon :: String
-  , ajaxVesselSpeed :: Maybe String
-  , ajaxVesselCourse :: Maybe String
-  , ajaxVesselLastPos :: Int -- Unix timestamp
+  , ajaxVesselMmsi     :: String
+  , ajaxVesselLat      :: String
+  , ajaxVesselLon      :: String
+  , ajaxVesselSpeed    :: Maybe String
+  , ajaxVesselCourse   :: Maybe String
+  , ajaxVesselLastPos  :: Int -- Unix timestamp
   }
   deriving (Generic, Show)
 

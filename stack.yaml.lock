@@ -12,12 +12,12 @@ packages:
   original:
     hackage: raven-haskell-0.1.4.0
 - completed:
-    hackage: MissingH-1.4.3.0@sha256:32f9892ec98cd21df4f4d3ed8d95a3831ae74287ea0641d6f09b2dc6ef061d39,4859
+    hackage: MissingH-1.5.0.0@sha256:34df0817c543894b53942852109da1ba7f3f615ca0aded9b9c58bf52d33017e8,4740
     pantry-tree:
-      size: 5271
-      sha256: 6cd6a7213615d72a7db3234c7fcd4346ceb4889bc8fb14b302b5878768018fcd
+      size: 5272
+      sha256: e651ec6ac04238ae27e645f5c8316459999bed57c388c459a44c21c58525fba7
   original:
-    hackage: MissingH-1.4.3.0
+    hackage: MissingH-1.5.0.0
 - completed:
     hackage: amazonka-1.6.1@sha256:f58b63e83876f93aa03c54e54b3eb8ba9358af93819d41f4a5a8f8b7d8b8399c,3544
     pantry-tree:
@@ -26,12 +26,12 @@ packages:
   original:
     hackage: amazonka-1.6.1
 - completed:
-    hackage: random-1.1@sha256:7b67624fd76ddf97c206de0801dc7e888097e9d572974be9b9ea6551d76965df,1777
+    hackage: random-1.2.1@sha256:8bee24dc0c985a90ee78d94c61f8aed21c49633686f0f1c14c5078d818ee43a2,6598
     pantry-tree:
-      size: 637
-      sha256: 14a1b01728c5584e87c9fa00746a66e28ffd89dd2c0eabd334c8463953496e1b
+      size: 1528
+      sha256: 8bdc994ce41f43624ab42302a881fe5a0f81d965f5d238841e24943664681a06
   original:
-    hackage: random-1.1
+    hackage: random-1.2.1
 - completed:
     hackage: unliftio-core-0.1.2.0@sha256:b0a7652ffce2284a6cebe05c99eb60573a8fb6631163f34b0b30a80b4a78cb23,1081
     pantry-tree:

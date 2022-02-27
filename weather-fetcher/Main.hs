@@ -1,49 +1,36 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Main where
 
-import           Data.Aeson                     ( eitherDecode )
-import           Control.Concurrent             ( threadDelay )
-import           Control.Exception              ( SomeException
-                                                , catch
-                                                )
-import           Control.Monad                  ( forever
-                                                , forM_ )
-import           Data.Maybe                     ( fromJust )
-import           Network.HTTP                   ( simpleHTTP
-                                                , getResponseBody
-                                                , Request(..)
-                                                , RequestMethod(..)
-                                                )
-import           Network.URI                    ( parseURI )
-import           System.Environment             ( getEnv )
-import           System.Log.Raven               ( initRaven
-                                                , register
-                                                , silentFallback
-                                                )
-import           System.Log.Raven.Transport.HttpConduit
-                                                ( sendRecord )
-import           System.Log.Raven.Types         ( SentryLevel(Error)
-                                                , SentryRecord(..)
-                                                )
-import           System.Logger                  ( Output(StdOut)
-                                                , Logger
-                                                , create
-                                                , info
-                                                , debug
-                                                , err
-                                                )
-import           System.Logger.Class            ( Logger
-                                                , debug
-                                                )
-import           System.Logger.Message          ( msg )
-import           System.Timeout                 ( timeout )
+import           Control.Concurrent                     (threadDelay)
+import           Control.Exception                      (SomeException, catch)
+import           Control.Monad                          (forM_, forever)
+import           Data.Aeson                             (eitherDecode)
+import           Data.Maybe                             (fromJust)
+import           Network.HTTP                           (Request (..),
+                                                         RequestMethod (..),
+                                                         getResponseBody,
+                                                         simpleHTTP)
+import           Network.URI                            (parseURI)
+import           System.Environment                     (getEnv)
+import           System.Log.Raven                       (initRaven, register,
+                                                         silentFallback)
+import           System.Log.Raven.Transport.HttpConduit (sendRecord)
+import           System.Log.Raven.Types                 (SentryLevel (Error),
+                                                         SentryRecord (..))
+import           System.Logger                          (Logger,
+                                                         Output (StdOut),
+                                                         create, debug, err,
+                                                         info)
+import           System.Logger.Class                    (Logger, debug)
+import           System.Logger.Message                  (msg)
+import           System.Timeout                         (timeout)
 
-import Types
+import           Types
 
-import qualified Database as DB
+import qualified Database                               as DB
 
 main :: IO ()
 main = do
@@ -85,9 +72,9 @@ fetchWeatherForLocation logger (Location locationID name latitude longitude crea
   responseBody <- checkResponseBody
       <$> timeout (20 * 1000 * 1000) (simpleHTTP request >>= getResponseBody) -- 20 second timeout
   let result = responseBody >>= eitherDecode
-  case result of 
+  case result of
     Left errorMessage -> error errorMessage
-    Right weather -> DB.insertLocationWeather locationID weather
+    Right weather     -> DB.insertLocationWeather locationID weather
 
 checkResponseBody :: Maybe a -> Either String a
 checkResponseBody =

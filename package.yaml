@@ -30,16 +30,28 @@ library:
     - amazonka-sns
     - binary
     - bytestring
+    - containers
+    - data-default
+    - fast-logger
+    - http-types
+    - http-conduit
     - lens
+    - MissingH
     - mtl
     - postgresql-simple
+    - regex-compat
     - scientific
     - scotty
+    - tagsoup
     - time
     - tinylog
     - text
     - unordered-containers
     - uuid
+    - wai
+    - wai-extra
+    - wai-middleware-static
+    - warp
 
 executables:
   ferry-services-server-exe:
@@ -52,22 +64,15 @@ executables:
     dependencies:
     - aeson
     - bytestring
-    - containers
-    - data-default
-    - fast-logger
     - ferry-services-server
     - mtl
     - raven-haskell
-    - scientific
     - scotty
-    - time
     - tinylog
     - text
     - unordered-containers
-    - uuid
     - wai
     - wai-extra
-    - wai-middleware-static
     - warp
 
   ferry-services-scraper-exe:
@@ -78,18 +83,9 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - aeson
-    - bytestring
     - ferry-services-server
-    - http-types
-    - http-conduit
-    - MissingH
     - raven-haskell
-    - regex-compat
-    - tagsoup
-    - time
     - tinylog
-    - uuid
 
   ferry-services-weather-fetcher-exe:
     main:                Main.hs
@@ -136,4 +132,13 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - aeson
     - ferry-services-server
+    - hspec
+    - hspec-wai
+    - hspec-wai-json
+    - mtl
+    - scotty
+    - tinylog
+    - wai
+    - wai-extra

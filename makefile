@@ -5,11 +5,11 @@ export $(shell sed 's/=.*//' envfile.local)
 
 default: server
 
-.PHONY: build
+.PHONY:
 build:
 	stack build
 
-.PHONY: build-release
+.PHONY:
 build-release:
 	echo ${DOCKER_HUB_PASSWORD} | docker login -u ${DOCKER_HUB_USERNAME} --password-stdin
 	stack docker pull
@@ -42,3 +42,7 @@ weather-fetcher: build
 .PHONY: vessel-fetcher
 vessel-fetcher: build
 	stack exec ferry-services-vessel-fetcher-exe
+
+.PHONY: tests
+tests:
+	stack test
