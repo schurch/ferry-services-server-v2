@@ -1,9 +1,19 @@
 #!make
 
--include envfile.local
-export $(shell sed 's/=.*//' envfile.local)
+define setup_env
+	$(eval include $(1))
+	$(eval export)
+endef
 
 default: server
+
+.PHONY:
+dev-env: 
+	$(call setup_env, envfile.local)
+
+.PHONY:
+test-env: 
+	$(call setup_env, envfile-test.local)
 
 .PHONY:
 build:
@@ -28,21 +38,23 @@ watch:
 	stack build --file-watch
 
 .PHONY: server
-server: build
+server: build dev-env
 	stack exec ferry-services-server-exe
 
 .PHONY: scraper
-scraper: build
+scraper: build dev-env
 	stack exec ferry-services-scraper-exe
 
 .PHONY: weather-fetcher
-weather-fetcher: build
+weather-fetcher: build dev-env
 	stack exec ferry-services-weather-fetcher-exe
 
 .PHONY: vessel-fetcher
-vessel-fetcher: build
+vessel-fetcher: build dev-env
 	stack exec ferry-services-vessel-fetcher-exe
 
 .PHONY: tests
-tests:
+tests: test-env
+	migrate -source file://migrations -database "postgres://stefanchurch@localhost:5432/ferry-services-test?sslmode=disable" drop -f
+	migrate -source file://migrations -database "postgres://stefanchurch@localhost:5432/ferry-services-test?sslmode=disable" up
 	stack test
