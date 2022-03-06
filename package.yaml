@@ -95,11 +95,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - aeson
-    - bytestring
     - ferry-services-server
-    - HTTP
-    - network-uri
     - raven-haskell
     - tinylog
 
@@ -111,17 +107,9 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - aeson
-    - bytestring
     - ferry-services-server
-    - http-types
-    - http-conduit
     - raven-haskell
-    - tagsoup
-    - time
     - tinylog
-    - uuid
-    - zlib
 
 tests:
   ferry-services-server-test:

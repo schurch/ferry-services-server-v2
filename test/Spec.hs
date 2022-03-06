@@ -17,13 +17,20 @@ import           System.Environment                   (getEnv, setEnv)
 
 import           Scraper
 import           Types
+import           VesselFetcher
+import           WeatherFetcher
 import           WebServer
+
+import qualified Database                             as DB
 
 main :: IO ()
 main = do
   logger <- create StdOut
   fetchNorthLinkServicesAndNotify logger
   fetchCalMacStatusesAndNotify logger
+  locations <- DB.getLocations
+  fetchWeatherForLocation logger $ locations !! 0
+  fetchVessels logger [232001580]
   hspec $ webServerSpec logger
 
 webServerSpec :: Logger -> Spec

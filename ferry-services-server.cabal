@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 823f40441b7f752473b57c3dc62c4d3673248dfd445e74bbefabb0705f38622d
+-- hash: d13070791991c376610f5877fdd546aaee036a1836f115e6de5c2634845f8b68
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -31,6 +31,8 @@ library
       Scraper
       Types
       Utility
+      VesselFetcher
+      WeatherFetcher
       WebServer
   other-modules:
       Paths_ferry_services_server
@@ -113,18 +115,10 @@ executable ferry-services-vessel-fetcher-exe
       vessel-fetcher
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      aeson
-    , base >=4.7 && <5
-    , bytestring
+      base >=4.7 && <5
     , ferry-services-server
-    , http-conduit
-    , http-types
     , raven-haskell
-    , tagsoup
-    , time
     , tinylog
-    , uuid
-    , zlib
   default-language: Haskell2010
 
 executable ferry-services-weather-fetcher-exe
@@ -135,12 +129,8 @@ executable ferry-services-weather-fetcher-exe
       weather-fetcher
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      HTTP
-    , aeson
-    , base >=4.7 && <5
-    , bytestring
+      base >=4.7 && <5
     , ferry-services-server
-    , network-uri
     , raven-haskell
     , tinylog
   default-language: Haskell2010
