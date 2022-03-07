@@ -24,10 +24,11 @@ fetchWeather :: Logger -> IO ()
 fetchWeather logger = do
   locations <- DB.getLocations
   forM_ locations $ \location -> do
-    fetchWeatherForLocation logger location
+    weather <- fetchWeatherForLocation logger location
+    DB.insertLocationWeather (locationLocationID location) weather
     threadDelay (2 * 1000 * 1000) -- 2 second delay
 
-fetchWeatherForLocation :: Logger -> Location -> IO ()
+fetchWeatherForLocation :: Logger -> Location -> IO WeatherFetcherResult
 fetchWeatherForLocation logger (Location locationID name latitude longitude created) = do
   appID <- getEnv "OPENWEATHERMAP_APPID"
   let url = "http://api.openweathermap.org/data/2.5/weather?lat=" <> show latitude <> "&lon=" <> show longitude <> "&APPID=" <> appID
@@ -38,7 +39,7 @@ fetchWeatherForLocation logger (Location locationID name latitude longitude crea
   let result = responseBody >>= eitherDecode
   case result of
     Left errorMessage -> error errorMessage
-    Right weather     -> DB.insertLocationWeather locationID weather
+    Right weather     -> return weather
 
 checkResponseBody :: Maybe a -> Either String a
 checkResponseBody =
