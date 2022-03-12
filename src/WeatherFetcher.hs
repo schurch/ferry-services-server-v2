@@ -23,6 +23,10 @@ import qualified Database                   as DB
 fetchWeather :: Logger -> IO ()
 fetchWeather logger = do
   locations <- DB.getLocations
+  fetchWeatherForLocations logger locations
+
+fetchWeatherForLocations :: Logger -> [Location] -> IO ()
+fetchWeatherForLocations logger locations = do
   forM_ locations $ \location -> do
     weather <- fetchWeatherForLocation logger location
     DB.insertLocationWeather (locationLocationID location) weather

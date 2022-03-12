@@ -11,10 +11,13 @@ import           Data.Aeson                           (FromJSON (parseJSON),
                                                        ToJSON (toJSON),
                                                        camelTo2, defaultOptions,
                                                        genericParseJSON,
-                                                       genericToJSON)
+                                                       genericToJSON,
+                                                       withScientific)
 import           Data.Char                            (toLower, toUpper)
+import           Data.Maybe                           (fromMaybe)
 import           Data.Proxy
-import           Data.Scientific                      (Scientific)
+import           Data.Scientific                      (Scientific,
+                                                       toBoundedInteger)
 import           Data.Text.Lazy                       (Text)
 import           Data.Time.Clock                      (UTCTime)
 import           Data.Typeable                        (Typeable, typeRep)
@@ -95,6 +98,9 @@ instance Enum ServiceStatus where
 
 instance ToJSON ServiceStatus where
   toJSON = toJSON . fromEnum
+
+instance FromJSON ServiceStatus where
+  parseJSON = withScientific "ServiceStatus" (pure . toEnum . fromMaybe (-99) . toBoundedInteger)
 
 instance ToField ServiceStatus where
   toField = toField . fromEnum
@@ -199,6 +205,9 @@ data ServiceResponse = ServiceResponse
 instance ToJSON ServiceResponse where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy ServiceResponse)
 
+instance FromJSON ServiceResponse where
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy ServiceResponse)
+
 data CreateInstallationRequest = CreateInstallationRequest
   { createInstallationRequestDeviceToken :: String
   , createInstallationRequestDeviceType  :: DeviceType
@@ -234,6 +243,9 @@ data LocationResponse = LocationResponse
 instance ToJSON LocationResponse where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy LocationResponse)
 
+instance FromJSON LocationResponse where
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy LocationResponse)
+
 data LocationWeatherResponse = LocationWeatherResponse
   { locationWeatherResponseIcon                  :: String
   , locationWeatherResponseDescription           :: String
@@ -246,6 +258,9 @@ data LocationWeatherResponse = LocationWeatherResponse
 
 instance ToJSON LocationWeatherResponse where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy LocationWeatherResponse)
+
+instance FromJSON LocationWeatherResponse where
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy LocationWeatherResponse)
 
 data VesselResponse = VesselResponse
   { vesselResponseMmsi         :: Int
@@ -260,6 +275,9 @@ data VesselResponse = VesselResponse
 
 instance ToJSON VesselResponse where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy VesselResponse)
+
+instance FromJSON VesselResponse where
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy VesselResponse)
 
 jsonOptions :: Typeable a => Proxy a -> Data.Aeson.Options
 jsonOptions type' =

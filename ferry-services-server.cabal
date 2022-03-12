@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d13070791991c376610f5877fdd546aaee036a1836f115e6de5c2634845f8b68
+-- hash: 2d2137d8e59a6b7582cc9e79f2aae5dd7ad31ca24fedfb5c30acc1bde5538ea7
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -150,6 +150,7 @@ test-suite ferry-services-server-test
     , hspec
     , hspec-wai
     , hspec-wai-json
+    , http-types
     , mtl
     , scotty
     , tinylog

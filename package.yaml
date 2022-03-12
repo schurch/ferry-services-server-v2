@@ -125,6 +125,7 @@ tests:
     - hspec
     - hspec-wai
     - hspec-wai-json
+    - http-types
     - mtl
     - scotty
     - tinylog
