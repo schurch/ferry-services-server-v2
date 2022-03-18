@@ -63,9 +63,6 @@ spec = beforeAll_ setupIntegrationTests $ with app $ do
     it "responds with 200" $ do
       get "/api/vessels" `shouldRespondWith` vessels
 
-actual :: Spec
-actual = undefined
-
 -- Response checks
 vessels :: ResponseMatcher
 vessels = jsonReponseMatcher checkVesselsResponse

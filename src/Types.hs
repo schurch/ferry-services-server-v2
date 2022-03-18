@@ -108,7 +108,6 @@ instance ToField ServiceStatus where
 instance FromField ServiceStatus where
   fromField field byteString = toEnum <$> fromField field byteString
 
-
 data DeviceType = IOS | Android deriving (Eq, Show, Generic, Bounded, Enum)
 
 instance ToJSON DeviceType

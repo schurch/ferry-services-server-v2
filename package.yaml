@@ -129,6 +129,7 @@ tests:
     - http-types
     - mtl
     - scotty
+    - time
     - tinylog
     - wai
     - wai-extra
