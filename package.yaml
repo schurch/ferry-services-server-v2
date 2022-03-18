@@ -121,6 +121,7 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - aeson
+    - aeson-qq
     - ferry-services-server
     - hspec
     - hspec-wai

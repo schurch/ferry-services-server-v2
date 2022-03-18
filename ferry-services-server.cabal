@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2d2137d8e59a6b7582cc9e79f2aae5dd7ad31ca24fedfb5c30acc1bde5538ea7
+-- hash: 100d757c8c86297d2e3644ba1422f67659dff8c564136168aadf9292f16cf475
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -139,12 +139,15 @@ test-suite ferry-services-server-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      IntegrationSpec
+      JSONTests
       Paths_ferry_services_server
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
+    , aeson-qq
     , base >=4.7 && <5
     , ferry-services-server
     , hspec
