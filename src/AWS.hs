@@ -15,8 +15,7 @@ import           Control.Exception.Lens                 (trying)
 import           Control.Lens                           ((&), (.~), (?~), (^.))
 import           Control.Lens.At                        (at)
 import           Control.Monad                          (void)
-import           Data.Aeson                             (ToJSON, encode, object,
-                                                         toJSON, (.=))
+import           Data.Aeson                             (encode)
 import           Data.Binary.Builder                    (Builder,
                                                          toLazyByteString)
 import           Data.Char                              (toLower)
@@ -52,30 +51,8 @@ import qualified Data.Text.Lazy.Encoding                as TE
 import qualified System.Logger                          as L
 import qualified System.Logger.Message                  as L
 
-import           Types                                  (DeviceType (..))
-
--- {
---   "default": "This is the default message which must be present when publishing a message to a topic. The default message will only be used if a message is not present for
--- one of the notification platforms.",
---   "APNS": "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"} }",
---   "GCM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}",
---   "ADM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
--- }
-data PushPayload = PushPayload
-  { pushPayloadDefault     :: String
-  , pushPayloadApns        :: Maybe String
-  , pushPayloadApnsSandbox :: Maybe String
-  , pushPayloadGcm         :: Maybe String
-  }
-  deriving Show
-
-instance ToJSON PushPayload where
-  toJSON (PushPayload text apns apnsSandbox gcm) = object
-    [ "default" .= text
-    , "APNS" .= apns
-    , "APNS_SANDBOX" .= apnsSandbox
-    , "GCM" .= gcm
-    ]
+import           Types                                  (DeviceType (..),
+                                                         PushPayload (..))
 
 data EndpointAttributesResult = EndpointAttributesEndpointNotFound | AttributeResults String Bool
 data SendNotificationResult = SendNotificationResultSuccess | SendNotificationEndpointDisabled

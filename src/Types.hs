@@ -7,11 +7,12 @@ module Types where
 
 import           Control.Monad.Reader                 (ReaderT, asks)
 import           Data.Aeson                           (FromJSON (parseJSON),
+                                                       KeyValue ((.=)),
                                                        Options (fieldLabelModifier, omitNothingFields),
                                                        ToJSON (toJSON),
                                                        camelTo2, defaultOptions,
-                                                       genericParseJSON,
-                                                       genericToJSON,
+                                                       encode, genericParseJSON,
+                                                       genericToJSON, object,
                                                        withScientific)
 import           Data.Char                            (toLower, toUpper)
 import           Data.Maybe                           (fromMaybe)
@@ -30,6 +31,8 @@ import           System.Logger                        (Logger, log)
 import           System.Logger.Class                  (MonadLogger, log)
 import           Web.Scotty.Trans                     (ActionT, ScottyT)
 
+import qualified Data.ByteString.Lazy.Char8           as C
+
 -- Web server
 data Env = Env
   { logger :: Logger
@@ -44,6 +47,28 @@ instance MonadLogger Types.Action where
     System.Logger.log logger level message
 
 -- Push payloads
+-- {
+--   "default": "This is the default message which must be present when publishing a message to a topic. The default message will only be used if a message is not present for
+-- one of the notification platforms.",
+--   "APNS": "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"} }",
+--   "GCM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}",
+--   "ADM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
+-- }
+data PushPayload = PushPayload
+  { pushPayloadDefault :: String
+  , pushPayloadApns    :: Maybe APSPayload
+  , pushPayloadGcm     :: Maybe CGMPayload
+  }
+  deriving Show
+
+instance ToJSON PushPayload where
+  toJSON (PushPayload text apns gcm) = object
+    [ "default" .= text
+    , "APNS" .= (C.unpack . encode <$> apns)
+    , "APNS_SANDBOX" .= (C.unpack . encode <$> apns)
+    , "GCM" .= (C.unpack . encode <$> gcm)
+    ]
+
 -- Apple
 data APSPayload = APSPayload
   { apsPayloadAps       :: APSPayloadBody

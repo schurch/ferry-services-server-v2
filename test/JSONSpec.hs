@@ -9,7 +9,6 @@ import           Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import           Data.Time.Clock                (UTCTime (UTCTime))
 import           Test.Hspec                     (Spec, describe, it, shouldBe)
 
-import           AWS                            (PushPayload (..))
 import           Types
 
 spec :: Spec
@@ -59,17 +58,28 @@ spec = do
       it "encodes correctly" $
           encode PushPayload
           { pushPayloadDefault = "Default payload message"
-          , pushPayloadApns = Just "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
-          , pushPayloadApnsSandbox = Just "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
-          , pushPayloadGcm = Just "\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
+          , pushPayloadApns = Just $ APSPayload
+            { apsPayloadAps = APSPayloadBody
+              { apsPayloadBodyAlert = "There is a disruption to the Arran service"
+              , apsPayloadBodySound = "default"
+              }
+            , apsPayloadServiceID = 5
+            }
+          , pushPayloadGcm = Just $ CGMPayload
+            { gcmPayloadData = GCMPayloadData
+              { gcmPayloadDataServiceID = 5
+              , gcmPayloadDataTitle = "Sailings disrupted"
+              , gcmPayloadDataBody = "Ardrossan (ARD) - Brodick (BRO)"
+              }
+            }
           }
           `shouldBe`
           encode [aesonQQ|
             {
               "default": "Default payload message",
-              "APNS": "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}",
-              "APNS_SANDBOX": "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}",
-              "GCM": "\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
+              "APNS": "{\"service_id\":5,\"aps\":{\"sound\":\"default\",\"alert\":\"There is a disruption to the Arran service\"}}",
+              "APNS_SANDBOX": "{\"service_id\":5,\"aps\":{\"sound\":\"default\",\"alert\":\"There is a disruption to the Arran service\"}}",
+              "GCM": "{\"data\":{\"body\":\"Ardrossan (ARD) - Brodick (BRO)\",\"service_id\":5,\"title\":\"Sailings disrupted\"}}"
             }
           |]
 

@@ -218,19 +218,14 @@ notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServ
                           }
           )
           serviceID
-        stringPayload = C.unpack . encode $ apsPayload
     in  PushPayload { pushPayloadDefault     = message
-                    , pushPayloadApns        = Just stringPayload
-                    , pushPayloadApnsSandbox = Just stringPayload
+                    , pushPayloadApns        = Just apsPayload
                     , pushPayloadGcm         = Nothing
                     }
 
   createAndroidPushPayload :: String -> String -> String -> Int -> PushPayload
   createAndroidPushPayload defaultMessage title body serviceID =
-    let gcmPayload = CGMPayload (GCMPayloadData serviceID title body)
-        stringPayload = C.unpack . encode $ gcmPayload
-    in  PushPayload { pushPayloadDefault     = defaultMessage
-                    , pushPayloadApns        = Nothing
-                    , pushPayloadApnsSandbox = Nothing
-                    , pushPayloadGcm         = Just stringPayload
-                    }
+    PushPayload { pushPayloadDefault     = defaultMessage
+                , pushPayloadApns        = Nothing
+                , pushPayloadGcm         = Just $ CGMPayload (GCMPayloadData serviceID title body)
+                }
