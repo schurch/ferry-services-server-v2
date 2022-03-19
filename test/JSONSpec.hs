@@ -5,10 +5,11 @@ module JSONSpec where
 
 import           Data.Aeson                     (encode)
 import           Data.Aeson.QQ                  (aesonQQ)
-import           Data.Time.Calendar.OrdinalDate
-import           Data.Time.Clock
+import           Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
+import           Data.Time.Clock                (UTCTime (UTCTime))
 import           Test.Hspec                     (Spec, describe, it, shouldBe)
 
+import           AWS                            (PushPayload (..))
 import           Types
 
 spec :: Spec
@@ -53,6 +54,24 @@ spec = do
             }
           }
         |]
+
+    describe "PushPayload" $
+      it "encodes correctly" $
+          encode PushPayload
+          { pushPayloadDefault = "Default payload message"
+          , pushPayloadApns = Just "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
+          , pushPayloadApnsSandbox = Just "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
+          , pushPayloadGcm = Just "\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
+          }
+          `shouldBe`
+          encode [aesonQQ|
+            {
+              "default": "Default payload message",
+              "APNS": "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}",
+              "APNS_SANDBOX": "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}",
+              "GCM": "\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
+            }
+          |]
 
   describe "API payloads" $ do
     describe "ServiceResponse" $
