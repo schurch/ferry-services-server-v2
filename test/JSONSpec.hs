@@ -54,24 +54,17 @@ spec = do
           }
         |]
 
-    describe "PushPayload" $
+    describe "Apple PushPayload" $
       it "encodes correctly" $
           encode PushPayload
           { pushPayloadDefault = "Default payload message"
-          , pushPayloadApns = Just $ APSPayload
+          , pushPayloadContent = ApplePayload (APSPayload
             { apsPayloadAps = APSPayloadBody
               { apsPayloadBodyAlert = "There is a disruption to the Arran service"
               , apsPayloadBodySound = "default"
               }
             , apsPayloadServiceID = 5
-            }
-          , pushPayloadGcm = Just $ CGMPayload
-            { gcmPayloadData = GCMPayloadData
-              { gcmPayloadDataServiceID = 5
-              , gcmPayloadDataTitle = "Sailings disrupted"
-              , gcmPayloadDataBody = "Ardrossan (ARD) - Brodick (BRO)"
-              }
-            }
+            })
           }
           `shouldBe`
           encode [aesonQQ|
@@ -79,6 +72,28 @@ spec = do
               "default": "Default payload message",
               "APNS": "{\"service_id\":5,\"aps\":{\"sound\":\"default\",\"alert\":\"There is a disruption to the Arran service\"}}",
               "APNS_SANDBOX": "{\"service_id\":5,\"aps\":{\"sound\":\"default\",\"alert\":\"There is a disruption to the Arran service\"}}",
+              "GCM": null
+            }
+          |]
+
+    describe "Google PushPayload" $
+      it "encodes correctly" $
+          encode PushPayload
+          { pushPayloadDefault = "Default payload message"
+          , pushPayloadContent = GooglePayload (CGMPayload
+            { gcmPayloadData = GCMPayloadData
+              { gcmPayloadDataServiceID = 5
+              , gcmPayloadDataTitle = "Sailings disrupted"
+              , gcmPayloadDataBody = "Ardrossan (ARD) - Brodick (BRO)"
+              }
+            })
+          }
+          `shouldBe`
+          encode [aesonQQ|
+            {
+              "default": "Default payload message",
+              "APNS": null,
+              "APNS_SANDBOX": null,
               "GCM": "{\"data\":{\"body\":\"Ardrossan (ARD) - Brodick (BRO)\",\"service_id\":5,\"title\":\"Sailings disrupted\"}}"
             }
           |]

@@ -10,8 +10,9 @@ import           Data.Aeson                           (FromJSON (parseJSON),
                                                        KeyValue ((.=)),
                                                        Options (fieldLabelModifier, omitNothingFields),
                                                        ToJSON (toJSON),
-                                                       camelTo2, defaultOptions,
-                                                       encode, genericParseJSON,
+                                                       Value (..), camelTo2,
+                                                       defaultOptions, encode,
+                                                       genericParseJSON,
                                                        genericToJSON, object,
                                                        withScientific)
 import           Data.Char                            (toLower, toUpper)
@@ -56,17 +57,24 @@ instance MonadLogger Types.Action where
 -- }
 data PushPayload = PushPayload
   { pushPayloadDefault :: String
-  , pushPayloadApns    :: Maybe APSPayload
-  , pushPayloadGcm     :: Maybe CGMPayload
+  , pushPayloadContent :: PushPayloadContent
   }
   deriving Show
 
+data PushPayloadContent = ApplePayload APSPayload | GooglePayload CGMPayload deriving Show
+
 instance ToJSON PushPayload where
-  toJSON (PushPayload text apns gcm) = object
+  toJSON (PushPayload text (ApplePayload apns)) = object
     [ "default" .= text
-    , "APNS" .= (C.unpack . encode <$> apns)
-    , "APNS_SANDBOX" .= (C.unpack . encode <$> apns)
-    , "GCM" .= (C.unpack . encode <$> gcm)
+    , "APNS" .= (C.unpack . encode $ apns)
+    , "APNS_SANDBOX" .= (C.unpack . encode $ apns)
+    , "GCM" .= Null
+    ]
+  toJSON (PushPayload text (GooglePayload gcm)) = object
+    [ "default" .= text
+    , "APNS" .= Null
+    , "APNS_SANDBOX" .= Null
+    , "GCM" .= (C.unpack . encode $ gcm)
     ]
 
 -- Apple

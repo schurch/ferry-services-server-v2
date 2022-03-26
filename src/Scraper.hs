@@ -218,14 +218,8 @@ notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServ
                           }
           )
           serviceID
-    in  PushPayload { pushPayloadDefault     = message
-                    , pushPayloadApns        = Just apsPayload
-                    , pushPayloadGcm         = Nothing
-                    }
+    in  PushPayload message (ApplePayload apsPayload)
 
   createAndroidPushPayload :: String -> String -> String -> Int -> PushPayload
   createAndroidPushPayload defaultMessage title body serviceID =
-    PushPayload { pushPayloadDefault     = defaultMessage
-                , pushPayloadApns        = Nothing
-                , pushPayloadGcm         = Just $ CGMPayload (GCMPayloadData serviceID title body)
-                }
+    PushPayload defaultMessage (GooglePayload (CGMPayload (GCMPayloadData serviceID title body)))
