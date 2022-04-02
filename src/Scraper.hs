@@ -56,7 +56,6 @@ fetchNorthLinkService logger = do
   return Service
     { serviceID               = 1000
     , serviceUpdated          = time
-    , serviceSortOrder        = 24
     , serviceArea             = "ORKNEY & SHETLAND"
     , serviceRoute            = "Scrabster - Stromness / Aberdeen - Kirkwall - Lerwick"
     , serviceStatus           = textToStatus statusText
@@ -116,7 +115,6 @@ ajaxResultToService :: UTCTime -> (Int, AjaxServiceDetails) -> Service
 ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
   { serviceID               = read ajaxServiceDetailsCode
   , serviceUpdated          = time
-  , serviceSortOrder        = sortOrder
   , serviceArea             = ajaxServiceDetailsDestName
   , serviceRoute            = ajaxServiceDetailsRouteName
   , serviceStatus           = imageToStatus ajaxServiceDetailsImage

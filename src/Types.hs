@@ -156,7 +156,6 @@ instance FromField DeviceType where
 -- Database Types
 data Service = Service
   { serviceID               :: Int
-  , serviceSortOrder        :: Int
   , serviceArea             :: String
   , serviceRoute            :: String
   , serviceStatus           :: ServiceStatus

@@ -4,7 +4,7 @@
 
 module WebServer where
 
-import           Control.Monad                        (void, when)
+import           Control.Monad                        (forM, void, when)
 import           Control.Monad.IO.Class               (liftIO)
 import           Control.Monad.Reader                 (asks)
 import           Data.Aeson                           (Value (..))
@@ -121,14 +121,15 @@ getService serviceID = do
   service        <- DB.getService serviceID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
-  return $ serviceToServiceResponseWithLocationLookup locationLookup time <$> service
+  return $ serviceToServiceResponseWithLocationLookup locationLookup 1 time <$> service
 
 getServices :: Action [ServiceResponse]
 getServices = do
   services       <- DB.getServices
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
-  return $ serviceToServiceResponseWithLocationLookup locationLookup time <$> services
+  forM (zip [1..] services) $ \(sortOrder, service) ->
+    return $ serviceToServiceResponseWithLocationLookup locationLookup sortOrder time service
 
 createInstallation
   :: UUID -> CreateInstallationRequest -> Action [ServiceResponse]
@@ -160,7 +161,8 @@ getServicesForInstallation installationID = do
   services       <- DB.getServicesForInstallation installationID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
-  return $ serviceToServiceResponseWithLocationLookup locationLookup time <$> services
+  forM (zip [1..] services) $ \(sortOrder, service) ->
+    return $ serviceToServiceResponseWithLocationLookup locationLookup sortOrder time service
 
 getVessels :: Action [VesselResponse]
 getVessels = do
@@ -186,11 +188,11 @@ vesselToVesselResponse Vessel {..} =
   }
 
 serviceToServiceResponseWithLocationLookup
-  :: ServiceLocationLookup -> UTCTime -> Service -> ServiceResponse
-serviceToServiceResponseWithLocationLookup locationLookup currentTime Service {..}
+  :: ServiceLocationLookup -> Int -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponseWithLocationLookup locationLookup sortOrder currentTime Service {..}
   = ServiceResponse
     { serviceResponseServiceID        = serviceID
-    , serviceResponseSortOrder        = serviceSortOrder
+    , serviceResponseSortOrder        = sortOrder
     , serviceResponseArea             = serviceArea
     , serviceResponseRoute            = serviceRoute
     , serviceResponseStatus           = serviceStatusForTime currentTime

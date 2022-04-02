@@ -94,7 +94,7 @@ getService serviceID = do
   results <- withConnection $ \connection -> query
     connection
     [sql|
-      SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
+      SELECT service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
       FROM services
       WHERE service_id = ? AND visible = TRUE
     |]
@@ -105,18 +105,20 @@ getServices :: MonadIO m => m [Types.Service]
 getServices = withConnection $ \connection -> query_
   connection
   [sql|
-    SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
+    SELECT service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
     FROM services
     WHERE visible = TRUE
+    ORDER BY area, route
   |]
 
 getServicesForOrganisation :: MonadIO m => String -> m [Types.Service]
 getServicesForOrganisation organisation = withConnection $ \connection -> query
   connection
   [sql|
-    SELECT service_id, sort_order, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
+    SELECT service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
     FROM services
     WHERE organisation = ?
+    ORDER BY area, route
   |]
   (Only organisation)
 
@@ -170,10 +172,11 @@ getServicesForInstallation installationID = withConnection $ \connection ->
   query
     connection
     [sql|
-      SELECT s.service_id, s.sort_order, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.organisation, s.last_updated_date, s.updated
+      SELECT s.service_id, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.organisation, s.last_updated_date, s.updated
       FROM services s
       JOIN installation_services i ON s.service_id = i.service_id
       WHERE i.installation_id = ? AND s.visible = TRUE
+      ORDER BY s.area, s.route
     |]
     (Only installationID)
 
@@ -199,7 +202,7 @@ getIntererestedInstallationsForServiceID serviceID =
       FROM installation_services s
       JOIN installations i ON s.installation_id = i.installation_id
       WHERE s.service_id = ?
-      |]
+    |]
     (Only serviceID)
 
 saveServices :: MonadIO m => [Types.Service] -> m ()
@@ -207,11 +210,10 @@ saveServices services = void $ withConnection $ \connection -> do
   executeMany
     connection
     [sql|
-      INSERT INTO services (service_id, sort_order, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated)
-      VALUES (?,?,?,?,?,?,?,?,?,?)
+      INSERT INTO services (service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated)
+      VALUES (?,?,?,?,?,?,?,?,?)
       ON CONFLICT (service_id) DO UPDATE
         SET service_id = excluded.service_id,
-            sort_order = excluded.sort_order,
             area = excluded.area,
             route = excluded.route,
             status = excluded.status,
@@ -220,14 +222,14 @@ saveServices services = void $ withConnection $ \connection -> do
             organisation = excluded.organisation,
             last_updated_date = excluded.last_updated_date,
             updated = excluded.updated
-      |]
+    |]
     services
   let serviceIDs = serviceID <$> services
   execute
     connection
     [sql|
-        UPDATE services SET visible = TRUE WHERE service_id IN ?
-      |]
+      UPDATE services SET visible = TRUE WHERE service_id IN ?
+    |]
     (Only $ In serviceIDs)
 
 deleteInstallationWithID :: MonadIO m => UUID -> m ()
