@@ -19,6 +19,9 @@ import           Data.Time.Clock                      (UTCTime, diffUTCTime,
                                                        getCurrentTime)
 import           Data.UUID                            (UUID, fromText)
 import           Network.Wai                          (Middleware)
+import           Network.Wai.Middleware.AddHeaders
+import           Network.Wai.Middleware.Gzip          (GzipFiles (..), def,
+                                                       gzip, gzipFiles)
 import           Network.Wai.Middleware.RequestLogger (Destination (Callback),
                                                        IPAddrSource (FromFallback),
                                                        OutputFormat (Apache),
@@ -30,7 +33,7 @@ import           System.Logger                        (Level (Debug, Info, Trace
                                                        Logger, level, log, msg)
 import           System.Logger.Message                (msg)
 import           Web.Scotty.Trans                     (Parsable (parseParam),
-                                                       delete, get, json,
+                                                       delete, file, get, json,
                                                        jsonData, middleware,
                                                        param, post, redirect,
                                                        setHeader)
@@ -46,43 +49,43 @@ import qualified Database                             as DB
 webApp :: Middleware -> Scotty
 webApp requestLogger = do
   middleware requestLogger
+  middleware $ gzip def { gzipFiles = GzipCompress }
+  middleware $ addHeaders [("Access-Control-Allow-Origin", "*")
+                          ,("X-Frame-Options", "DENY")
+                          ,("X-Content-Type-Options", "nosniff")]
   middleware $ staticPolicy (noDots <> isNotAbsolute <> addBase "public")
-  get "/" $ redirect "/index.html"
+  get "/" $ do
+    setHeader "Content-Type" "text/html"
+    setHeader "Content-Security-Policy" "script-src 'self'"
+    file "public/index.html"
   get "/api/services" $ do
     services <- getServices
-    setHeader "Access-Control-Allow-Origin" "*"
     json services
   get "/api/services/:serviceID" $ do
     serviceID <- param "serviceID"
     service   <- getService serviceID
-    setHeader "Access-Control-Allow-Origin" "*"
     json service
   post "/api/installations/:installationID" $ do
     installationID <- param "installationID"
     request        <- jsonData
     services       <- createInstallation installationID request
-    setHeader "Access-Control-Allow-Origin" "*"
     json services
   get "/api/installations/:installationID/services" $ do
     installationID <- param "installationID"
     services       <- getServicesForInstallation installationID
-    setHeader "Access-Control-Allow-Origin" "*"
     json services
   post "/api/installations/:installationID/services" $ do
     installationID <- param "installationID"
     (AddServiceRequest serviceID) <- jsonData
     services <- addServiceToInstallation installationID serviceID
-    setHeader "Access-Control-Allow-Origin" "*"
     json services
   delete "/api/installations/:installationID/services/:serviceID" $ do
     installationID <- param "installationID"
     serviceID      <- param "serviceID"
     services       <- deleteServiceForInstallation installationID serviceID
-    setHeader "Access-Control-Allow-Origin" "*"
     json services
   get "/api/vessels" $ do
     vessels <- getVessels
-    setHeader "Access-Control-Allow-Origin" "*"
     json vessels
 
 instance Parsable UUID where
