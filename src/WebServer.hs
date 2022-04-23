@@ -13,11 +13,13 @@ import           Data.Default                         (def)
 import           Data.Maybe                           (fromJust, fromMaybe,
                                                        isNothing)
 import           Data.Scientific                      (Scientific (..),
+                                                       fromFloatDigits,
                                                        toRealFloat)
 import           Data.Text.Lazy                       (Text, toStrict)
 import           Data.Time.Clock                      (UTCTime, diffUTCTime,
                                                        getCurrentTime)
 import           Data.UUID                            (UUID, fromText)
+import           Database.Postgis
 import           Network.Wai                          (Middleware)
 import           Network.Wai.Middleware.AddHeaders
 import           Network.Wai.Middleware.Gzip          (GzipFiles (..), def,
@@ -185,10 +187,18 @@ vesselToVesselResponse Vessel {..} =
   , vesselResponseName = vesselName
   , vesselResponseSpeed = vesselSpeed
   , vesselResponseCourse = vesselCourse
-  , vesselResponseLatitude = vesselLatitude
-  , vesselResponseLongitude = vesselLongitude
+  , vesselResponseLatitude = getLatitude vesselCoordinate
+  , vesselResponseLongitude = getLongitude vesselCoordinate
   , vesselResponseLastReceived = vesselLastReceived
   }
+  where
+    getLatitude :: Geometry -> Scientific
+    getLatitude (GeoPoint _ (Point (Position latitude _ _ _))) = fromFloatDigits latitude
+    getLatitude _ = error "Expected point"
+
+    getLongitude :: Geometry -> Scientific
+    getLongitude (GeoPoint _ (Point (Position _ longitude _ _))) = fromFloatDigits longitude
+    getLongitude _ = error "Expected point"
 
 serviceToServiceResponseWithLocationLookup
   :: ServiceLocationLookup -> Int -> UTCTime -> Service -> ServiceResponse
@@ -260,8 +270,8 @@ getLocationLookup = do
   locationWeatherLookup <- getLocationWeatherLookup
   return
     $ M.fromListWith (++)
-    $ [ (serviceID, [LocationResponse locationID name latitude longitude (M.lookup locationID locationWeatherLookup)])
-      | (ServiceLocation serviceID locationID name latitude longitude) <-
+    $ [ (serviceID, [LocationResponse locationID name (fromFloatDigits latitude) (fromFloatDigits longitude) (M.lookup locationID locationWeatherLookup)])
+      | (ServiceLocation serviceID locationID name (GeoPoint _ (Point (Position latitude longitude _ _)))) <-
         serviceLocations
       ]
 

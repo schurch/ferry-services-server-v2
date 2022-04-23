@@ -39,6 +39,13 @@ packages:
       sha256: 9d970bf5f98e68e8fc129b04d6c9d8eb1e641c7556ffd0f0a168a259335b6fd7
   original:
     hackage: unliftio-core-0.1.2.0
+- completed:
+    hackage: haskell-postgis-0.2.0@sha256:f222a95f032d396ce0ad590174ac1207416be1f8faa6b721a327b6fb84bbb328,1715
+    pantry-tree:
+      size: 547
+      sha256: 3a4642023f260cba4da884e032e2a4bdcb9f99c278cb306fd50f8e0bc257f424
+  original:
+    hackage: haskell-postgis-0.2.0@sha256:f222a95f032d396ce0ad590174ac1207416be1f8faa6b721a327b6fb84bbb328
 snapshots:
 - completed:
     size: 587126

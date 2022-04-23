@@ -55,6 +55,6 @@ vessel-fetcher: build dev-env
 
 .PHONY: tests
 tests: test-env
-	migrate -source file://migrations -database "postgres://stefanchurch@localhost:5432/ferry-services-test?sslmode=disable" drop -f
+	psql -d ferry-services-test -U stefanchurch -c 'DROP TABLE IF EXISTS vessels; DROP TABLE IF EXISTS service_locations; DROP TABLE IF EXISTS installation_services; DROP TABLE IF EXISTS installations; DROP TABLE IF EXISTS location_weather; DROP TABLE IF EXISTS locations; DROP TABLE IF EXISTS services; DROP TABLE IF EXISTS schema_migrations;'
 	migrate -source file://migrations -database "postgres://stefanchurch@localhost:5432/ferry-services-test?sslmode=disable" up
 	stack test

@@ -11,6 +11,7 @@ import           Data.Aeson                 (eitherDecode)
 import           Data.Char                  (toLower, toUpper)
 import           Data.Time.Clock            (UTCTime (..), getCurrentTime)
 import           Data.Time.Clock.POSIX      (posixSecondsToUTCTime)
+import           Database.Postgis
 import           Network.HTTP.Simple        (getResponseBody, httpBS,
                                              parseRequest, setRequestHeaders)
 import           Network.HTTP.Types.Header  (hAccept, hAcceptLanguage, hCookie,
@@ -58,16 +59,20 @@ fetchVessel mmsi = do
       Right result'      -> return $ ajaxToVessel time result'
     where
       ajaxToVessel :: UTCTime -> AjaxVessels -> Vessel
-      ajaxToVessel time AjaxVessels {..} = Vessel
-        { vesselMmsi = read . ajaxVesselMmsi . head $ ajaxVesselsData
-        , vesselName = capitaliseWords . ajaxVesselShipname . head $ ajaxVesselsData
-        , vesselSpeed = read <$> (ajaxVesselSpeed . head $ ajaxVesselsData)
-        , vesselCourse = read <$> (ajaxVesselCourse . head $ ajaxVesselsData)
-        , vesselLatitude = read . ajaxVesselLat . head $ ajaxVesselsData
-        , vesselLongitude = read . ajaxVesselLon . head $ ajaxVesselsData
-        , vesselLastReceived = toUTC . ajaxVesselLastPos . head $ ajaxVesselsData
-        , vesselUpdated = time
-        }
+      ajaxToVessel time AjaxVessels {..} =
+        let
+          latitude = read . ajaxVesselLat . head $ ajaxVesselsData :: Double
+          longitude = read . ajaxVesselLon . head $ ajaxVesselsData :: Double
+        in
+          Vessel
+          { vesselMmsi = read . ajaxVesselMmsi . head $ ajaxVesselsData
+          , vesselName = capitaliseWords . ajaxVesselShipname . head $ ajaxVesselsData
+          , vesselSpeed = read <$> (ajaxVesselSpeed . head $ ajaxVesselsData)
+          , vesselCourse = read <$> (ajaxVesselCourse . head $ ajaxVesselsData)
+          , vesselCoordinate = GeoPoint (Just 4326) (Point (Position latitude longitude Nothing Nothing))
+          , vesselLastReceived = toUTC . ajaxVesselLastPos . head $ ajaxVesselsData
+          , vesselUpdated = time
+          }
       toUTC :: Int -> UTCTime
       toUTC = posixSecondsToUTCTime . fromInteger . toInteger
       capitaliseWords :: String -> String

@@ -33,6 +33,7 @@ library:
     - containers
     - data-default
     - fast-logger
+    - haskell-postgis
     - http-types
     - http-conduit
     - lens

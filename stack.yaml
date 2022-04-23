@@ -39,7 +39,7 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-extra-deps: [raven-haskell-0.1.4.0, MissingH-1.5.0.0, amazonka-1.6.1, random-1.2.1, unliftio-core-0.1.2.0]
+extra-deps: [raven-haskell-0.1.4.0, MissingH-1.5.0.0, amazonka-1.6.1, random-1.2.1, unliftio-core-0.1.2.0, haskell-postgis-0.2.0@sha256:f222a95f032d396ce0ad590174ac1207416be1f8faa6b721a327b6fb84bbb328]
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -255,7 +255,7 @@ getServiceLocations :: MonadIO m => m [ServiceLocation]
 getServiceLocations = withConnection $ \connection -> query_
   connection
   [sql|
-    SELECT sl.service_id, l.location_id, l.name, l.latitude, l.longitude
+    SELECT sl.service_id, l.location_id, l.name, l.coordinate
     FROM service_locations sl
     JOIN locations l ON l.location_id = sl.location_id
   |]
@@ -264,7 +264,7 @@ getLocations :: MonadIO m => m [Location]
 getLocations = withConnection $ \connection -> query_
   connection
   [sql|
-    SELECT location_id, name, latitude, longitude, created
+    SELECT location_id, name, coordinate, created
     FROM locations
   |]
 
@@ -273,14 +273,13 @@ saveVessel vessel = void $ withConnection $ \connection -> do
   execute
     connection
     [sql|
-      INSERT INTO vessels (mmsi, name, speed, course, latitude, longitude, last_received, updated)
-        VALUES (?,?,?,?,?,?,?,?)
+      INSERT INTO vessels (mmsi, name, speed, course, coordinate, last_received, updated)
+        VALUES (?,?,?,?,?,?,?)
         ON CONFLICT (mmsi) DO UPDATE
           SET name = excluded.name,
               speed = excluded.speed,
               course = excluded.course,
-              latitude = excluded.latitude,
-              longitude = excluded.longitude,
+              coordinate = excluded.coordinate,
               last_received = excluded.last_received,
               updated = excluded.updated
     |] vessel
@@ -289,6 +288,6 @@ getVessels :: MonadIO m => m [Vessel]
 getVessels = withConnection $ \connection -> query_
   connection
   [sql|
-    SELECT mmsi, name, speed, course, latitude, longitude, last_received, updated
+    SELECT mmsi, name, speed, course, coordinate, last_received, updated
     FROM vessels
   |]

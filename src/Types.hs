@@ -24,6 +24,8 @@ import           Data.Text.Lazy                       (Text)
 import           Data.Time.Clock                      (UTCTime)
 import           Data.Typeable                        (Typeable, typeRep)
 import           Data.UUID                            (UUID)
+import           Database.Postgis
+import           Database.Postgis                     (Geometry (..))
 import           Database.PostgreSQL.Simple           (FromRow, ToRow)
 import           Database.PostgreSQL.Simple.FromField (FromField (..))
 import           Database.PostgreSQL.Simple.ToField   (ToField (..))
@@ -32,6 +34,7 @@ import           System.Logger                        (Logger, log)
 import           System.Logger.Class                  (MonadLogger, log)
 import           Web.Scotty.Trans                     (ActionT, ScottyT)
 
+import qualified Data.ByteString.Lazy                 as B
 import qualified Data.ByteString.Lazy.Char8           as C
 
 -- Web server
@@ -154,6 +157,14 @@ instance FromField DeviceType where
   fromField field byteString = toEnum <$> fromField field byteString
 
 -- Database Types
+instance ToField Geometry where
+  toField  =  toField . writeGeometry
+
+instance FromField Geometry where
+  fromField f m = case m of
+              Just bs -> return $ readGeometry . B.fromStrict $ bs
+              Nothing -> error "Invalid Field"
+
 data Service = Service
   { serviceID               :: Int
   , serviceArea             :: String
@@ -180,16 +191,14 @@ data ServiceLocation = ServiceLocation
   { serviceLocationServiceID  :: Int
   , serviceLocationLocationID :: Int
   , serviceLocationName       :: String
-  , serviceLocationLatitude   :: Scientific
-  , serviceLocationLongitude  :: Scientific
+  , serviceLocationCoordinate :: Geometry
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data Location = Location
   { locationLocationID :: Int
   , locationName       :: String
-  , locationLatitude   :: Scientific
-  , locationLongitude  :: Scientific
+  , locationCoordinate :: Geometry
   , locationCreated    :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
@@ -211,8 +220,7 @@ data Vessel = Vessel
   , vesselName         :: String
   , vesselSpeed        :: Maybe Scientific
   , vesselCourse       :: Maybe Scientific
-  , vesselLatitude     :: Scientific
-  , vesselLongitude    :: Scientific
+  , vesselCoordinate   :: Geometry
   , vesselLastReceived :: UTCTime
   , vesselUpdated      :: UTCTime
   }

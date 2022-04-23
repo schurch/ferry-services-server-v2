@@ -6,6 +6,7 @@ import           Control.Concurrent         (threadDelay)
 import           Control.Monad              (forM_)
 import           Data.Aeson                 (eitherDecode)
 import           Data.Maybe                 (fromJust)
+import           Database.Postgis
 import           Network.HTTP.Simple        (getResponseBody, httpBS,
                                              parseRequest, setRequestHeaders)
 import           System.Environment         (getEnv)
@@ -33,7 +34,7 @@ fetchWeatherForLocations logger locations = do
     threadDelay (2 * 1000 * 1000) -- 2 second delay
 
 fetchWeatherForLocation :: Logger -> Location -> IO WeatherFetcherResult
-fetchWeatherForLocation logger (Location locationID name latitude longitude created) = do
+fetchWeatherForLocation logger (Location locationID name (GeoPoint _ (Point (Position latitude longitude _ _))) created) = do
   appID <- getEnv "OPENWEATHERMAP_APPID"
   let url = "http://api.openweathermap.org/data/2.5/weather?lat=" <> show latitude <> "&lon=" <> show longitude <> "&APPID=" <> appID
   System.Logger.debug logger (msg  $ "Fetching " <> name)
@@ -44,6 +45,7 @@ fetchWeatherForLocation logger (Location locationID name latitude longitude crea
   case result of
     Left errorMessage -> error errorMessage
     Right weather     -> return weather
+fetchWeatherForLocation _ _ = error "Expected geo point for latitude & longitude"
 
 checkResponseBody :: Maybe a -> Either String a
 checkResponseBody =
