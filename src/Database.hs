@@ -119,8 +119,8 @@ hideServicesWithIDs :: MonadIO m => [Int] -> m ()
 hideServicesWithIDs serviceIDs = void $ withConnection $ \connection -> execute
   connection
   [sql|
-      UPDATE services SET visible = FALSE WHERE service_id IN ?
-    |]
+    UPDATE services SET visible = FALSE WHERE service_id IN ?
+  |]
   (Only $ In serviceIDs)
 
 createInstallation
