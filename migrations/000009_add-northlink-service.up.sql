@@ -1,3 +1,5 @@
+BEGIN;
+
 ALTER TABLE services ADD COLUMN organisation TEXT NOT NULL DEFAULT 'CalMac';
 ALTER TABLE services ALTER COLUMN organisation DROP DEFAULT;
 
@@ -14,3 +16,5 @@ INSERT INTO service_locations (service_id, location_id) VALUES (1000, 60);
 INSERT INTO service_locations (service_id, location_id) VALUES (1000, 61);
 INSERT INTO service_locations (service_id, location_id) VALUES (1000, 62);
 INSERT INTO service_locations (service_id, location_id) VALUES (1000, 63);
+
+COMMIT;

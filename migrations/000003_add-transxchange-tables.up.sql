@@ -1,3 +1,5 @@
+BEGIN;
+
 CREATE TYPE day_of_week AS ENUM ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
 
 CREATE TABLE stop_points (
@@ -181,3 +183,5 @@ UPDATE locations SET stop_point_id = '9300FIB' WHERE location_id = '51';
 UPDATE locations SET stop_point_id = '9300LHL' WHERE location_id = '50';
 UPDATE locations SET stop_point_id = '9300LCR' WHERE location_id = '16';
 UPDATE locations SET stop_point_id = '9300LCT' WHERE location_id = '15';
+
+COMMIT;

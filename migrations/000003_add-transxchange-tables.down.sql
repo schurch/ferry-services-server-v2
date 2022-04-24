@@ -1,3 +1,5 @@
+BEGIN;
+
 DROP TABLE IF EXISTS days_of_non_operation;
 DROP TABLE IF EXISTS days_of_operation;
 DROP TABLE IF EXISTS vehicle_journeys;
@@ -16,3 +18,5 @@ DROP TYPE IF EXISTS day_of_week;
 
 ALTER TABLE services DROP COLUMN IF EXISTS transxchange_service_code;
 ALTER TABLE locations DROP COLUMN IF EXISTS stop_point_id;
+
+COMMIT;

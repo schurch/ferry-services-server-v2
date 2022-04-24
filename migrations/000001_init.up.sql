@@ -1,3 +1,5 @@
+BEGIN;
+
 CREATE TABLE services (
     service_id INTEGER PRIMARY KEY,
     sort_order INTEGER NOT NULL,
@@ -192,3 +194,5 @@ INSERT INTO service_locations (service_id, location_id) VALUES (38, 54);
 INSERT INTO service_locations (service_id, location_id) VALUES (38, 55);
 INSERT INTO service_locations (service_id, location_id) VALUES (1, 56);
 INSERT INTO service_locations (service_id, location_id) VALUES (1, 57);
+
+COMMIT;

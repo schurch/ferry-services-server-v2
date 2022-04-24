@@ -1,3 +1,5 @@
+BEGIN;
+
 CREATE TABLE location_weather (
     location_id INTEGER PRIMARY KEY REFERENCES locations (location_id),
     description TEXT NOT NULL,
@@ -10,3 +12,5 @@ CREATE TABLE location_weather (
 );
 
 DELETE FROM locations WHERE location_id IN (1,2,5,6);
+
+COMMIT;
