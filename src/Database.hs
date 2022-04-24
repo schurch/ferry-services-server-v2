@@ -20,6 +20,7 @@ module Database
   , getLocations
   , saveVessel
   , getVessels
+  , getServiceVessels
   ) where
 
 import           Control.Monad                    (forM_, void)
@@ -39,15 +40,7 @@ import           Database.PostgreSQL.Simple       (Connection, In (In),
 import           Database.PostgreSQL.Simple.SqlQQ (sql)
 import           Database.PostgreSQL.Simple.Types (PGArray (..))
 import           System.Environment               (getEnv)
-import           Types                            (DeviceType, Installation,
-                                                   Location,
-                                                   LocationWeather (..),
-                                                   Service (..),
-                                                   ServiceLocation, Vessel (..),
-                                                   WeatherFetcherResult (..),
-                                                   WeatherFetcherResultMain (..),
-                                                   WeatherFetcherResultWeather (..),
-                                                   WeatherFetcherResultWind (..))
+import           Types
 import           Utility                          (splitOn)
 
 connectionString :: IO ByteString
@@ -290,4 +283,19 @@ getVessels = withConnection $ \connection -> query_
   [sql|
     SELECT mmsi, name, speed, course, coordinate, last_received, updated
     FROM vessels
+  |]
+
+getServiceVessels :: MonadIO m => m [ServiceVessel]
+getServiceVessels = withConnection $ \connection -> query_
+  connection
+  [sql|
+    WITH bounding_box AS (
+      SELECT sl.service_id, ST_Expand(ST_Extent(l.coordinate), 0.01) AS bounds
+      FROM locations l
+      JOIN service_locations sl ON l.location_id = sl.location_id
+      GROUP BY sl.service_id
+    )
+    SELECT b.service_id, v.mmsi, v.name, v.speed, v.course, v.coordinate, v.last_received, v.updated
+    FROM vessels v, bounding_box b
+    WHERE v.coordinate && b.bounds;
   |]

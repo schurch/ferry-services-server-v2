@@ -24,8 +24,8 @@ import           Data.Text.Lazy                       (Text)
 import           Data.Time.Clock                      (UTCTime)
 import           Data.Typeable                        (Typeable, typeRep)
 import           Data.UUID                            (UUID)
-import           Database.Postgis
-import           Database.Postgis                     (Geometry (..))
+import           Database.Postgis                     (Geometry, readGeometry,
+                                                       writeGeometry)
 import           Database.PostgreSQL.Simple           (FromRow, ToRow)
 import           Database.PostgreSQL.Simple.FromField (FromField (..))
 import           Database.PostgreSQL.Simple.ToField   (ToField (..))
@@ -226,6 +226,18 @@ data Vessel = Vessel
   }
   deriving (Generic, Show, ToRow, FromRow)
 
+data ServiceVessel = ServiceVessel
+  { serviceVesselSeviceID     :: Int
+  , serviceVesselMmsi         :: Int
+  , serviceVesselName         :: String
+  , serviceVesselSpeed        :: Maybe Scientific
+  , serviceVesselCourse       :: Maybe Scientific
+  , serviceVesselCoordinate   :: Geometry
+  , serviceVesselLastReceived :: UTCTime
+  , serviceVesselUpdated      :: UTCTime
+  }
+  deriving (Generic, Show, ToRow, FromRow)
+
 -- API Types
 data ServiceResponse = ServiceResponse
   { serviceResponseServiceID        :: Int
@@ -237,6 +249,7 @@ data ServiceResponse = ServiceResponse
   , serviceResponseAdditionalInfo   :: Maybe String
   , serviceResponseDisruptionReason :: Maybe String
   , serviceResponseLastUpdatedDate  :: Maybe UTCTime
+  , serviceResponseVessels          :: [VesselResponse]
   , serviceResponseUpdated          :: UTCTime
   }
   deriving (Generic, Show)

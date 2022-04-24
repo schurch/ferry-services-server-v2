@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TypeApplications  #-}
 
 module VesselFetcher where
 
@@ -11,7 +10,8 @@ import           Data.Aeson                 (eitherDecode)
 import           Data.Char                  (toLower, toUpper)
 import           Data.Time.Clock            (UTCTime (..), getCurrentTime)
 import           Data.Time.Clock.POSIX      (posixSecondsToUTCTime)
-import           Database.Postgis
+import           Database.Postgis           (Geometry (GeoPoint), Point (Point),
+                                             Position (Position))
 import           Network.HTTP.Simple        (getResponseBody, httpBS,
                                              parseRequest, setRequestHeaders)
 import           Network.HTTP.Types.Header  (hAccept, hAcceptLanguage, hCookie,

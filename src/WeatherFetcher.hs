@@ -6,7 +6,8 @@ import           Control.Concurrent         (threadDelay)
 import           Control.Monad              (forM_)
 import           Data.Aeson                 (eitherDecode)
 import           Data.Maybe                 (fromJust)
-import           Database.Postgis
+import           Database.Postgis           (Geometry (GeoPoint), Point (Point),
+                                             Position (Position))
 import           Network.HTTP.Simple        (getResponseBody, httpBS,
                                              parseRequest, setRequestHeaders)
 import           System.Environment         (getEnv)
@@ -45,7 +46,7 @@ fetchWeatherForLocation logger (Location locationID name (GeoPoint _ (Point (Pos
   case result of
     Left errorMessage -> error errorMessage
     Right weather     -> return weather
-fetchWeatherForLocation _ _ = error "Expected geo point for latitude & longitude"
+fetchWeatherForLocation _ _ = error "Expected point"
 
 checkResponseBody :: Maybe a -> Either String a
 checkResponseBody =

@@ -19,9 +19,11 @@ import           Data.Text.Lazy                       (Text, toStrict)
 import           Data.Time.Clock                      (UTCTime, diffUTCTime,
                                                        getCurrentTime)
 import           Data.UUID                            (UUID, fromText)
-import           Database.Postgis
+import           Database.Postgis                     (Geometry (GeoPoint),
+                                                       Point (Point),
+                                                       Position (Position))
 import           Network.Wai                          (Middleware)
-import           Network.Wai.Middleware.AddHeaders
+import           Network.Wai.Middleware.AddHeaders    (addHeaders)
 import           Network.Wai.Middleware.Gzip          (GzipFiles (..), def,
                                                        gzip, gzipFiles)
 import           Network.Wai.Middleware.RequestLogger (Destination (Callback),
@@ -121,20 +123,25 @@ loggerSettings logger = case level logger of
 -- Lookup locations for a service ID
 type ServiceLocationLookup = M.Map Int [LocationResponse]
 
+-- Lookup vessels for a service ID
+type ServiceVesselLookup = M.Map Int [VesselResponse]
+
 getService :: Int -> Action (Maybe ServiceResponse)
 getService serviceID = do
   service        <- DB.getService serviceID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
-  return $ serviceToServiceResponseWithLocationLookup locationLookup 1 time <$> service
+  vesselLookup   <- getServiceVesselLookup
+  return $ serviceToServiceResponseWithLocationLookup vesselLookup locationLookup 1 time <$> service
 
 getServices :: Action [ServiceResponse]
 getServices = do
   services       <- DB.getServices
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
+  vesselLookup   <- getServiceVesselLookup
   forM (zip [1..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponseWithLocationLookup locationLookup sortOrder time service
+    return $ serviceToServiceResponseWithLocationLookup vesselLookup locationLookup sortOrder time service
 
 createInstallation
   :: UUID -> CreateInstallationRequest -> Action [ServiceResponse]
@@ -166,8 +173,9 @@ getServicesForInstallation installationID = do
   services       <- DB.getServicesForInstallation installationID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
+  vesselLookup   <- getServiceVesselLookup
   forM (zip [1..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponseWithLocationLookup locationLookup sortOrder time service
+    return $ serviceToServiceResponseWithLocationLookup vesselLookup locationLookup sortOrder time service
 
 getVessels :: Action [VesselResponse]
 getVessels = do
@@ -176,8 +184,16 @@ getVessels = do
   return $ vesselToVesselResponse <$> vessels
 
 vesselFilter :: UTCTime -> Vessel -> Bool
-vesselFilter currentTime Vessel { vesselLastReceived = vesselLastReceived} =
-  let diff = diffUTCTime currentTime vesselLastReceived
+vesselFilter currentTime Vessel { vesselLastReceived = vesselLastReceived } =
+  vesselTimeFilter currentTime vesselLastReceived
+
+serviceVesselFilter :: UTCTime -> ServiceVessel -> Bool
+serviceVesselFilter currentTime ServiceVessel { serviceVesselLastReceived = vesselLastReceived} =
+  vesselTimeFilter currentTime vesselLastReceived
+
+vesselTimeFilter :: UTCTime -> UTCTime -> Bool
+vesselTimeFilter currentTime lastReceived =
+  let diff = diffUTCTime currentTime lastReceived
   in diff < 1800
 
 vesselToVesselResponse :: Vessel -> VesselResponse
@@ -201,8 +217,8 @@ vesselToVesselResponse Vessel {..} =
     getLongitude _ = error "Expected point"
 
 serviceToServiceResponseWithLocationLookup
-  :: ServiceLocationLookup -> Int -> UTCTime -> Service -> ServiceResponse
-serviceToServiceResponseWithLocationLookup locationLookup sortOrder currentTime Service {..}
+  ::  ServiceVesselLookup -> ServiceLocationLookup -> Int -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponseWithLocationLookup vesselLookup locationLookup sortOrder currentTime Service {..}
   = ServiceResponse
     { serviceResponseServiceID        = serviceID
     , serviceResponseSortOrder        = sortOrder
@@ -216,6 +232,8 @@ serviceToServiceResponseWithLocationLookup locationLookup sortOrder currentTime 
     , serviceResponseAdditionalInfo   = serviceAdditionalInfo
     , serviceResponseDisruptionReason = serviceDisruptionReason
     , serviceResponseLastUpdatedDate  = serviceLastUpdatedDate
+    , serviceResponseVessels          = fromMaybe []
+                                          $ M.lookup serviceID vesselLookup
     , serviceResponseUpdated          = serviceUpdated
     }
 
@@ -273,6 +291,18 @@ getLocationLookup = do
     $ [ (serviceID, [LocationResponse locationID name (fromFloatDigits latitude) (fromFloatDigits longitude) (M.lookup locationID locationWeatherLookup)])
       | (ServiceLocation serviceID locationID name (GeoPoint _ (Point (Position latitude longitude _ _)))) <-
         serviceLocations
+      ]
+
+getServiceVesselLookup :: Action ServiceVesselLookup
+getServiceVesselLookup = do
+  serviceVessels <- liftIO DB.getServiceVessels
+  time <- liftIO getCurrentTime
+  vessels <- filter (vesselFilter time) <$> DB.getVessels
+  return
+    $ M.fromListWith (++)
+    $ [ (serviceID, [vesselToVesselResponse (Vessel mmsi name speed course coordinate lastReceived updated)])
+      | vessel@(ServiceVessel serviceID mmsi name speed course coordinate lastReceived updated) <- serviceVessels
+      , serviceVesselFilter time vessel
       ]
 
 getLocationWeatherLookup :: Action (M.Map Int LocationWeatherResponse)
