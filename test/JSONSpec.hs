@@ -126,6 +126,17 @@ spec = do
         , serviceResponseAdditionalInfo = Just "Additional info"
         , serviceResponseDisruptionReason = Just "Weather"
         , serviceResponseLastUpdatedDate =  Just $ UTCTime (fromOrdinalDate 2022 32) 5000
+        , serviceResponseVessels = [
+          VesselResponse
+          { vesselResponseMmsi = 232001580
+          , vesselResponseName = "Caledonian Isles"
+          , vesselResponseSpeed = Just 0.2
+          , vesselResponseCourse = Just 226
+          , vesselResponseLatitude = -5.135736
+          , vesselResponseLongitude = 55.57808
+          , vesselResponseLastReceived = UTCTime (fromOrdinalDate 2022 45) 6000
+          }
+        ]
         , serviceResponseUpdated = UTCTime (fromOrdinalDate 2022 33) 5000
         }
         `shouldBe`
@@ -154,6 +165,17 @@ spec = do
                   "wind_speed_mph": 18,
                   "description": "Moderate rain"
                 }
+              }
+            ],
+            "vessels": [
+              {
+                "mmsi": 232001580,
+                "name": "Caledonian Isles",
+                "speed": 0.2,
+                "course": 226,
+                "latitude": -5.135736,
+                "longitude": 55.57808,
+                "last_received": "2022-02-14T01:40:00Z"
               }
             ]
           }
