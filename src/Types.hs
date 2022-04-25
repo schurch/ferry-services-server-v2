@@ -17,6 +17,7 @@ import           Data.Aeson                           (FromJSON (parseJSON),
                                                        withScientific)
 import           Data.Char                            (toLower, toUpper)
 import           Data.Maybe                           (fromMaybe)
+import           Data.Pool                            (Pool)
 import           Data.Proxy
 import           Data.Scientific                      (Scientific,
                                                        toBoundedInteger)
@@ -26,7 +27,8 @@ import           Data.Typeable                        (Typeable, typeRep)
 import           Data.UUID                            (UUID)
 import           Database.Postgis                     (Geometry, readGeometry,
                                                        writeGeometry)
-import           Database.PostgreSQL.Simple           (FromRow, ToRow)
+import           Database.PostgreSQL.Simple           (Connection, FromRow,
+                                                       ToRow)
 import           Database.PostgreSQL.Simple.FromField (FromField (..))
 import           Database.PostgreSQL.Simple.ToField   (ToField (..))
 import           GHC.Generics                         (Generic)
@@ -39,7 +41,8 @@ import qualified Data.ByteString.Lazy.Char8           as C
 
 -- Web server
 data Env = Env
-  { logger :: Logger
+  { logger         :: Logger
+  , connectionPool :: Pool Connection
   }
 
 type Scotty = ScottyT Text (ReaderT Env IO) ()

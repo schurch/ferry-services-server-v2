@@ -41,6 +41,7 @@ library:
     - mtl
     - postgresql-simple
     - regex-compat
+    - resource-pool
     - scientific
     - scotty
     - tagsoup
@@ -67,7 +68,9 @@ executables:
     - bytestring
     - ferry-services-server
     - mtl
+    - postgresql-simple
     - raven-haskell
+    - resource-pool
     - scotty
     - tinylog
     - text
@@ -85,7 +88,9 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - ferry-services-server
+    - postgresql-simple
     - raven-haskell
+    - resource-pool
     - tinylog
 
   ferry-services-weather-fetcher-exe:
@@ -97,7 +102,9 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - ferry-services-server
+    - postgresql-simple
     - raven-haskell
+    - resource-pool
     - tinylog
 
   ferry-services-vessel-fetcher-exe:
@@ -109,7 +116,9 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - ferry-services-server
+    - postgresql-simple
     - raven-haskell
+    - resource-pool
     - tinylog
 
 tests:
@@ -129,6 +138,8 @@ tests:
     - hspec-wai-json
     - http-types
     - mtl
+    - postgresql-simple
+    - resource-pool
     - scotty
     - time
     - tinylog

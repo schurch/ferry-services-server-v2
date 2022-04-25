@@ -6,6 +6,10 @@ module Main where
 import           Control.Concurrent                     (threadDelay)
 import           Control.Exception                      (SomeException, catch)
 import           Control.Monad                          (forever)
+import           Data.Pool                              (createPool)
+import           Data.String                            (fromString)
+import           Database.PostgreSQL.Simple             (close,
+                                                         connectPostgreSQL)
 import           System.Environment                     (getEnv)
 import           System.Log.Raven                       (initRaven, register,
                                                          silentFallback)
@@ -24,9 +28,17 @@ import           VesselFetcher                          (defaultMmsis,
 main :: IO ()
 main = do
   logger <- create StdOut
+  connectionString <- getEnv "DB_CONNECTION"
+  connectionPool <-
+    createPool
+      (connectPostgreSQL $ fromString connectionString)
+      Database.PostgreSQL.Simple.close
+      2 -- stripes
+      60 -- unused connections are kept open for a minute
+      10 -- max. 10 connections open per stripe
   forever $ do
     info logger (msg @String "Fetching vessels")
-    catch (fetchVessels logger defaultMmsis) (handleException logger)
+    catch (fetchVessels logger connectionPool defaultMmsis) (handleException logger)
     threadDelay (10 * 60 * 1000 * 1000) -- 15 mins
 
 handleException :: Logger -> SomeException -> IO ()

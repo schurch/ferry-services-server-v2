@@ -11,9 +11,11 @@ import           Data.Aeson                 (eitherDecode, encode)
 import           Data.List                  (find, nub, (\\))
 import           Data.List.Utils            (replace)
 import           Data.Maybe                 (fromJust, fromMaybe)
+import           Data.Pool                  (Pool, withResource)
 import           Data.Time.Clock            (UTCTime, getCurrentTime)
 import           Data.Time.Clock.POSIX      (posixSecondsToUTCTime)
 import           Data.UUID                  (UUID)
+import           Database.PostgreSQL.Simple (Connection)
 import           Network.HTTP.Simple        (getResponseBody, httpBS,
                                              parseRequest, setRequestHeaders)
 import           Network.HTTP.Types.Header  (hAccept, hAcceptEncoding,
@@ -37,13 +39,13 @@ import qualified Database                   as DB
 newtype ScrapedServices = ScrapedServices { unScrapedServices :: [Service] }
 newtype DatabaseServices = DatabaseServices { unDatabaseServices :: [Service] }
 
-fetchNorthLinkServicesAndNotify :: Logger -> IO ()
-fetchNorthLinkServicesAndNotify logger = do
+fetchNorthLinkServicesAndNotify :: Logger -> Pool Connection -> IO ()
+fetchNorthLinkServicesAndNotify logger connectionPool = do
   info logger (msg @String "Fetching NorthLink service")
   scrapedServices <- ScrapedServices . (: []) <$> fetchNorthLinkService logger
-  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation "NorthLink"
-  DB.saveServices $ unScrapedServices scrapedServices
-  notifyForServices logger scrapedServices databaseServices
+  databaseServices <- DatabaseServices <$> withResource connectionPool (`DB.getServicesForOrganisation` "NorthLink")
+  withResource connectionPool (\connection -> DB.saveServices connection $ unScrapedServices scrapedServices)
+  notifyForServices logger connectionPool scrapedServices databaseServices
 
 fetchNorthLinkService :: Logger -> IO Service
 fetchNorthLinkService logger = do
@@ -71,15 +73,14 @@ fetchNorthLinkService logger = do
                       | text == "red"      = Cancelled
                       | otherwise          = error "Unknown image status"
 
-fetchCalMacStatusesAndNotify :: Logger -> IO ()
-fetchCalMacStatusesAndNotify logger = do
+fetchCalMacStatusesAndNotify :: Logger -> Pool Connection -> IO ()
+fetchCalMacStatusesAndNotify logger connectionPool = do
   info logger (msg @String "Fetching CalMac services")
   scrapedServices  <- fetchCalMacServices
-  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation "CalMac"
-  DB.saveServices $ unScrapedServices scrapedServices
-  DB.hideServicesWithIDs
-    $ generateRemovedServiceIDs scrapedServices databaseServices
-  notifyForServices logger scrapedServices databaseServices
+  databaseServices <- DatabaseServices <$> withResource connectionPool (`DB.getServicesForOrganisation` "CalMac")
+  withResource connectionPool (\connection -> DB.saveServices connection $ unScrapedServices scrapedServices)
+  withResource connectionPool (\connection -> DB.hideServicesWithIDs connection $ generateRemovedServiceIDs scrapedServices databaseServices)
+  notifyForServices logger connectionPool scrapedServices databaseServices
  where
   generateRemovedServiceIDs :: ScrapedServices -> DatabaseServices -> [Int]
   generateRemovedServiceIDs (ScrapedServices newServices) (DatabaseServices oldServices)
@@ -140,8 +141,8 @@ ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
   stringToUTCTime :: String -> UTCTime
   stringToUTCTime time = posixSecondsToUTCTime $ fromInteger (read time) / 1000
 
-notifyForServices :: Logger -> ScrapedServices -> DatabaseServices -> IO ()
-notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServices)
+notifyForServices :: Logger -> Pool Connection -> ScrapedServices -> DatabaseServices -> IO ()
+notifyForServices logger connectionPool (ScrapedServices newServices) (DatabaseServices oldServices)
   = forM_ newServices $ \service -> do
     let oldService = find (\s -> serviceID s == serviceID service) oldServices
     case oldService of
@@ -151,11 +152,8 @@ notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServ
         let statusValid  = serviceStatus service /= Unknown
         let shouldNotify = statusesDifferent && statusValid
         when shouldNotify $ do
-          interestedInstallations <- DB.getIntererestedInstallationsForServiceID
-            $ serviceID service
-
+          interestedInstallations <- withResource connectionPool (\connection -> DB.getIntererestedInstallationsForServiceID connection $ serviceID service)
           let defaultNotificationMessage = serviceToDefaultNotificationMessage service
-
           let iOSInterestedInstallations = filter
                 ((==) IOS . installationDeviceType)
                 interestedInstallations
@@ -182,7 +180,7 @@ notifyForServices logger (ScrapedServices newServices) (DatabaseServices oldServ
     result <- sendNotificationWihPayload logger endpointARN payload
     case result of
       SendNotificationEndpointDisabled -> do
-        void $ DB.deleteInstallationWithID installationID
+        void $ withResource connectionPool (`DB.deleteInstallationWithID` installationID)
         deletePushEndpoint logger endpointARN
       SendNotificationResultSuccess -> return ()
 

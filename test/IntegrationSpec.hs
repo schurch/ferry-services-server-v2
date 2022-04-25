@@ -5,6 +5,10 @@ module IntegrationSpec where
 import           Control.Monad.Reader                 (ReaderT (runReaderT))
 import           Data.Aeson                           (FromJSON, decode, encode)
 import           Data.List                            (find)
+import           Data.Pool                            (Pool, createPool,
+                                                       withResource)
+import           Data.String                          (fromString)
+import           Database.PostgreSQL.Simple           (close, connectPostgreSQL)
 import           Network.HTTP.Types.Header            (Header)
 import           Network.Wai                          (Application)
 import           Network.Wai.Middleware.RequestLogger (mkRequestLogger)
@@ -21,6 +25,7 @@ import           Test.Hspec.Wai                       (Body,
 
 import           Web.Scotty.Trans                     (scottyAppT)
 
+import           Database.PostgreSQL.Simple           (Connection)
 import           System.Environment                   (getEnv, setEnv)
 
 import           Scraper
@@ -111,22 +116,30 @@ jsonReponseMatcher jsonChecker = do
 setupIntegrationTests :: IO ()
 setupIntegrationTests = do
   logger <- create StdOut
-  runScraper logger
-  fetchBrodickWeather logger
-  fetchCaledonianIslesVessel logger
+  connectionString <- getEnv "DB_CONNECTION"
+  connectionPool <-
+    createPool
+      (connectPostgreSQL $ fromString connectionString)
+      Database.PostgreSQL.Simple.close
+      2 -- stripes
+      60 -- unused connections are kept open for a minute
+      10 -- max. 10 connections open per stripe
+  runScraper logger connectionPool
+  fetchBrodickWeather logger connectionPool
+  fetchCaledonianIslesVessel logger connectionPool
   where
-    runScraper :: Logger -> IO ()
-    runScraper logger = do
-      fetchNorthLinkServicesAndNotify logger
-      fetchCalMacStatusesAndNotify logger
+    runScraper :: Logger -> Pool Connection -> IO ()
+    runScraper logger connectionPool = do
+      fetchNorthLinkServicesAndNotify logger connectionPool
+      fetchCalMacStatusesAndNotify logger connectionPool
 
-    fetchBrodickWeather :: Logger -> IO ()
-    fetchBrodickWeather logger = do
-      brodick <- filter ((==) 4 . locationLocationID) <$> DB.getLocations
-      fetchWeatherForLocations logger brodick
+    fetchBrodickWeather :: Logger -> Pool Connection -> IO ()
+    fetchBrodickWeather logger connectionPool = do
+      brodick <- filter ((==) 4 . locationLocationID) <$> (withResource connectionPool DB.getLocations)
+      fetchWeatherForLocations logger connectionPool brodick
 
-    fetchCaledonianIslesVessel :: Logger -> IO ()
-    fetchCaledonianIslesVessel logger = fetchVessels logger [caledonianIslesMMSI]
+    fetchCaledonianIslesVessel :: Logger -> Pool Connection -> IO ()
+    fetchCaledonianIslesVessel logger connectionPool = fetchVessels logger connectionPool [caledonianIslesMMSI]
 
 caledonianIslesMMSI :: Int
 caledonianIslesMMSI = 232001580
@@ -135,4 +148,12 @@ app :: IO Application
 app = do
   logger <- create StdOut
   requestLogger <- mkRequestLogger $ loggerSettings logger
-  scottyAppT (`runReaderT` Env logger) (webApp requestLogger)
+  connectionString <- getEnv "DB_CONNECTION"
+  connectionPool <-
+    createPool
+      (connectPostgreSQL $ fromString connectionString)
+      Database.PostgreSQL.Simple.close
+      2 -- stripes
+      60 -- unused connections are kept open for a minute
+      10 -- max. 10 connections open per stripe
+  scottyAppT (`runReaderT` Env logger connectionPool) (webApp requestLogger)

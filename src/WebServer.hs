@@ -12,6 +12,7 @@ import           Data.Char                            (ord)
 import           Data.Default                         (def)
 import           Data.Maybe                           (fromJust, fromMaybe,
                                                        isNothing)
+import           Data.Pool                            (withResource)
 import           Data.Scientific                      (Scientific (..),
                                                        fromFloatDigits,
                                                        toRealFloat)
@@ -22,6 +23,7 @@ import           Data.UUID                            (UUID, fromText)
 import           Database.Postgis                     (Geometry (GeoPoint),
                                                        Point (Point),
                                                        Position (Position))
+import           Database.PostgreSQL.Simple           (Connection)
 import           Network.Wai                          (Middleware)
 import           Network.Wai.Middleware.AddHeaders    (addHeaders)
 import           Network.Wai.Middleware.Gzip          (GzipFiles (..), def,
@@ -126,9 +128,14 @@ type ServiceLocationLookup = M.Map Int [LocationResponse]
 -- Lookup vessels for a service ID
 type ServiceVesselLookup = M.Map Int [VesselResponse]
 
+runQuery :: (Connection -> Action a) -> Action a
+runQuery query = do
+  pool <- asks connectionPool
+  withResource pool $ \connection -> query connection
+
 getService :: Int -> Action (Maybe ServiceResponse)
 getService serviceID = do
-  service        <- DB.getService serviceID
+  service        <- runQuery $ \connection -> DB.getService connection serviceID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   vesselLookup   <- getServiceVesselLookup
@@ -136,7 +143,7 @@ getService serviceID = do
 
 getServices :: Action [ServiceResponse]
 getServices = do
-  services       <- DB.getServices
+  services       <- runQuery $ \connection -> DB.getServices connection
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   vesselLookup   <- getServiceVesselLookup
@@ -151,7 +158,7 @@ createInstallation installationID (CreateInstallationRequest deviceToken deviceT
                                              deviceToken
                                              deviceType
     time <- liftIO getCurrentTime
-    DB.createInstallation installationID
+    runQuery $ \connection -> DB.createInstallation connection installationID
                           deviceToken
                           deviceType
                           awsSNSEndpointARN
@@ -160,17 +167,17 @@ createInstallation installationID (CreateInstallationRequest deviceToken deviceT
 
 addServiceToInstallation :: UUID -> Int -> Action [ServiceResponse]
 addServiceToInstallation installationID serviceID = do
-  DB.addServiceToInstallation installationID serviceID
+  runQuery $ \connection -> DB.addServiceToInstallation connection installationID serviceID
   getServicesForInstallation installationID
 
 deleteServiceForInstallation :: UUID -> Int -> Action [ServiceResponse]
 deleteServiceForInstallation installationID serviceID = do
-  DB.deleteServiceForInstallation installationID serviceID
+  runQuery $ \connection -> DB.deleteServiceForInstallation connection installationID serviceID
   getServicesForInstallation installationID
 
 getServicesForInstallation :: UUID -> Action [ServiceResponse]
 getServicesForInstallation installationID = do
-  services       <- DB.getServicesForInstallation installationID
+  services       <- runQuery $ \connection -> DB.getServicesForInstallation connection installationID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   vesselLookup   <- getServiceVesselLookup
@@ -180,7 +187,7 @@ getServicesForInstallation installationID = do
 getVessels :: Action [VesselResponse]
 getVessels = do
   time <- liftIO getCurrentTime
-  vessels <- filter (vesselFilter time) <$> DB.getVessels
+  vessels <- filter (vesselFilter time) <$> runQuery DB.getVessels
   return $ vesselToVesselResponse <$> vessels
 
 vesselFilter :: UTCTime -> Vessel -> Bool
@@ -266,7 +273,7 @@ serviceStatusForTime currentTime serviceUpdated serviceStatus =
 registerDeviceToken :: UUID -> String -> DeviceType -> Action String
 registerDeviceToken installationID deviceToken deviceType = do
   logger'            <- asks logger
-  storedInstallation <- DB.getInstallationWithID installationID
+  storedInstallation <- runQuery $ \connection -> DB.getInstallationWithID connection installationID
   currentEndpointARN <- if isNothing storedInstallation
     then liftIO $ createPushEndpoint logger' deviceToken deviceType
     else return $ installationEndpointARN . fromJust $ storedInstallation
@@ -284,7 +291,7 @@ registerDeviceToken installationID deviceToken deviceType = do
 
 getLocationLookup :: Action ServiceLocationLookup
 getLocationLookup = do
-  serviceLocations <- liftIO DB.getServiceLocations
+  serviceLocations <- runQuery $ \connection -> DB.getServiceLocations connection
   locationWeatherLookup <- getLocationWeatherLookup
   return
     $ M.fromListWith (++)
@@ -295,9 +302,9 @@ getLocationLookup = do
 
 getServiceVesselLookup :: Action ServiceVesselLookup
 getServiceVesselLookup = do
-  serviceVessels <- liftIO DB.getServiceVessels
+  serviceVessels <- runQuery $ \connection -> DB.getServiceVessels connection
   time <- liftIO getCurrentTime
-  vessels <- filter (vesselFilter time) <$> DB.getVessels
+  vessels <- filter (vesselFilter time) <$> runQuery DB.getVessels
   return
     $ M.fromListWith (++)
     $ [ (serviceID, [vesselToVesselResponse (Vessel mmsi name speed course coordinate lastReceived updated)])
@@ -307,7 +314,7 @@ getServiceVesselLookup = do
 
 getLocationWeatherLookup :: Action (M.Map Int LocationWeatherResponse)
 getLocationWeatherLookup = do
-  locationWeathers <- liftIO DB.getLocationWeathers
+  locationWeathers <- runQuery $ \connection -> DB.getLocationWeathers connection
   return
     $ M.fromList
     $ [ (locationID

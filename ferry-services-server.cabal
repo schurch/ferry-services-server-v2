@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0f13e04fbda5a5a329e0ba3eab19e77bee046cf7849079fae6ad07e391a314ce
+-- hash: d202d6d859daf6b4df6b4ef85ca1eb0b0ec0b0c789a059c7c4c89e2a543caed2
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -57,6 +57,7 @@ library
     , mtl
     , postgresql-simple
     , regex-compat
+    , resource-pool
     , scientific
     , scotty
     , tagsoup
@@ -81,7 +82,9 @@ executable ferry-services-scraper-exe
   build-depends:
       base >=4.7 && <5
     , ferry-services-server
+    , postgresql-simple
     , raven-haskell
+    , resource-pool
     , tinylog
   default-language: Haskell2010
 
@@ -98,7 +101,9 @@ executable ferry-services-server-exe
     , bytestring
     , ferry-services-server
     , mtl
+    , postgresql-simple
     , raven-haskell
+    , resource-pool
     , scotty
     , text
     , tinylog
@@ -118,7 +123,9 @@ executable ferry-services-vessel-fetcher-exe
   build-depends:
       base >=4.7 && <5
     , ferry-services-server
+    , postgresql-simple
     , raven-haskell
+    , resource-pool
     , tinylog
   default-language: Haskell2010
 
@@ -132,7 +139,9 @@ executable ferry-services-weather-fetcher-exe
   build-depends:
       base >=4.7 && <5
     , ferry-services-server
+    , postgresql-simple
     , raven-haskell
+    , resource-pool
     , tinylog
   default-language: Haskell2010
 
@@ -156,6 +165,8 @@ test-suite ferry-services-server-test
     , hspec-wai-json
     , http-types
     , mtl
+    , postgresql-simple
+    , resource-pool
     , scotty
     , time
     , tinylog

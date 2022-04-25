@@ -8,10 +8,12 @@ import           Control.Exception          (SomeException, catch)
 import           Control.Monad              (forM_, forever)
 import           Data.Aeson                 (eitherDecode)
 import           Data.Char                  (toLower, toUpper)
+import           Data.Pool                  (Pool, withResource)
 import           Data.Time.Clock            (UTCTime (..), getCurrentTime)
 import           Data.Time.Clock.POSIX      (posixSecondsToUTCTime)
 import           Database.Postgis           (Geometry (GeoPoint), Point (Point),
                                              Position (Position))
+import           Database.PostgreSQL.Simple (Connection)
 import           Network.HTTP.Simple        (getResponseBody, httpBS,
                                              parseRequest, setRequestHeaders)
 import           Network.HTTP.Types.Header  (hAccept, hAcceptLanguage, hCookie,
@@ -28,12 +30,12 @@ import qualified Data.ByteString.Char8      as B8
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Database                   as DB
 
-fetchVessels :: Logger -> [Int] -> IO ()
-fetchVessels logger mmsis  = do
+fetchVessels :: Logger -> Pool Connection -> [Int] -> IO ()
+fetchVessels logger connectionPool mmsis  = do
   forM_ mmsis $ \mmsi -> do
     vessel <- fetchVessel mmsi
     debug logger (msg  $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
-    DB.saveVessel vessel
+    withResource connectionPool (`DB.saveVessel` vessel)
     threadDelay (4 * 1000 * 1000) -- 4 second delay
 
 fetchVessel :: Int -> IO Vessel

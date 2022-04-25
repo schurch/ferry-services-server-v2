@@ -6,7 +6,11 @@ import           Control.Exception.Base                 (SomeException)
 import           Control.Monad.Reader                   (runReaderT)
 import           Data.Aeson                             (Value (String))
 import           Data.ByteString.Char8                  (unpack)
+import           Data.Pool                              (createPool)
+import           Data.String                            (fromString)
 import           Data.Text.Encoding                     (decodeUtf8)
+import           Database.PostgreSQL.Simple             (close,
+                                                         connectPostgreSQL)
 import           Network.Wai                            (Middleware, Request,
                                                          rawPathInfo,
                                                          rawQueryString,
@@ -45,7 +49,15 @@ main = do
         setPort (read port) . setOnException exceptionHandler $ defaultSettings
   let options = Options { verbose = 0, settings = settings }
   requestLogger <- mkRequestLogger $ loggerSettings logger
-  scottyOptsT options (`runReaderT` Env logger) (webApp requestLogger)
+  connectionString <- getEnv "DB_CONNECTION"
+  connectionPool <-
+    createPool
+      (connectPostgreSQL $ fromString connectionString)
+      Database.PostgreSQL.Simple.close
+      2 -- stripes
+      60 -- unused connections are kept open for a minute
+      10 -- max. 10 connections open per stripe
+  scottyOptsT options (`runReaderT` Env logger connectionPool) (webApp requestLogger)
 
 exceptionHandler :: Maybe Request -> SomeException -> IO ()
 exceptionHandler request exception = do

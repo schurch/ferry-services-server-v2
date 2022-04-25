@@ -6,8 +6,10 @@ import           Control.Concurrent         (threadDelay)
 import           Control.Monad              (forM_)
 import           Data.Aeson                 (eitherDecode)
 import           Data.Maybe                 (fromJust)
+import           Data.Pool                  (Pool, withResource)
 import           Database.Postgis           (Geometry (GeoPoint), Point (Point),
                                              Position (Position))
+import           Database.PostgreSQL.Simple (Connection)
 import           Network.HTTP.Simple        (getResponseBody, httpBS,
                                              parseRequest, setRequestHeaders)
 import           System.Environment         (getEnv)
@@ -22,16 +24,16 @@ import           Types
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Database                   as DB
 
-fetchWeather :: Logger -> IO ()
-fetchWeather logger = do
-  locations <- DB.getLocations
-  fetchWeatherForLocations logger locations
+fetchWeather :: Logger -> Pool Connection -> IO ()
+fetchWeather logger connectionPool = do
+  locations <-  withResource connectionPool DB.getLocations
+  fetchWeatherForLocations logger connectionPool locations
 
-fetchWeatherForLocations :: Logger -> [Location] -> IO ()
-fetchWeatherForLocations logger locations = do
+fetchWeatherForLocations :: Logger -> Pool Connection -> [Location] -> IO ()
+fetchWeatherForLocations logger connectionPool locations = do
   forM_ locations $ \location -> do
     weather <- fetchWeatherForLocation logger location
-    DB.insertLocationWeather (locationLocationID location) weather
+    withResource connectionPool (\connection -> DB.insertLocationWeather connection (locationLocationID location) weather)
     threadDelay (2 * 1000 * 1000) -- 2 second delay
 
 fetchWeatherForLocation :: Logger -> Location -> IO WeatherFetcherResult
