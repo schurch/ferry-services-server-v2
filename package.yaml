@@ -93,6 +93,7 @@ executables:
     - raven-haskell
     - resource-pool
     - tinylog
+    - transformers
 
   ferry-services-weather-fetcher-exe:
     main:                Main.hs
@@ -107,6 +108,7 @@ executables:
     - raven-haskell
     - resource-pool
     - tinylog
+    - transformers
 
   ferry-services-vessel-fetcher-exe:
     main:                Main.hs

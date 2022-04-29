@@ -6,7 +6,7 @@ module Main where
 import           Control.Concurrent                     (threadDelay)
 import           Control.Exception                      (SomeException, catch)
 import           Control.Monad                          (forever)
-import           Control.Monad.Trans.Reader
+import           Control.Monad.Trans.Reader             (runReaderT)
 import           Data.Pool                              (createPool)
 import           Data.String                            (fromString)
 import           Database.PostgreSQL.Simple             (close,

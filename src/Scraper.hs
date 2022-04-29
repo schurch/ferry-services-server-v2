@@ -7,6 +7,8 @@ module Scraper where
 import           Control.Concurrent         (threadDelay)
 import           Control.Exception          (SomeException, catch)
 import           Control.Monad              (forM_, forever, void, when)
+import           Control.Monad.IO.Class     (liftIO)
+import           Control.Monad.Reader       (asks)
 import           Data.Aeson                 (eitherDecode, encode)
 import           Data.List                  (find, nub, (\\))
 import           Data.List.Utils            (replace)
@@ -20,9 +22,7 @@ import           Network.HTTP.Simple        (getResponseBody, httpBS,
                                              parseRequest, setRequestHeaders)
 import           Network.HTTP.Types.Header  (hAccept, hAcceptEncoding,
                                              hContentType, hHost, hUserAgent)
-import           System.Logger              (Logger, Output (StdOut), create,
-                                             err, info)
-import           System.Logger.Class        (Logger, debug)
+import           System.Logger.Class        (Logger, info)
 import           System.Logger.Message      (msg)
 import           System.Timeout             (timeout)
 import           Text.HTML.TagSoup          (fromAttrib, parseTags, renderTags,
@@ -39,22 +39,23 @@ import qualified Database                   as DB
 newtype ScrapedServices = ScrapedServices { unScrapedServices :: [Service] }
 newtype DatabaseServices = DatabaseServices { unDatabaseServices :: [Service] }
 
-fetchNorthLinkServicesAndNotify :: Logger -> Pool Connection -> IO ()
-fetchNorthLinkServicesAndNotify logger connectionPool = do
-  info logger (msg @String "Fetching NorthLink service")
-  scrapedServices <- ScrapedServices . (: []) <$> fetchNorthLinkService logger
+fetchNorthLinkServicesAndNotify :: Application ()
+fetchNorthLinkServicesAndNotify = do
+  info (msg @String "Fetching NorthLink service")
+  scrapedServices <- ScrapedServices . (: []) <$> fetchNorthLinkService
+  connectionPool <- asks connectionPool
   databaseServices <- DatabaseServices <$> withResource connectionPool (`DB.getServicesForOrganisation` "NorthLink")
   withResource connectionPool (\connection -> DB.saveServices connection $ unScrapedServices scrapedServices)
-  notifyForServices logger connectionPool scrapedServices databaseServices
+  notifyForServices scrapedServices databaseServices
 
-fetchNorthLinkService :: Logger -> IO Service
-fetchNorthLinkService logger = do
+fetchNorthLinkService :: Application Service
+fetchNorthLinkService = do
   htmlTags <- parseTags .  B8.unpack . getResponseBody <$> httpBS "https://www.northlinkferries.co.uk/opsnews/"
   let statusText = last . words . fromAttrib "class" . head . dropWhile (~/= ("<div id=page>" :: String)) $ htmlTags
   let disruptionInfo = renderTags . takeWhile (~/= ("<!-- .entry-content -->" :: String)) . dropWhile (~/= ("<div class=entry-content>" :: String)) $ htmlTags
   let strippedNewlines = replace "\194\160" "" . replace "\t" "" . replace "\n" ""
   let strippedStyles string = subRegex (mkRegex " style=\"[^\"]*\"") string ""
-  time <- getCurrentTime
+  time <- liftIO getCurrentTime
   return Service
     { serviceID               = 1000
     , serviceUpdated          = time
@@ -73,14 +74,15 @@ fetchNorthLinkService logger = do
                       | text == "red"      = Cancelled
                       | otherwise          = error "Unknown image status"
 
-fetchCalMacStatusesAndNotify :: Logger -> Pool Connection -> IO ()
-fetchCalMacStatusesAndNotify logger connectionPool = do
-  info logger (msg @String "Fetching CalMac services")
-  scrapedServices  <- fetchCalMacServices
+fetchCalMacStatusesAndNotify :: Application ()
+fetchCalMacStatusesAndNotify = do
+  info (msg @String "Fetching CalMac services")
+  scrapedServices  <- liftIO fetchCalMacServices
+  connectionPool <- asks connectionPool
   databaseServices <- DatabaseServices <$> withResource connectionPool (`DB.getServicesForOrganisation` "CalMac")
   withResource connectionPool (\connection -> DB.saveServices connection $ unScrapedServices scrapedServices)
   withResource connectionPool (\connection -> DB.hideServicesWithIDs connection $ generateRemovedServiceIDs scrapedServices databaseServices)
-  notifyForServices logger connectionPool scrapedServices databaseServices
+  notifyForServices scrapedServices databaseServices
  where
   generateRemovedServiceIDs :: ScrapedServices -> DatabaseServices -> [Int]
   generateRemovedServiceIDs (ScrapedServices newServices) (DatabaseServices oldServices)
@@ -141,9 +143,11 @@ ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
   stringToUTCTime :: String -> UTCTime
   stringToUTCTime time = posixSecondsToUTCTime $ fromInteger (read time) / 1000
 
-notifyForServices :: Logger -> Pool Connection -> ScrapedServices -> DatabaseServices -> IO ()
-notifyForServices logger connectionPool (ScrapedServices newServices) (DatabaseServices oldServices)
-  = forM_ newServices $ \service -> do
+notifyForServices :: ScrapedServices -> DatabaseServices -> Application ()
+notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) = do
+  logger <- asks logger
+  connectionPool <- asks connectionPool
+  forM_ newServices $ \service -> do
     let oldService = find (\s -> serviceID s == serviceID service) oldServices
     case oldService of
       Just oldService -> do
@@ -161,7 +165,7 @@ notifyForServices logger connectionPool (ScrapedServices newServices) (DatabaseS
             $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
                 do
                   let payload = createApplePushPayload defaultNotificationMessage (serviceID service)
-                  sendNotification logger installationID endpointARN payload
+                  sendNotification installationID endpointARN payload
 
           let androidInterestedInstallations = filter
                 ((==) Android . installationDeviceType)
@@ -171,17 +175,19 @@ notifyForServices logger connectionPool (ScrapedServices newServices) (DatabaseS
             $ \Installation { installationID = installationID, installationEndpointARN = endpointARN } ->
                 do
                   let payload = createAndroidPushPayload defaultNotificationMessage androidTitle androidBody (serviceID service)
-                  sendNotification logger installationID endpointARN payload
+                  sendNotification installationID endpointARN payload
 
       Nothing -> return ()
  where
-  sendNotification :: Logger -> UUID -> String -> PushPayload -> IO ()
-  sendNotification logger installationID endpointARN payload = do
-    result <- sendNotificationWihPayload logger endpointARN payload
+  sendNotification :: UUID -> String -> PushPayload -> Application ()
+  sendNotification installationID endpointARN payload = do
+    logger <- asks logger
+    connectionPool <- asks connectionPool
+    result <- liftIO $ sendNotificationWihPayload logger endpointARN payload
     case result of
       SendNotificationEndpointDisabled -> do
         void $ withResource connectionPool (`DB.deleteInstallationWithID` installationID)
-        deletePushEndpoint logger endpointARN
+        liftIO $ deletePushEndpoint logger endpointARN
       SendNotificationResultSuccess -> return ()
 
   serviceToDefaultNotificationMessage :: Service -> String

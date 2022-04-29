@@ -7,6 +7,7 @@ import           Control.Concurrent                     (threadDelay)
 import           Control.Exception                      (SomeException, catch)
 import           Control.Monad                          (forM_, forever, void,
                                                          when)
+import           Control.Monad.Trans.Reader             (runReaderT)
 import           Data.Pool                              (createPool)
 import           Data.String                            (fromString)
 import           Database.PostgreSQL.Simple             (close,
@@ -24,6 +25,7 @@ import           System.Logger.Class                    (Logger, debug)
 import           System.Logger.Message                  (msg)
 
 import           Scraper
+import           Types
 
 main :: IO ()
 main = do
@@ -36,10 +38,11 @@ main = do
       2 -- stripes
       60 -- unused connections are kept open for a minute
       10 -- max. 10 connections open per stripe
+  let env = Env logger connectionPool
   forever $ do
     info logger (msg @String "Fetching statuses")
-    catch (fetchCalMacStatusesAndNotify logger connectionPool) (handleException logger)
-    catch (fetchNorthLinkServicesAndNotify logger connectionPool) (handleException logger)
+    catch (runReaderT fetchCalMacStatusesAndNotify env) (handleException logger)
+    catch (runReaderT fetchNorthLinkServicesAndNotify env) (handleException logger)
     threadDelay (15 * 60 * 1000 * 1000) -- 15 mins
 
 handleException :: Logger -> SomeException -> IO ()
