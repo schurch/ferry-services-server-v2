@@ -21,7 +21,6 @@ import           Network.HTTP.Simple        (getResponseBody, httpBS,
 import           Network.HTTP.Types.Header  (hAccept, hAcceptLanguage, hCookie,
                                              hHost, hReferer, hUserAgent)
 import           System.Environment         (getEnv)
-import           System.Logger              (Logger, Output (StdOut), create)
 import           System.Logger.Class        (debug)
 import           System.Logger.Message      (msg)
 import           System.Timeout             (timeout)

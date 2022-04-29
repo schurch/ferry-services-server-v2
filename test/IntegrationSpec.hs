@@ -2,7 +2,8 @@
 
 module IntegrationSpec where
 
-import           Control.Monad.Reader                 (ReaderT (runReaderT))
+import           Control.Monad.Reader                 (ReaderT (runReaderT),
+                                                       asks)
 import           Data.Aeson                           (FromJSON, decode, encode)
 import           Data.List                            (find)
 import           Data.Pool                            (Pool, createPool,
@@ -124,27 +125,27 @@ setupIntegrationTests = do
       2 -- stripes
       60 -- unused connections are kept open for a minute
       10 -- max. 10 connections open per stripe
-  runScraper logger connectionPool
-  fetchBrodickWeather logger connectionPool
-  fetchCaledonianIslesVessel logger connectionPool
+  let env = Env logger connectionPool
+  runReaderT (runScraper >> fetchBrodickWeather >> fetchCaledonianIslesVessel) env
   where
-    runScraper :: Logger -> Pool Connection -> IO ()
-    runScraper logger connectionPool = do
-      fetchNorthLinkServicesAndNotify logger connectionPool
-      fetchCalMacStatusesAndNotify logger connectionPool
+    runScraper :: Types.Application ()
+    runScraper = do
+      fetchNorthLinkServicesAndNotify
+      fetchCalMacStatusesAndNotify
 
-    fetchBrodickWeather :: Logger -> Pool Connection -> IO ()
-    fetchBrodickWeather logger connectionPool = do
+    fetchBrodickWeather :: Types.Application ()
+    fetchBrodickWeather = do
+      connectionPool <- asks connectionPool
       brodick <- filter ((==) 4 . locationLocationID) <$> (withResource connectionPool DB.getLocations)
-      fetchWeatherForLocations logger connectionPool brodick
+      fetchWeatherForLocations brodick
 
-    fetchCaledonianIslesVessel :: Logger -> Pool Connection -> IO ()
-    fetchCaledonianIslesVessel logger connectionPool = fetchVessels logger connectionPool [caledonianIslesMMSI]
+    fetchCaledonianIslesVessel :: Types.Application ()
+    fetchCaledonianIslesVessel = fetchVessels [caledonianIslesMMSI]
 
 caledonianIslesMMSI :: Int
 caledonianIslesMMSI = 232001580
 
-app :: IO Application
+app :: IO Network.Wai.Application
 app = do
   logger <- create StdOut
   requestLogger <- mkRequestLogger $ loggerSettings logger

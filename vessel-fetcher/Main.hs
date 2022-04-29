@@ -38,9 +38,9 @@ main = do
       2 -- stripes
       60 -- unused connections are kept open for a minute
       10 -- max. 10 connections open per stripe
+  let env = Env logger connectionPool
   forever $ do
     info logger (msg @String "Fetching vessels")
-    let env = Env logger connectionPool
     catch (runReaderT (fetchVessels defaultMmsis) env) (handleException logger)
     threadDelay (10 * 60 * 1000 * 1000) -- 15 mins
 
