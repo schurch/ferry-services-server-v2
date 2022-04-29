@@ -51,6 +51,7 @@ library:
     - unordered-containers
     - uuid
     - wai
+    - wai-cors
     - wai-extra
     - wai-middleware-static
     - warp

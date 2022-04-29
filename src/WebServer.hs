@@ -26,6 +26,7 @@ import           Database.Postgis                     (Geometry (GeoPoint),
 import           Database.PostgreSQL.Simple           (Connection)
 import           Network.Wai                          (Middleware)
 import           Network.Wai.Middleware.AddHeaders    (addHeaders)
+import           Network.Wai.Middleware.Cors
 import           Network.Wai.Middleware.Gzip          (GzipFiles (..), def,
                                                        gzip, gzipFiles)
 import           Network.Wai.Middleware.RequestLogger (Destination (Callback),
@@ -55,14 +56,15 @@ import qualified Database                             as DB
 webApp :: Middleware -> Scotty
 webApp requestLogger = do
   middleware requestLogger
+  let corsOrigins = ["https://scottishferryapp.com", "https://www.scottishferryapp.com"]
+  middleware $ cors (const $ Just simpleCorsResourcePolicy { corsOrigins = Just (corsOrigins, False) })
   middleware $ gzip def { gzipFiles = GzipCompress }
-  middleware $ addHeaders [("Access-Control-Allow-Origin", "*")
-                          ,("X-Frame-Options", "DENY")
-                          ,("X-Content-Type-Options", "nosniff")]
+  middleware $ addHeaders [("X-Frame-Options", "DENY")
+                          ,("X-Content-Type-Options", "nosniff")
+                          ,("Content-Security-Policy", "script-src 'self' https:, object-src 'none'; base-uri 'none';")]
   middleware $ staticPolicy (noDots <> isNotAbsolute <> addBase "public")
   get "/" $ do
     setHeader "Content-Type" "text/html"
-    setHeader "Content-Security-Policy" "script-src 'self'"
     file "public/index.html"
   get "/api/services" $ do
     services <- getServices

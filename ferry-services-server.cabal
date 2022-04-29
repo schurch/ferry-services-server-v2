@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d202d6d859daf6b4df6b4ef85ca1eb0b0ec0b0c789a059c7c4c89e2a543caed2
+-- hash: d28410c5f413a323504bd9fa3fee7ec132d0a3025c6c1f860519ef76ffd2f767
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -67,6 +67,7 @@ library
     , unordered-containers
     , uuid
     , wai
+    , wai-cors
     , wai-extra
     , wai-middleware-static
     , warp
