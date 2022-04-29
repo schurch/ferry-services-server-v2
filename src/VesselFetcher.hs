@@ -6,6 +6,8 @@ module VesselFetcher where
 import           Control.Concurrent         (threadDelay)
 import           Control.Exception          (SomeException, catch)
 import           Control.Monad              (forM_, forever)
+import           Control.Monad.IO.Class     (liftIO)
+import           Control.Monad.Reader       (asks)
 import           Data.Aeson                 (eitherDecode)
 import           Data.Char                  (toLower, toUpper)
 import           Data.Pool                  (Pool, withResource)
@@ -19,8 +21,8 @@ import           Network.HTTP.Simple        (getResponseBody, httpBS,
 import           Network.HTTP.Types.Header  (hAccept, hAcceptLanguage, hCookie,
                                              hHost, hReferer, hUserAgent)
 import           System.Environment         (getEnv)
-import           System.Logger              (Logger, Output (StdOut), create,
-                                             debug, err, info)
+import           System.Logger              (Logger, Output (StdOut), create)
+import           System.Logger.Class        (debug)
 import           System.Logger.Message      (msg)
 import           System.Timeout             (timeout)
 
@@ -30,13 +32,14 @@ import qualified Data.ByteString.Char8      as B8
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Database                   as DB
 
-fetchVessels :: Logger -> Pool Connection -> [Int] -> IO ()
-fetchVessels logger connectionPool mmsis  = do
+fetchVessels :: [Int] -> Application ()
+fetchVessels mmsis  = do
   forM_ mmsis $ \mmsi -> do
-    vessel <- fetchVessel mmsi
-    debug logger (msg  $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
-    withResource connectionPool (`DB.saveVessel` vessel)
-    threadDelay (4 * 1000 * 1000) -- 4 second delay
+    vessel <- liftIO $ fetchVessel mmsi
+    debug (msg  $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
+    pool <- asks connectionPool
+    withResource pool (`DB.saveVessel` vessel)
+    liftIO $ threadDelay (4 * 1000 * 1000) -- 4 second delay
 
 fetchVessel :: Int -> IO Vessel
 fetchVessel mmsi = do

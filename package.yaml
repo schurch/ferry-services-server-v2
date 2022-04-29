@@ -121,6 +121,7 @@ executables:
     - raven-haskell
     - resource-pool
     - tinylog
+    - transformers
 
 tests:
   ferry-services-server-test:

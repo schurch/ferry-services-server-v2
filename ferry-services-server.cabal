@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d28410c5f413a323504bd9fa3fee7ec132d0a3025c6c1f860519ef76ffd2f767
+-- hash: 4ec8252643ad60cdde2c321f341f5f12bc6cbfea63d92fbb915afefedafd128c
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -128,6 +128,7 @@ executable ferry-services-vessel-fetcher-exe
     , raven-haskell
     , resource-pool
     , tinylog
+    , transformers
   default-language: Haskell2010
 
 executable ferry-services-weather-fetcher-exe

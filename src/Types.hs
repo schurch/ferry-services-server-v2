@@ -39,14 +39,21 @@ import           Web.Scotty.Trans                     (ActionT, ScottyT)
 import qualified Data.ByteString.Lazy                 as B
 import qualified Data.ByteString.Lazy.Char8           as C
 
--- Web server
 data Env = Env
   { logger         :: Logger
   , connectionPool :: Pool Connection
   }
 
-type Scotty = ScottyT Text (ReaderT Env IO) ()
-type Action = ActionT Text (ReaderT Env IO)
+type Application = ReaderT Env IO
+
+instance MonadLogger Application where
+  log level message = do
+    logger <- asks logger
+    System.Logger.log logger level message
+
+-- Web server
+type Scotty = ScottyT Text Application ()
+type Action = ActionT Text Application
 
 instance MonadLogger Types.Action where
   log level message = do

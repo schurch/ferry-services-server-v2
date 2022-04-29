@@ -6,6 +6,7 @@ module Main where
 import           Control.Concurrent                     (threadDelay)
 import           Control.Exception                      (SomeException, catch)
 import           Control.Monad                          (forever)
+import           Control.Monad.Trans.Reader
 import           Data.Pool                              (createPool)
 import           Data.String                            (fromString)
 import           Database.PostgreSQL.Simple             (close,
@@ -21,9 +22,10 @@ import           System.Logger                          (Logger,
                                                          create, debug, err,
                                                          info)
 import           System.Logger.Message                  (msg)
-
 import           VesselFetcher                          (defaultMmsis,
                                                          fetchVessels)
+
+import           Types
 
 main :: IO ()
 main = do
@@ -38,7 +40,8 @@ main = do
       10 -- max. 10 connections open per stripe
   forever $ do
     info logger (msg @String "Fetching vessels")
-    catch (fetchVessels logger connectionPool defaultMmsis) (handleException logger)
+    let env = Env logger connectionPool
+    catch (runReaderT (fetchVessels defaultMmsis) env) (handleException logger)
     threadDelay (10 * 60 * 1000 * 1000) -- 15 mins
 
 handleException :: Logger -> SomeException -> IO ()
