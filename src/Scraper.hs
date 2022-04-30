@@ -43,9 +43,8 @@ fetchNorthLinkServicesAndNotify :: Application ()
 fetchNorthLinkServicesAndNotify = do
   info (msg @String "Fetching NorthLink service")
   scrapedServices <- ScrapedServices . (: []) <$> fetchNorthLinkService
-  connectionPool <- asks connectionPool
-  databaseServices <- DatabaseServices <$> withResource connectionPool (`DB.getServicesForOrganisation` "NorthLink")
-  withResource connectionPool (\connection -> DB.saveServices connection $ unScrapedServices scrapedServices)
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation "NorthLink"
+  DB.saveServices $ unScrapedServices scrapedServices
   notifyForServices scrapedServices databaseServices
 
 fetchNorthLinkService :: Application Service
@@ -78,10 +77,9 @@ fetchCalMacStatusesAndNotify :: Application ()
 fetchCalMacStatusesAndNotify = do
   info (msg @String "Fetching CalMac services")
   scrapedServices  <- liftIO fetchCalMacServices
-  connectionPool <- asks connectionPool
-  databaseServices <- DatabaseServices <$> withResource connectionPool (`DB.getServicesForOrganisation` "CalMac")
-  withResource connectionPool (\connection -> DB.saveServices connection $ unScrapedServices scrapedServices)
-  withResource connectionPool (\connection -> DB.hideServicesWithIDs connection $ generateRemovedServiceIDs scrapedServices databaseServices)
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation "CalMac"
+  DB.saveServices $ unScrapedServices scrapedServices
+  DB.hideServicesWithIDs $ generateRemovedServiceIDs scrapedServices databaseServices
   notifyForServices scrapedServices databaseServices
  where
   generateRemovedServiceIDs :: ScrapedServices -> DatabaseServices -> [Int]
@@ -146,7 +144,6 @@ ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
 notifyForServices :: ScrapedServices -> DatabaseServices -> Application ()
 notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) = do
   logger <- asks logger
-  connectionPool <- asks connectionPool
   forM_ newServices $ \service -> do
     let oldService = find (\s -> serviceID s == serviceID service) oldServices
     case oldService of
@@ -156,7 +153,7 @@ notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) =
         let statusValid  = serviceStatus service /= Unknown
         let shouldNotify = statusesDifferent && statusValid
         when shouldNotify $ do
-          interestedInstallations <- withResource connectionPool (\connection -> DB.getIntererestedInstallationsForServiceID connection $ serviceID service)
+          interestedInstallations <- DB.getIntererestedInstallationsForServiceID $ serviceID service
           let defaultNotificationMessage = serviceToDefaultNotificationMessage service
           let iOSInterestedInstallations = filter
                 ((==) IOS . installationDeviceType)
@@ -182,11 +179,10 @@ notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) =
   sendNotification :: UUID -> String -> PushPayload -> Application ()
   sendNotification installationID endpointARN payload = do
     logger <- asks logger
-    connectionPool <- asks connectionPool
     result <- liftIO $ sendNotificationWihPayload logger endpointARN payload
     case result of
       SendNotificationEndpointDisabled -> do
-        void $ withResource connectionPool (`DB.deleteInstallationWithID` installationID)
+        void $ DB.deleteInstallationWithID installationID
         liftIO $ deletePushEndpoint logger endpointARN
       SendNotificationResultSuccess -> return ()
 

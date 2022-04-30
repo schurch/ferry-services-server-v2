@@ -36,8 +36,7 @@ fetchVessels mmsis  = do
   forM_ mmsis $ \mmsi -> do
     vessel <- liftIO $ fetchVessel mmsi
     debug (msg  $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
-    pool <- asks connectionPool
-    withResource pool (`DB.saveVessel` vessel)
+    DB.saveVessel vessel
     liftIO $ threadDelay (4 * 1000 * 1000) -- 4 second delay
 
 fetchVessel :: Int -> IO Vessel

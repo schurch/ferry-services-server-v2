@@ -25,7 +25,9 @@ module Database
 
 import           Control.Monad                    (forM_, void)
 import           Control.Monad.IO.Class           (MonadIO, liftIO)
+import           Control.Monad.Reader             (asks)
 import           Data.Maybe                       (listToMaybe)
+import           Data.Pool                        (Pool, withResource)
 import           Data.Time.Calendar               (Day)
 import           Data.Time.Clock                  (UTCTime)
 import           Data.Time.LocalTime              (TimeOfDay (..))
@@ -40,12 +42,17 @@ import           System.Environment               (getEnv)
 import           Types
 import           Utility                          (splitOn)
 
-insertLocationWeather :: MonadIO m => Connection -> Int -> WeatherFetcherResult -> m ()
-insertLocationWeather connection locationID
+withConnection :: (Connection -> IO a) -> Application a
+withConnection action = do
+  connectionPool <- asks connectionPool
+  liftIO $ withResource connectionPool action
+
+insertLocationWeather :: Int -> WeatherFetcherResult -> Application ()
+insertLocationWeather locationID
   (WeatherFetcherResult (
     (WeatherFetcherResultWeather icon description) : _)
     (WeatherFetcherResultMain temperature)
-    (WeatherFetcherResultWind windSpeed windDirection)) = liftIO $ void $ execute
+    (WeatherFetcherResultWind windSpeed windDirection)) = withConnection $ \connection -> void $ execute
       connection
       [sql|
         INSERT INTO location_weather (location_id, description, icon, temperature, wind_speed, wind_direction)
@@ -59,19 +66,19 @@ insertLocationWeather connection locationID
                 updated = CURRENT_TIMESTAMP
       |]
       (locationID, description, icon, temperature, windSpeed, windDirection)
-insertLocationWeather _ _ _ = return ()
+insertLocationWeather _ _ = return ()
 
-getLocationWeathers :: MonadIO m => Connection -> m [LocationWeather]
-getLocationWeathers connection = liftIO $ query_
+getLocationWeathers :: Application [LocationWeather]
+getLocationWeathers = withConnection $ \connection -> query_
   connection
   [sql|
     SELECT location_id, description, icon, temperature, wind_speed, wind_direction, updated, created
     FROM location_weather
   |]
 
-getService :: MonadIO m => Connection -> Int -> m (Maybe Types.Service)
-getService connection serviceID = do
-  results <- liftIO $ query
+getService :: Int -> Application (Maybe Types.Service)
+getService serviceID = do
+  results <- withConnection $ \connection -> query
     connection
     [sql|
       SELECT service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
@@ -81,8 +88,8 @@ getService connection serviceID = do
     (Only serviceID)
   return $ listToMaybe results
 
-getServices :: MonadIO m => Connection -> m [Types.Service]
-getServices connection = liftIO $ query_
+getServices :: Application [Types.Service]
+getServices = withConnection $ \connection -> query_
   connection
   [sql|
     SELECT service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
@@ -91,8 +98,8 @@ getServices connection = liftIO $ query_
     ORDER BY area, route
   |]
 
-getServicesForOrganisation :: MonadIO m => Connection -> String -> m [Types.Service]
-getServicesForOrganisation connection organisation = liftIO $ query connection
+getServicesForOrganisation :: String -> Application [Types.Service]
+getServicesForOrganisation organisation = withConnection $ \connection -> query connection
   [sql|
     SELECT service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
     FROM services
@@ -101,8 +108,8 @@ getServicesForOrganisation connection organisation = liftIO $ query connection
   |]
   (Only organisation)
 
-hideServicesWithIDs :: MonadIO m => Connection -> [Int] -> m ()
-hideServicesWithIDs connection serviceIDs = liftIO $ void $ execute
+hideServicesWithIDs :: [Int] -> Application ()
+hideServicesWithIDs serviceIDs = withConnection $ \connection -> void $ execute
   connection
   [sql|
     UPDATE services SET visible = FALSE WHERE service_id IN ?
@@ -110,9 +117,9 @@ hideServicesWithIDs connection serviceIDs = liftIO $ void $ execute
   (Only $ In serviceIDs)
 
 createInstallation
-  :: MonadIO m => Connection -> UUID -> String -> DeviceType -> String -> UTCTime -> m ()
-createInstallation connection installationID deviceToken deviceType awsSNSEndpointARN time
-  = liftIO $ void $ execute
+  :: UUID -> String -> DeviceType -> String -> UTCTime -> Application ()
+createInstallation installationID deviceToken deviceType awsSNSEndpointARN time
+  = withConnection $ \connection -> void $ execute
     connection
     [sql|
       INSERT INTO installations (installation_id, device_token, device_type, endpoint_arn, updated)
@@ -126,9 +133,9 @@ createInstallation connection installationID deviceToken deviceType awsSNSEndpoi
     |]
     (installationID, deviceToken, deviceType, awsSNSEndpointARN, time)
 
-addServiceToInstallation :: MonadIO m => Connection -> UUID -> Int -> m ()
-addServiceToInstallation connection installationID serviceID =
-  liftIO $ void $ execute
+addServiceToInstallation :: UUID -> Int -> Application ()
+addServiceToInstallation installationID serviceID =
+  withConnection $ \connection -> void $ execute
     connection
     [sql|
       INSERT INTO installation_services (installation_id, service_id)
@@ -137,18 +144,18 @@ addServiceToInstallation connection installationID serviceID =
     |]
     (installationID, serviceID)
 
-deleteServiceForInstallation :: MonadIO m => Connection -> UUID -> Int -> m ()
-deleteServiceForInstallation connection installationID serviceID =
-  liftIO $ void $ execute
+deleteServiceForInstallation :: UUID -> Int -> Application ()
+deleteServiceForInstallation installationID serviceID =
+  withConnection $ \connection -> void $ execute
     connection
     [sql|
       DELETE FROM installation_services WHERE installation_id = ? AND service_id = ?
     |]
     (installationID, serviceID)
 
-getServicesForInstallation :: MonadIO m => Connection -> UUID -> m [Types.Service]
-getServicesForInstallation connection installationID =
-  liftIO $ query
+getServicesForInstallation :: UUID -> Application [Types.Service]
+getServicesForInstallation installationID =
+  withConnection $ \connection -> query
     connection
     [sql|
       SELECT s.service_id, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.organisation, s.last_updated_date, s.updated
@@ -159,9 +166,9 @@ getServicesForInstallation connection installationID =
     |]
     (Only installationID)
 
-getInstallationWithID :: MonadIO m => Connection -> UUID -> m (Maybe Installation)
-getInstallationWithID connection installationID = do
-  results <- liftIO $ query
+getInstallationWithID :: UUID -> Application (Maybe Installation)
+getInstallationWithID installationID = do
+  results <- withConnection $ \connection -> query
     connection
     [sql|
       SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
@@ -172,9 +179,9 @@ getInstallationWithID connection installationID = do
   return $ listToMaybe results
 
 getIntererestedInstallationsForServiceID
-  :: MonadIO m => Connection -> Int -> m [Installation]
-getIntererestedInstallationsForServiceID connection serviceID =
-  liftIO $ query
+  :: Int -> Application [Installation]
+getIntererestedInstallationsForServiceID serviceID =
+  withConnection $ \connection -> query
     connection
     [sql|
       SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
@@ -184,8 +191,8 @@ getIntererestedInstallationsForServiceID connection serviceID =
     |]
     (Only serviceID)
 
-saveServices :: MonadIO m => Connection -> [Types.Service] -> m ()
-saveServices connection services = liftIO $ void $ do
+saveServices :: [Types.Service] -> Application ()
+saveServices services = withConnection $ \connection -> void $ do
   executeMany
     connection
     [sql|
@@ -211,27 +218,27 @@ saveServices connection services = liftIO $ void $ do
     |]
     (Only $ In serviceIDs)
 
-deleteInstallationWithID :: MonadIO m => Connection -> UUID -> m ()
-deleteInstallationWithID connection installationID = do
-  deleteInstallationServicesWithID connection installationID
-  liftIO $ void $ execute
+deleteInstallationWithID :: UUID -> Application ()
+deleteInstallationWithID installationID = do
+  deleteInstallationServicesWithID installationID
+  withConnection $ \connection -> void $ execute
     connection
     [sql|
       DELETE FROM installations WHERE installation_id = ?
     |]
     (Only installationID)
 
-deleteInstallationServicesWithID :: MonadIO m => Connection -> UUID -> m ()
-deleteInstallationServicesWithID connection installationID =
-  liftIO $ void $ execute
+deleteInstallationServicesWithID :: UUID -> Application ()
+deleteInstallationServicesWithID installationID =
+  withConnection $ \connection -> void $ execute
     connection
     [sql|
       DELETE FROM installation_services WHERE installation_id = ?
     |]
     (Only installationID)
 
-getServiceLocations :: MonadIO m => Connection -> m [ServiceLocation]
-getServiceLocations connection = liftIO $ query_
+getServiceLocations :: Application [ServiceLocation]
+getServiceLocations = withConnection $ \connection -> query_
   connection
   [sql|
     SELECT sl.service_id, l.location_id, l.name, l.coordinate
@@ -239,16 +246,16 @@ getServiceLocations connection = liftIO $ query_
     JOIN locations l ON l.location_id = sl.location_id
   |]
 
-getLocations :: MonadIO m => Connection -> m [Location]
-getLocations connection = liftIO $ query_
+getLocations :: Application [Location]
+getLocations = withConnection $ \connection -> query_
   connection
   [sql|
     SELECT location_id, name, coordinate, created
     FROM locations
   |]
 
-saveVessel :: MonadIO m => Connection -> Vessel -> m ()
-saveVessel connection vessel = liftIO $ void $ do
+saveVessel :: Vessel -> Application ()
+saveVessel vessel = withConnection $ \connection -> void $ do
   execute
     connection
     [sql|
@@ -263,16 +270,16 @@ saveVessel connection vessel = liftIO $ void $ do
               updated = excluded.updated
     |] vessel
 
-getVessels :: MonadIO m => Connection -> m [Vessel]
-getVessels connection = liftIO $ query_
+getVessels :: Application [Vessel]
+getVessels = withConnection $ \connection -> query_
   connection
   [sql|
     SELECT mmsi, name, speed, course, coordinate, last_received, updated
     FROM vessels
   |]
 
-getServiceVessels :: MonadIO m => Connection -> m [ServiceVessel]
-getServiceVessels connection = liftIO $ query_
+getServiceVessels :: Application [ServiceVessel]
+getServiceVessels = withConnection $ \connection -> query_
   connection
   [sql|
     WITH bounding_box AS (

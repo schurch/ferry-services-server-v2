@@ -135,8 +135,7 @@ setupIntegrationTests = do
 
     fetchBrodickWeather :: Types.Application ()
     fetchBrodickWeather = do
-      connectionPool <- asks connectionPool
-      brodick <- filter ((==) 4 . locationLocationID) <$> (withResource connectionPool DB.getLocations)
+      brodick <- filter ((==) 4 . locationLocationID) <$> DB.getLocations
       fetchWeatherForLocations brodick
 
     fetchCaledonianIslesVessel :: Types.Application ()

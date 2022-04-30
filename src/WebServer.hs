@@ -7,6 +7,7 @@ module WebServer where
 import           Control.Monad                        (forM, void, when)
 import           Control.Monad.IO.Class               (liftIO)
 import           Control.Monad.Reader                 (asks)
+import           Control.Monad.Trans                  (lift)
 import           Data.Aeson                           (Value (..))
 import           Data.Char                            (ord)
 import           Data.Default                         (def)
@@ -130,14 +131,9 @@ type ServiceLocationLookup = M.Map Int [LocationResponse]
 -- Lookup vessels for a service ID
 type ServiceVesselLookup = M.Map Int [VesselResponse]
 
-runQuery :: (Connection -> Action a) -> Action a
-runQuery query = do
-  pool <- asks connectionPool
-  withResource pool $ \connection -> query connection
-
 getService :: Int -> Action (Maybe ServiceResponse)
 getService serviceID = do
-  service        <- runQuery $ \connection -> DB.getService connection serviceID
+  service        <- lift $ DB.getService serviceID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   vesselLookup   <- getServiceVesselLookup
@@ -145,7 +141,7 @@ getService serviceID = do
 
 getServices :: Action [ServiceResponse]
 getServices = do
-  services       <- runQuery $ \connection -> DB.getServices connection
+  services       <- lift DB.getServices
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   vesselLookup   <- getServiceVesselLookup
@@ -160,7 +156,7 @@ createInstallation installationID (CreateInstallationRequest deviceToken deviceT
                                              deviceToken
                                              deviceType
     time <- liftIO getCurrentTime
-    runQuery $ \connection -> DB.createInstallation connection installationID
+    lift $ DB.createInstallation installationID
                           deviceToken
                           deviceType
                           awsSNSEndpointARN
@@ -169,17 +165,17 @@ createInstallation installationID (CreateInstallationRequest deviceToken deviceT
 
 addServiceToInstallation :: UUID -> Int -> Action [ServiceResponse]
 addServiceToInstallation installationID serviceID = do
-  runQuery $ \connection -> DB.addServiceToInstallation connection installationID serviceID
+  lift $ DB.addServiceToInstallation installationID serviceID
   getServicesForInstallation installationID
 
 deleteServiceForInstallation :: UUID -> Int -> Action [ServiceResponse]
 deleteServiceForInstallation installationID serviceID = do
-  runQuery $ \connection -> DB.deleteServiceForInstallation connection installationID serviceID
+  lift $ DB.deleteServiceForInstallation installationID serviceID
   getServicesForInstallation installationID
 
 getServicesForInstallation :: UUID -> Action [ServiceResponse]
 getServicesForInstallation installationID = do
-  services       <- runQuery $ \connection -> DB.getServicesForInstallation connection installationID
+  services       <- lift $ DB.getServicesForInstallation installationID
   time           <- liftIO getCurrentTime
   locationLookup <- getLocationLookup
   vesselLookup   <- getServiceVesselLookup
@@ -189,7 +185,7 @@ getServicesForInstallation installationID = do
 getVessels :: Action [VesselResponse]
 getVessels = do
   time <- liftIO getCurrentTime
-  vessels <- filter (vesselFilter time) <$> runQuery DB.getVessels
+  vessels <- filter (vesselFilter time) <$> lift DB.getVessels
   return $ vesselToVesselResponse <$> vessels
 
 vesselFilter :: UTCTime -> Vessel -> Bool
@@ -275,7 +271,7 @@ serviceStatusForTime currentTime serviceUpdated serviceStatus =
 registerDeviceToken :: UUID -> String -> DeviceType -> Action String
 registerDeviceToken installationID deviceToken deviceType = do
   logger'            <- asks logger
-  storedInstallation <- runQuery $ \connection -> DB.getInstallationWithID connection installationID
+  storedInstallation <- lift $ DB.getInstallationWithID installationID
   currentEndpointARN <- if isNothing storedInstallation
     then liftIO $ createPushEndpoint logger' deviceToken deviceType
     else return $ installationEndpointARN . fromJust $ storedInstallation
@@ -293,7 +289,7 @@ registerDeviceToken installationID deviceToken deviceType = do
 
 getLocationLookup :: Action ServiceLocationLookup
 getLocationLookup = do
-  serviceLocations <- runQuery $ \connection -> DB.getServiceLocations connection
+  serviceLocations <- lift DB.getServiceLocations
   locationWeatherLookup <- getLocationWeatherLookup
   return
     $ M.fromListWith (++)
@@ -304,9 +300,9 @@ getLocationLookup = do
 
 getServiceVesselLookup :: Action ServiceVesselLookup
 getServiceVesselLookup = do
-  serviceVessels <- runQuery $ \connection -> DB.getServiceVessels connection
+  serviceVessels <- lift $ DB.getServiceVessels
   time <- liftIO getCurrentTime
-  vessels <- filter (vesselFilter time) <$> runQuery DB.getVessels
+  vessels <- filter (vesselFilter time) <$> lift DB.getVessels
   return
     $ M.fromListWith (++)
     $ [ (serviceID, [vesselToVesselResponse (Vessel mmsi name speed course coordinate lastReceived updated)])
@@ -316,7 +312,7 @@ getServiceVesselLookup = do
 
 getLocationWeatherLookup :: Action (M.Map Int LocationWeatherResponse)
 getLocationWeatherLookup = do
-  locationWeathers <- runQuery $ \connection -> DB.getLocationWeathers connection
+  locationWeathers <- lift DB.getLocationWeathers
   return
     $ M.fromList
     $ [ (locationID

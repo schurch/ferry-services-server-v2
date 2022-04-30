@@ -26,16 +26,14 @@ import qualified Database                   as DB
 
 fetchWeather :: Application ()
 fetchWeather = do
-  connectionPool <- asks connectionPool
-  locations <-  withResource connectionPool DB.getLocations
+  locations <-  DB.getLocations
   fetchWeatherForLocations locations
 
 fetchWeatherForLocations :: [Location] -> Application ()
 fetchWeatherForLocations locations = do
   forM_ locations $ \location -> do
     weather <- fetchWeatherForLocation location
-    connectionPool <- asks connectionPool
-    liftIO $ withResource connectionPool (\connection -> DB.insertLocationWeather connection (locationLocationID location) weather)
+    DB.insertLocationWeather (locationLocationID location) weather
     liftIO $ threadDelay (2 * 1000 * 1000) -- 2 second delay
 
 fetchWeatherForLocation :: Location -> Application WeatherFetcherResult
