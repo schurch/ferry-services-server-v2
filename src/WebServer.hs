@@ -57,7 +57,7 @@ import qualified Database                             as DB
 webApp :: Middleware -> Scotty
 webApp requestLogger = do
   middleware requestLogger
-  let corsOrigins = ["https://scottishferryapp.com", "https://www.scottishferryapp.com"]
+  let corsOrigins = ["https://scottishferryapp.com", "https://www.scottishferryapp.com", "http://localhost:3000"]
   middleware $ cors (const $ Just simpleCorsResourcePolicy { corsOrigins = Just (corsOrigins, False) })
   middleware $ gzip def { gzipFiles = GzipCompress }
   middleware $ addHeaders [("X-Frame-Options", "DENY")
