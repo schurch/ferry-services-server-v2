@@ -4,7 +4,7 @@ services:
     image: stefanchurch/ferry-services-server:latest
     container_name: ferry-services-server-prod
     ports:
-      - "3009:3009"
+      - "127.0.0.1:3009:3009"
     depends_on:
       - "db-prod"
     restart: always

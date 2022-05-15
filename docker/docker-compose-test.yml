@@ -4,7 +4,7 @@ services:
     image: stefanchurch/ferry-services-server:latest
     container_name: ferry-services-server-test
     ports:
-      - "3008:3008"
+      - "127.0.0.1:3008:3008"
     depends_on:
       - "db-test"
     restart: always
