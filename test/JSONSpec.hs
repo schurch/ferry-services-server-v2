@@ -70,8 +70,8 @@ spec = do
           encode [aesonQQ|
             {
               "default": "Default payload message",
-              "APNS": "{\"service_id\":5,\"aps\":{\"sound\":\"default\",\"alert\":\"There is a disruption to the Arran service\"}}",
-              "APNS_SANDBOX": "{\"service_id\":5,\"aps\":{\"sound\":\"default\",\"alert\":\"There is a disruption to the Arran service\"}}",
+              "APNS": "{\"aps\":{\"alert\":\"There is a disruption to the Arran service\",\"sound\":\"default\"},\"service_id\":5}",
+              "APNS_SANDBOX": "{\"aps\":{\"alert\":\"There is a disruption to the Arran service\",\"sound\":\"default\"},\"service_id\":5}",
               "GCM": null
             }
           |]
