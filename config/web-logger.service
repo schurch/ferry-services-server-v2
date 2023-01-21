@@ -1,0 +1,12 @@
+[Unit]
+Description=Web Logger
+
+[Service]
+User=stefanchurch
+Group=stefanchurch
+Environment="COMPOSE_HTTP_TIMEOUT=86400"
+ExecStart=/bin/sh -c 'docker-compose -f /home/stefanchurch/ferry-services-server/docker-compose-prod.yml logs --no-color --follow server-prod | mawk -W interactive -F'\''[|,]'\'' '\''!/.*(Listening on port|Attaching to).*/{ print $4 }'\'' | mawk -W interactive NF > /home/stefanchurch/ferry-services-server/logs/web.log'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

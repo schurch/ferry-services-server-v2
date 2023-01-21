@@ -1,0 +1,11 @@
+[Unit]
+Description=Grok Exporter
+
+[Service]
+User=stefanchurch
+Group=stefanchurch
+ExecStart=/home/stefanchurch/grok_exporter-1.0.0.RC5.linux-amd64/grok_exporter -config /home/stefanchurch/grok_exporter-1.0.0.RC5.linux-amd64/config.yml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
