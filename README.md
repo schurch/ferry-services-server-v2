@@ -2,6 +2,16 @@
 
 Server application for the Ferry Services App.
 
+### Building
+
+May need to prefix the build command with
+
+```bash
+C_INCLUDE_PATH="`xcrun --show-sdk-path`/usr/include/ffi"
+```
+
+See [https://gitlab.haskell.org/ghc/ghc/-/issues/20592#note_391266](https://gitlab.haskell.org/ghc/ghc/-/issues/20592#note_391266)
+
 ### Database migrations
 
 These are done with the `migrate` tool [https://github.com/golang-migrate/migrate](https://github.com/golang-migrate/migrate)
