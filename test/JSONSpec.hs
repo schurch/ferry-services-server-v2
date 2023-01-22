@@ -34,13 +34,17 @@ spec = do
           }
         |]
 
-    describe "CGMPayload" $
+    describe "GCMPayload" $
       it "encodes correctly" $
-        encode CGMPayload
+        encode GCMPayload
         { gcmPayloadData = GCMPayloadData
           { gcmPayloadDataServiceID = 5
           , gcmPayloadDataTitle = "Sailings disrupted"
           , gcmPayloadDataBody = "Ardrossan (ARD) - Brodick (BRO)"
+          }
+        , gcmPayloadPriority = "high"
+        , gcmPayloadAndroid = GCMPayloadAndroid
+          { gcmPayloadAndroidPriority = "high" 
           }
         }
         `shouldBe`
@@ -50,6 +54,10 @@ spec = do
               "service_id": 5,
               "title": "Sailings disrupted",
               "body": "Ardrossan (ARD) - Brodick (BRO)"
+            },
+            "priority": "high",
+            "android": {
+                "priority": "high"
             }
           }
         |]
@@ -80,12 +88,16 @@ spec = do
       it "encodes correctly" $
           encode PushPayload
           { pushPayloadDefault = "Default payload message"
-          , pushPayloadContent = GooglePayload (CGMPayload
+          , pushPayloadContent = GooglePayload (GCMPayload
             { gcmPayloadData = GCMPayloadData
               { gcmPayloadDataServiceID = 5
               , gcmPayloadDataTitle = "Sailings disrupted"
               , gcmPayloadDataBody = "Ardrossan (ARD) - Brodick (BRO)"
               }
+            , gcmPayloadPriority = "high"
+            , gcmPayloadAndroid = (GCMPayloadAndroid
+              { gcmPayloadAndroidPriority = "high"
+              })
             })
           }
           `shouldBe`
@@ -94,7 +106,7 @@ spec = do
               "default": "Default payload message",
               "APNS": null,
               "APNS_SANDBOX": null,
-              "GCM": "{\"data\":{\"body\":\"Ardrossan (ARD) - Brodick (BRO)\",\"service_id\":5,\"title\":\"Sailings disrupted\"}}"
+              "GCM": "{\"android\":{\"priority\":\"high\"},\"data\":{\"body\":\"Ardrossan (ARD) - Brodick (BRO)\",\"service_id\":5,\"title\":\"Sailings disrupted\"},\"priority\":\"high\"}"
             }
           |]
 

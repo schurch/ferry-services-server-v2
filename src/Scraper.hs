@@ -220,4 +220,4 @@ notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) =
 
   createAndroidPushPayload :: String -> String -> String -> Int -> PushPayload
   createAndroidPushPayload defaultMessage title body serviceID =
-    PushPayload defaultMessage (GooglePayload (CGMPayload (GCMPayloadData serviceID title body)))
+    PushPayload defaultMessage (GooglePayload (GCMPayload (GCMPayloadData serviceID title body) "high" (GCMPayloadAndroid "high")))

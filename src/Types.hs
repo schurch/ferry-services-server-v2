@@ -74,7 +74,7 @@ data PushPayload = PushPayload
   }
   deriving Show
 
-data PushPayloadContent = ApplePayload APSPayload | GooglePayload CGMPayload deriving Show
+data PushPayloadContent = ApplePayload APSPayload | GooglePayload GCMPayload deriving Show
 
 instance ToJSON PushPayload where
   toJSON (PushPayload text (ApplePayload apns)) = object
@@ -110,13 +110,15 @@ instance ToJSON APSPayloadBody where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayloadBody)
 
 -- Google
-data CGMPayload = CGMPayload
+data GCMPayload = GCMPayload
   { gcmPayloadData         :: GCMPayloadData
+  , gcmPayloadPriority     :: String
+  , gcmPayloadAndroid      :: GCMPayloadAndroid
   }
   deriving (Generic, Show)
 
-instance ToJSON CGMPayload where
-  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy CGMPayload)
+instance ToJSON GCMPayload where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPayload)
 
 data GCMPayloadData = GCMPayloadData
   { gcmPayloadDataServiceID :: Int
@@ -127,6 +129,14 @@ data GCMPayloadData = GCMPayloadData
 
 instance ToJSON GCMPayloadData where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPayloadData)
+
+data GCMPayloadAndroid = GCMPayloadAndroid
+  { gcmPayloadAndroidPriority :: String
+  }
+  deriving (Generic, Show)
+
+instance ToJSON GCMPayloadAndroid where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPayloadAndroid)
 
 -- General
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
