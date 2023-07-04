@@ -81,7 +81,7 @@ getService serviceID = do
   results <- withConnection $ \connection -> query
     connection
     [sql|
-      SELECT service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
+      SELECT service_id, area, route, status, additional_info, disruption_reason, organisation_id, last_updated_date, updated
       FROM services
       WHERE service_id = ? AND visible = TRUE
     |]
@@ -92,21 +92,21 @@ getServices :: Application [Types.Service]
 getServices = withConnection $ \connection -> query_
   connection
   [sql|
-    SELECT service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
+    SELECT service_id, area, route, status, additional_info, disruption_reason, organisation_id, last_updated_date, updated
     FROM services
     WHERE visible = TRUE
     ORDER BY area, route
   |]
 
-getServicesForOrganisation :: String -> Application [Types.Service]
-getServicesForOrganisation organisation = withConnection $ \connection -> query connection
+getServicesForOrganisation :: Int -> Application [Types.Service]
+getServicesForOrganisation organisationID = withConnection $ \connection -> query connection
   [sql|
-    SELECT service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated
+    SELECT service_id, area, route, status, additional_info, disruption_reason, organisation_id, last_updated_date, updated
     FROM services
-    WHERE organisation = ?
+    WHERE organisation_id = ?
     ORDER BY area, route
   |]
-  (Only organisation)
+  (Only organisationID)
 
 hideServicesWithIDs :: [Int] -> Application ()
 hideServicesWithIDs serviceIDs = withConnection $ \connection -> void $ execute
@@ -158,7 +158,7 @@ getServicesForInstallation installationID =
   withConnection $ \connection -> query
     connection
     [sql|
-      SELECT s.service_id, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.organisation, s.last_updated_date, s.updated
+      SELECT s.service_id, s.area, s.route, s.status, s.additional_info, s.disruption_reason, s.organisation_id, s.last_updated_date, s.updated
       FROM services s
       JOIN installation_services i ON s.service_id = i.service_id
       WHERE i.installation_id = ? AND s.visible = TRUE
@@ -196,7 +196,7 @@ saveServices services = withConnection $ \connection -> void $ do
   executeMany
     connection
     [sql|
-      INSERT INTO services (service_id, area, route, status, additional_info, disruption_reason, organisation, last_updated_date, updated)
+      INSERT INTO services (service_id, area, route, status, additional_info, disruption_reason, organisation_id, last_updated_date, updated)
       VALUES (?,?,?,?,?,?,?,?,?)
       ON CONFLICT (service_id) DO UPDATE
         SET service_id = excluded.service_id,
@@ -205,7 +205,7 @@ saveServices services = withConnection $ \connection -> void $ do
             status = excluded.status,
             additional_info = excluded.additional_info,
             disruption_reason = excluded.disruption_reason,
-            organisation = excluded.organisation,
+            organisation_id = excluded.organisation_id,
             last_updated_date = excluded.last_updated_date,
             updated = excluded.updated
     |]
@@ -259,22 +259,23 @@ saveVessel vessel = withConnection $ \connection -> void $ do
   execute
     connection
     [sql|
-      INSERT INTO vessels (mmsi, name, speed, course, coordinate, last_received, updated)
-        VALUES (?,?,?,?,?,?,?)
+      INSERT INTO vessels (mmsi, name, speed, course, coordinate, last_received, updated, organisation_id)
+        VALUES (?,?,?,?,?,?,?,?)
         ON CONFLICT (mmsi) DO UPDATE
           SET name = excluded.name,
               speed = excluded.speed,
               course = excluded.course,
               coordinate = excluded.coordinate,
               last_received = excluded.last_received,
-              updated = excluded.updated
+              updated = excluded.updated,
+              organisation_id = excluded.organisation_id
     |] vessel
 
 getVessels :: Application [Vessel]
 getVessels = withConnection $ \connection -> query_
   connection
   [sql|
-    SELECT mmsi, name, speed, course, coordinate, last_received, updated
+    SELECT mmsi, name, speed, course, coordinate, last_received, updated, organisation_id
     FROM vessels
   |]
 
@@ -288,7 +289,8 @@ getServiceVessels = withConnection $ \connection -> query_
       JOIN service_locations sl ON l.location_id = sl.location_id
       GROUP BY sl.service_id
     )
-    SELECT b.service_id, v.mmsi, v.name, v.speed, v.course, v.coordinate, v.last_received, v.updated
+    SELECT s.service_id, v.mmsi, v.name, v.speed, v.course, v.coordinate, v.last_received, v.updated, v.organisation_id
     FROM vessels v, bounding_box b
-    WHERE v.coordinate && b.bounds;
+    JOIN services s on s.service_id = b.service_id
+    WHERE v.coordinate && b.bounds AND s.organisation_id = v.organisation_id;
   |]

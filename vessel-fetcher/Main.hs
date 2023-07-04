@@ -42,7 +42,7 @@ main = do
   forever $ do
     info logger (msg @String "Fetching vessels")
     catch (runReaderT (fetchVessels defaultMmsis) env) (handleException logger)
-    threadDelay (10 * 60 * 1000 * 1000) -- 15 mins
+    threadDelay (5 * 60 * 1000 * 1000) -- 5 mins
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do

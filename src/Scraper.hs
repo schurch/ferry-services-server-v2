@@ -18,15 +18,13 @@ import           Data.Time.Clock            (UTCTime, getCurrentTime)
 import           Data.Time.Clock.POSIX      (posixSecondsToUTCTime)
 import           Data.UUID                  (UUID)
 import           Database.PostgreSQL.Simple (Connection)
-import           Network.HTTP.Simple        (getResponseBody, httpBS,
-                                             parseRequest, setRequestHeaders)
+import           Network.HTTP.Simple        (getResponseBody, httpBS, parseRequest, setRequestHeaders)
 import           Network.HTTP.Types.Header  (hAccept, hAcceptEncoding,
                                              hContentType, hHost, hUserAgent)
 import           System.Logger.Class        (Logger, info)
 import           System.Logger.Message      (msg)
 import           System.Timeout             (timeout)
-import           Text.HTML.TagSoup          (fromAttrib, parseTags, renderTags,
-                                             (~/=))
+import           Text.HTML.TagSoup          (fromAttrib, parseTags, renderTags, (~/=), isTagOpen, Tag(..))
 import           Text.Regex                 (mkRegex, subRegex)
 
 import           AWS
@@ -39,11 +37,50 @@ import qualified Database                   as DB
 newtype ScrapedServices = ScrapedServices { unScrapedServices :: [Service] }
 newtype DatabaseServices = DatabaseServices { unDatabaseServices :: [Service] }
 
+fetchWesternFerriesAndNotify :: Application ()
+fetchWesternFerriesAndNotify = do
+  info (msg @String "Fetching Western Ferries service")
+  scrapedServices <- ScrapedServices . (: []) <$> fetchWesternFerries
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 3
+  DB.saveServices $ unScrapedServices scrapedServices
+  notifyForServices scrapedServices databaseServices
+
+fetchWesternFerries :: Application Service
+fetchWesternFerries = do
+  htmlTags <- parseTags .  B8.unpack . getResponseBody <$> httpBS "https://status.western-ferries.co.uk/status/view"
+  additionalInfo <- B8.unpack . getResponseBody <$> httpBS "https://status.western-ferries.co.uk/status/content"
+  let activeTag = find (\t -> isTagOpen t && isActiveTag (fromAttrib "class" t)) htmlTags
+  let status = textToStatus $ statusClassText <$> activeTag
+  time <- liftIO getCurrentTime
+  return Service
+    { serviceID               = 2000
+    , serviceUpdated          = time
+    , serviceArea             = "COWAL & DUNOON (Western Ferries)"
+    , serviceRoute            = "Mcinroy's Point (Gourock) - Hunters Quay (Dunoon)"
+    , serviceStatus           = status
+    , serviceAdditionalInfo   = if null additionalInfo then Nothing else Just additionalInfo
+    , serviceDisruptionReason = Nothing
+    , serviceOrganisationID   = 3
+    , serviceLastUpdatedDate  = Nothing
+    }
+  where
+    isActiveTag :: String -> Bool
+    isActiveTag = elem "active" . words
+    
+    statusClassText :: Tag String -> String
+    statusClassText = flip (!!) 1 . words . fromAttrib "class"
+
+    textToStatus :: Maybe String -> ServiceStatus
+    textToStatus text | text == Just "status-green"    = Normal
+                      | text == Just "status-amber"    = Disrupted
+                      | text == Just "status-red"      = Cancelled
+                      | otherwise                      = error "Unknown image status"
+
 fetchNorthLinkServicesAndNotify :: Application ()
 fetchNorthLinkServicesAndNotify = do
   info (msg @String "Fetching NorthLink service")
   scrapedServices <- ScrapedServices . (: []) <$> fetchNorthLinkService
-  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation "NorthLink"
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 2
   DB.saveServices $ unScrapedServices scrapedServices
   notifyForServices scrapedServices databaseServices
 
@@ -63,7 +100,7 @@ fetchNorthLinkService = do
     , serviceStatus           = textToStatus statusText
     , serviceAdditionalInfo   = Just $ strippedNewlines . strippedStyles $ disruptionInfo
     , serviceDisruptionReason = Nothing
-    , serviceOrganisation     = "NorthLink"
+    , serviceOrganisationID   = 2
     , serviceLastUpdatedDate  = Nothing
     }
   where
@@ -77,7 +114,7 @@ fetchCalMacStatusesAndNotify :: Application ()
 fetchCalMacStatusesAndNotify = do
   info (msg @String "Fetching CalMac services")
   scrapedServices  <- liftIO fetchCalMacServices
-  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation "CalMac"
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 1
   DB.saveServices $ unScrapedServices scrapedServices
   DB.hideServicesWithIDs $ generateRemovedServiceIDs scrapedServices databaseServices
   notifyForServices scrapedServices databaseServices
@@ -123,7 +160,7 @@ ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) = Service
                               $  ajaxServiceDetailsWebDetail
                               <> fromMaybe "" ajaxServiceDetailsInfoMsg
   , serviceDisruptionReason = reasonToMaybe ajaxServiceDetailsReason
-  , serviceOrganisation     = "CalMac"
+  , serviceOrganisationID   = 1
   , serviceLastUpdatedDate  = Just $ stringToUTCTime ajaxServiceDetailsUpdated
   }
  where

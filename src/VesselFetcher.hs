@@ -31,16 +31,20 @@ import qualified Data.ByteString.Char8      as B8
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Database                   as DB
 
-fetchVessels :: [Int] -> Application ()
-fetchVessels mmsis  = do
-  forM_ mmsis $ \mmsi -> do
-    vessel <- liftIO $ fetchVessel mmsi
-    debug (msg  $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
-    DB.saveVessel vessel
-    liftIO $ threadDelay (4 * 1000 * 1000) -- 4 second delay
+type OrganisationID = Int
+type MMSI = Int
 
-fetchVessel :: Int -> IO Vessel
-fetchVessel mmsi = do
+fetchVessels :: [(OrganisationID, [MMSI])] -> Application ()
+fetchVessels organisations  = do
+  forM_ organisations $ \(organisationID, mmsis) -> do
+    forM_ mmsis $ \mmsi -> do
+      vessel <- liftIO $ fetchVessel organisationID mmsi
+      debug (msg  $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
+      DB.saveVessel vessel
+      liftIO $ threadDelay (4 * 1000 * 1000) -- 4 second delay
+
+fetchVessel :: OrganisationID -> MMSI -> IO Vessel
+fetchVessel organisationID mmsi = do
     let requestParameters = "asset_type=vessels&columns=shipname,mmsi,time_of_latest_position,lat_of_latest_position,lon_of_latest_position,speed,course&mmsi|eq|mmsi=" <> B8.pack (show mmsi)
     let headers =
             [ (hAccept, "*/*")
@@ -75,6 +79,7 @@ fetchVessel mmsi = do
           , vesselCoordinate = GeoPoint (Just 4326) (Point (Position latitude longitude Nothing Nothing))
           , vesselLastReceived = toUTC . ajaxVesselLastPos . head $ ajaxVesselsData
           , vesselUpdated = time
+          , vesselOrganisationID = organisationID
           }
       toUTC :: Int -> UTCTime
       toUTC = posixSecondsToUTCTime . fromInteger . toInteger
@@ -89,42 +94,50 @@ checkResponseBody :: Maybe a -> Either String a
 checkResponseBody =
     maybe (Left "Timeout while waiting for vessel response") Right
 
-defaultMmsis :: [Int]
-defaultMmsis = [ 232003244 -- CalMac
-        , 235104000
-        , 232000420
-        , 232003376
-        , 232003369
-        , 232003371
-        , 232003370
-        , 232343000
-        , 232605000
-        , 232003165
-        , 232003368
-        , 232003372
-        , 232001580
-        , 232002521
-        , 232002598
-        , 232003073
-        , 232003288
-        , 235056506
-        , 235000141
-        , 235000864
-        , 235087611
-        , 235008928
-        , 235008929
-        , 235025112
-        , 235052541
-        , 235053239
-        , 235052285
-        , 235083892
-        , 235099235
-        , 235099237
-        , 235101635
-        , 235116772
-        , 232003166
-        , 232019501
-        , 235449000 -- NorthLink
+defaultMmsis :: [(OrganisationID, [MMSI])]
+defaultMmsis = [ 
+  (1, [ 232003244 -- CalMac
+      , 235104000
+      , 232000420
+      , 232003376
+      , 232003369
+      , 232003371
+      , 232003370
+      , 232343000
+      , 232605000
+      , 232003165
+      , 232003368
+      , 232003372
+      , 232001580
+      , 232002521
+      , 232002598
+      , 232003073
+      , 232003288
+      , 235056506
+      , 235000141
+      , 235000864
+      , 235087611
+      , 235008928
+      , 235008929
+      , 235025112
+      , 235052541
+      , 235053239
+      , 235052285
+      , 235083892
+      , 235099235
+      , 235099237
+      , 235101635
+      , 235116772
+      , 232003166
+      , 232019501
+  ])
+  , (2, [ 235449000 -- NorthLink
         , 235450000
         , 235448000
-        ]
+  ])
+  , (3, [ 235001902 -- Western Ferries
+        , 235013197
+        , 235101062
+        , 235101063
+  ])
+ ]

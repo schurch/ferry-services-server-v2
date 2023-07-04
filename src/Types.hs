@@ -192,7 +192,7 @@ data Service = Service
   , serviceStatus           :: ServiceStatus
   , serviceAdditionalInfo   :: Maybe String
   , serviceDisruptionReason :: Maybe String
-  , serviceOrganisation     :: String
+  , serviceOrganisationID   :: Int
   , serviceLastUpdatedDate  :: Maybe UTCTime
   , serviceUpdated          :: UTCTime
   }
@@ -236,25 +236,27 @@ data LocationWeather = LocationWeather
   deriving (Generic, Show, ToRow, FromRow)
 
 data Vessel = Vessel
-  { vesselMmsi         :: Int
-  , vesselName         :: String
-  , vesselSpeed        :: Maybe Scientific
-  , vesselCourse       :: Maybe Scientific
-  , vesselCoordinate   :: Geometry
-  , vesselLastReceived :: UTCTime
-  , vesselUpdated      :: UTCTime
+  { vesselMmsi           :: Int
+  , vesselName           :: String
+  , vesselSpeed          :: Maybe Scientific
+  , vesselCourse         :: Maybe Scientific
+  , vesselCoordinate     :: Geometry
+  , vesselLastReceived   :: UTCTime
+  , vesselUpdated        :: UTCTime
+  , vesselOrganisationID :: Int
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data ServiceVessel = ServiceVessel
-  { serviceVesselSeviceID     :: Int
-  , serviceVesselMmsi         :: Int
-  , serviceVesselName         :: String
-  , serviceVesselSpeed        :: Maybe Scientific
-  , serviceVesselCourse       :: Maybe Scientific
-  , serviceVesselCoordinate   :: Geometry
-  , serviceVesselLastReceived :: UTCTime
-  , serviceVesselUpdated      :: UTCTime
+  { serviceVesselSeviceID       :: Int
+  , serviceVesselMmsi           :: Int
+  , serviceVesselName           :: String
+  , serviceVesselSpeed          :: Maybe Scientific
+  , serviceVesselCourse         :: Maybe Scientific
+  , serviceVesselCoordinate     :: Geometry
+  , serviceVesselLastReceived   :: UTCTime
+  , serviceVesselUpdated        :: UTCTime
+  , serviceVesselOrganisationID :: Int
   }
   deriving (Generic, Show, ToRow, FromRow)
 

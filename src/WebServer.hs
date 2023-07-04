@@ -300,13 +300,13 @@ getLocationLookup = do
 
 getServiceVesselLookup :: Action ServiceVesselLookup
 getServiceVesselLookup = do
-  serviceVessels <- lift $ DB.getServiceVessels
+  serviceVessels <- lift DB.getServiceVessels
   time <- liftIO getCurrentTime
   vessels <- filter (vesselFilter time) <$> lift DB.getVessels
   return
     $ M.fromListWith (++)
-    $ [ (serviceID, [vesselToVesselResponse (Vessel mmsi name speed course coordinate lastReceived updated)])
-      | vessel@(ServiceVessel serviceID mmsi name speed course coordinate lastReceived updated) <- serviceVessels
+    $ [ (serviceID, [vesselToVesselResponse (Vessel mmsi name speed course coordinate lastReceived updated organisationID)])
+      | vessel@(ServiceVessel serviceID mmsi name speed course coordinate lastReceived updated organisationID) <- serviceVessels
       , serviceVesselFilter time vessel
       ]
 

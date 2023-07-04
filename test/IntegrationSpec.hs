@@ -139,7 +139,10 @@ setupIntegrationTests = do
       fetchWeatherForLocations brodick
 
     fetchCaledonianIslesVessel :: Types.Application ()
-    fetchCaledonianIslesVessel = fetchVessels [caledonianIslesMMSI]
+    fetchCaledonianIslesVessel = fetchVessels [(calMacOrganisationID, [caledonianIslesMMSI])]
+
+calMacOrganisationID :: Int
+calMacOrganisationID = 1
 
 caledonianIslesMMSI :: Int
 caledonianIslesMMSI = 232001580

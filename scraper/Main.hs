@@ -43,6 +43,7 @@ main = do
     info logger (msg @String "Fetching statuses")
     catch (runReaderT fetchCalMacStatusesAndNotify env) (handleException logger)
     catch (runReaderT fetchNorthLinkServicesAndNotify env) (handleException logger)
+    catch (runReaderT fetchWesternFerriesAndNotify env) (handleException logger)
     threadDelay (15 * 60 * 1000 * 1000) -- 15 mins
 
 handleException :: Logger -> SomeException -> IO ()
