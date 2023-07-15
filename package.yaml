@@ -32,12 +32,14 @@ library:
     - bytestring
     - containers
     - data-default
+    - directory
     - fast-logger
     - haskell-postgis
     - http-types
     - http-conduit
     - lens
     - MissingH
+    - network
     - mtl
     - postgresql-simple
     - regex-compat
@@ -50,11 +52,14 @@ library:
     - text
     - unordered-containers
     - uuid
+    - vector
     - wai
     - wai-cors
     - wai-extra
     - wai-middleware-static
     - warp
+    - xml
+    - zip
 
 executables:
   ferry-services-server-exe:
@@ -113,6 +118,21 @@ executables:
   ferry-services-vessel-fetcher-exe:
     main:                Main.hs
     source-dirs:         vessel-fetcher
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - ferry-services-server
+    - postgresql-simple
+    - raven-haskell
+    - resource-pool
+    - tinylog
+    - transformers
+
+  ferry-services-transxchange-ingester-exe:
+    main:                Main.hs
+    source-dirs:         transxchange-ingester
     ghc-options:
     - -threaded
     - -rtsopts

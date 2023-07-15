@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ebe79ad272a9d6eb4012dc01f5831dc986964be2d6b37bfbe54b19571bc9fefb
+-- hash: 91caef67dcfdc90b95dc16cfb2c437a71dfbb29be78af1c5dba61c2d0f8e86f0
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -29,6 +29,9 @@ library
       AWS
       Database
       Scraper
+      TransxchangeIngester
+      TransxchangeParser
+      TransxchangeTypes
       Types
       Utility
       VesselFetcher
@@ -49,12 +52,14 @@ library
     , bytestring
     , containers
     , data-default
+    , directory
     , fast-logger
     , haskell-postgis
     , http-conduit
     , http-types
     , lens
     , mtl
+    , network
     , postgresql-simple
     , regex-compat
     , resource-pool
@@ -66,11 +71,14 @@ library
     , tinylog
     , unordered-containers
     , uuid
+    , vector
     , wai
     , wai-cors
     , wai-extra
     , wai-middleware-static
     , warp
+    , xml
+    , zip
   default-language: Haskell2010
 
 executable ferry-services-scraper-exe
@@ -113,6 +121,23 @@ executable ferry-services-server-exe
     , wai
     , wai-extra
     , warp
+  default-language: Haskell2010
+
+executable ferry-services-transxchange-ingester-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_ferry_services_server
+  hs-source-dirs:
+      transxchange-ingester
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , ferry-services-server
+    , postgresql-simple
+    , raven-haskell
+    , resource-pool
+    , tinylog
+    , transformers
   default-language: Haskell2010
 
 executable ferry-services-vessel-fetcher-exe
