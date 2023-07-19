@@ -2,40 +2,53 @@
 
 module IntegrationSpec where
 
-import           Control.Monad.Reader                 (ReaderT (runReaderT),
-                                                       asks)
-import           Data.Aeson                           (FromJSON, decode, encode)
-import           Data.List                            (find)
-import           Data.Pool                            (Pool, createPool,
-                                                       withResource)
-import           Data.String                          (fromString)
-import           Database.PostgreSQL.Simple           (close, connectPostgreSQL)
-import           Network.HTTP.Types.Header            (Header)
-import           Network.Wai                          (Application)
-import           Network.Wai.Middleware.RequestLogger (mkRequestLogger)
-import           System.Logger                        (Logger, Output (StdOut),
-                                                       create)
-import           Test.Hspec                           (Spec, beforeAll,
-                                                       beforeAll_, describe,
-                                                       hspec, it)
-import           Test.Hspec.Wai                       (Body,
-                                                       MatchBody (MatchBody),
-                                                       ResponseMatcher (ResponseMatcher),
-                                                       delete, get, post,
-                                                       shouldRespondWith, with)
-
-import           Web.Scotty.Trans                     (scottyAppT)
-
-import           Database.PostgreSQL.Simple           (Connection)
-import           System.Environment                   (getEnv, setEnv)
-
-import           Scraper
-import           Types
-import           VesselFetcher
-import           WeatherFetcher
-import           WebServer
-
-import qualified Database                             as DB
+import Control.Monad.Reader
+  ( ReaderT (runReaderT),
+    asks,
+  )
+import Data.Aeson (FromJSON, decode, encode)
+import Data.List (find)
+import Data.Pool
+  ( Pool,
+    createPool,
+    withResource,
+  )
+import Data.String (fromString)
+import qualified Database as DB
+import Database.PostgreSQL.Simple (Connection, close, connectPostgreSQL)
+import Network.HTTP.Types.Header (Header)
+import Network.Wai (Application)
+import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
+import Scraper
+import System.Environment (getEnv, setEnv)
+import System.Logger
+  ( Logger,
+    Output (StdOut),
+    create,
+  )
+import Test.Hspec
+  ( Spec,
+    beforeAll,
+    beforeAll_,
+    describe,
+    hspec,
+    it,
+  )
+import Test.Hspec.Wai
+  ( Body,
+    MatchBody (MatchBody),
+    ResponseMatcher (ResponseMatcher),
+    delete,
+    get,
+    post,
+    shouldRespondWith,
+    with,
+  )
+import Types
+import VesselFetcher
+import WeatherFetcher
+import Web.Scotty.Trans (scottyAppT)
+import WebServer
 
 spec :: Spec
 spec = beforeAll_ setupIntegrationTests $ with app $ do
@@ -111,7 +124,7 @@ jsonReponseMatcher jsonChecker = do
     bodyMatcher :: [Header] -> Body -> Maybe String
     bodyMatcher _ body = case decode body of
       Just decodedBody -> jsonChecker decodedBody
-      Nothing          -> return "Couldn't decode response"
+      Nothing -> return "Couldn't decode response"
 
 -- Setup
 setupIntegrationTests :: IO ()

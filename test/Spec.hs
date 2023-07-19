@@ -1,9 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Test.Hspec      (Spec, describe, hspec)
-
 import qualified IntegrationSpec
 import qualified JSONSpec
+import Test.Hspec (Spec, describe, hspec)
 
 main :: IO ()
 main = hspec spec

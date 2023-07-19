@@ -1,30 +1,31 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module JSONSpec where
 
-import           Data.Aeson                     (encode)
-import           Data.Aeson.QQ                  (aesonQQ)
-import           Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
-import           Data.Time.Clock                (UTCTime (UTCTime))
-import           Test.Hspec                     (Spec, describe, it, shouldBe)
-
-import           Types
+import Data.Aeson (encode)
+import Data.Aeson.QQ (aesonQQ)
+import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
+import Data.Time.Clock (UTCTime (UTCTime))
+import Test.Hspec (Spec, describe, it, shouldBe)
+import Types
 
 spec :: Spec
 spec = do
   describe "Notification Payloads" $ do
     describe "APSPayload" $
       it "encodes correctly" $
-        encode APSPayload
-        { apsPayloadAps = APSPayloadBody
-          { apsPayloadBodyAlert = "There is a disruption to the Arran service"
-          , apsPayloadBodySound = "default"
-          }
-        , apsPayloadServiceID = 5
-        }
-        `shouldBe`
-        encode [aesonQQ|
+        encode
+          APSPayload
+            { apsPayloadAps =
+                APSPayloadBody
+                  { apsPayloadBodyAlert = "There is a disruption to the Arran service",
+                    apsPayloadBodySound = "default"
+                  },
+              apsPayloadServiceID = 5
+            }
+          `shouldBe` encode
+            [aesonQQ|
           {
             "service_id": 5,
             "aps": {
@@ -36,19 +37,22 @@ spec = do
 
     describe "GCMPayload" $
       it "encodes correctly" $
-        encode GCMPayload
-        { gcmPayloadData = GCMPayloadData
-          { gcmPayloadDataServiceID = 5
-          , gcmPayloadDataTitle = "Sailings disrupted"
-          , gcmPayloadDataBody = "Ardrossan (ARD) - Brodick (BRO)"
-          }
-        , gcmPayloadPriority = "high"
-        , gcmPayloadAndroid = GCMPayloadAndroid
-          { gcmPayloadAndroidPriority = "high" 
-          }
-        }
-        `shouldBe`
-        encode [aesonQQ|
+        encode
+          GCMPayload
+            { gcmPayloadData =
+                GCMPayloadData
+                  { gcmPayloadDataServiceID = 5,
+                    gcmPayloadDataTitle = "Sailings disrupted",
+                    gcmPayloadDataBody = "Ardrossan (ARD) - Brodick (BRO)"
+                  },
+              gcmPayloadPriority = "high",
+              gcmPayloadAndroid =
+                GCMPayloadAndroid
+                  { gcmPayloadAndroidPriority = "high"
+                  }
+            }
+          `shouldBe` encode
+            [aesonQQ|
           {
             "data": {
               "service_id": 5,
@@ -64,18 +68,23 @@ spec = do
 
     describe "Apple PushPayload" $
       it "encodes correctly" $
-          encode PushPayload
-          { pushPayloadDefault = "Default payload message"
-          , pushPayloadContent = ApplePayload (APSPayload
-            { apsPayloadAps = APSPayloadBody
-              { apsPayloadBodyAlert = "There is a disruption to the Arran service"
-              , apsPayloadBodySound = "default"
-              }
-            , apsPayloadServiceID = 5
-            })
-          }
-          `shouldBe`
-          encode [aesonQQ|
+        encode
+          PushPayload
+            { pushPayloadDefault = "Default payload message",
+              pushPayloadContent =
+                ApplePayload
+                  ( APSPayload
+                      { apsPayloadAps =
+                          APSPayloadBody
+                            { apsPayloadBodyAlert = "There is a disruption to the Arran service",
+                              apsPayloadBodySound = "default"
+                            },
+                        apsPayloadServiceID = 5
+                      }
+                  )
+            }
+          `shouldBe` encode
+            [aesonQQ|
             {
               "default": "Default payload message",
               "APNS": "{\"aps\":{\"alert\":\"There is a disruption to the Arran service\",\"sound\":\"default\"},\"service_id\":5}",
@@ -86,22 +95,29 @@ spec = do
 
     describe "Google PushPayload" $
       it "encodes correctly" $
-          encode PushPayload
-          { pushPayloadDefault = "Default payload message"
-          , pushPayloadContent = GooglePayload (GCMPayload
-            { gcmPayloadData = GCMPayloadData
-              { gcmPayloadDataServiceID = 5
-              , gcmPayloadDataTitle = "Sailings disrupted"
-              , gcmPayloadDataBody = "Ardrossan (ARD) - Brodick (BRO)"
-              }
-            , gcmPayloadPriority = "high"
-            , gcmPayloadAndroid = (GCMPayloadAndroid
-              { gcmPayloadAndroidPriority = "high"
-              })
-            })
-          }
-          `shouldBe`
-          encode [aesonQQ|
+        encode
+          PushPayload
+            { pushPayloadDefault = "Default payload message",
+              pushPayloadContent =
+                GooglePayload
+                  ( GCMPayload
+                      { gcmPayloadData =
+                          GCMPayloadData
+                            { gcmPayloadDataServiceID = 5,
+                              gcmPayloadDataTitle = "Sailings disrupted",
+                              gcmPayloadDataBody = "Ardrossan (ARD) - Brodick (BRO)"
+                            },
+                        gcmPayloadPriority = "high",
+                        gcmPayloadAndroid =
+                          ( GCMPayloadAndroid
+                              { gcmPayloadAndroidPriority = "high"
+                              }
+                          )
+                      }
+                  )
+            }
+          `shouldBe` encode
+            [aesonQQ|
             {
               "default": "Default payload message",
               "APNS": null,
@@ -113,46 +129,49 @@ spec = do
   describe "API payloads" $ do
     describe "ServiceResponse" $
       it "encodes correctly" $
-        encode ServiceResponse
-        { serviceResponseServiceID = 5
-        , serviceResponseSortOrder = 1
-        , serviceResponseArea = "ARRAN"
-        , serviceResponseRoute = "Ardrossan (ARD) - Brodick (BRO)"
-        , serviceResponseStatus = Disrupted
-        , serviceResponseLocations = [
-          LocationResponse
-          { locationResponseID = 4
-          , locationResponseName = "Brodick"
-          , locationResponseLatitude = 55.576606
-          , locationResponseLongitude = -5.139172
-          , locationResponseWeather = Just LocationWeatherResponse
-          { locationWeatherResponseIcon = "10n"
-          , locationWeatherResponseDescription = "Moderate rain"
-          , locationWeatherResponseTemperatureCelsius = 5
-          , locationWeatherResponseWindSpeedMPH = 18
-          , locationWeatherResponseWindDirection = 196.4
-          , locationWeatherResponseWindDirectionCardinal = "SSW"
-          }
-          }
-        ]
-        , serviceResponseAdditionalInfo = Just "Additional info"
-        , serviceResponseDisruptionReason = Just "Weather"
-        , serviceResponseLastUpdatedDate =  Just $ UTCTime (fromOrdinalDate 2022 32) 5000
-        , serviceResponseVessels = [
-          VesselResponse
-          { vesselResponseMmsi = 232001580
-          , vesselResponseName = "Caledonian Isles"
-          , vesselResponseSpeed = Just 0.2
-          , vesselResponseCourse = Just 226
-          , vesselResponseLatitude = -5.135736
-          , vesselResponseLongitude = 55.57808
-          , vesselResponseLastReceived = UTCTime (fromOrdinalDate 2022 45) 6000
-          }
-        ]
-        , serviceResponseUpdated = UTCTime (fromOrdinalDate 2022 33) 5000
-        }
-        `shouldBe`
-        encode [aesonQQ|
+        encode
+          ServiceResponse
+            { serviceResponseServiceID = 5,
+              serviceResponseSortOrder = 1,
+              serviceResponseArea = "ARRAN",
+              serviceResponseRoute = "Ardrossan (ARD) - Brodick (BRO)",
+              serviceResponseStatus = Disrupted,
+              serviceResponseLocations =
+                [ LocationResponse
+                    { locationResponseID = 4,
+                      locationResponseName = "Brodick",
+                      locationResponseLatitude = 55.576606,
+                      locationResponseLongitude = -5.139172,
+                      locationResponseWeather =
+                        Just
+                          LocationWeatherResponse
+                            { locationWeatherResponseIcon = "10n",
+                              locationWeatherResponseDescription = "Moderate rain",
+                              locationWeatherResponseTemperatureCelsius = 5,
+                              locationWeatherResponseWindSpeedMPH = 18,
+                              locationWeatherResponseWindDirection = 196.4,
+                              locationWeatherResponseWindDirectionCardinal = "SSW"
+                            }
+                    }
+                ],
+              serviceResponseAdditionalInfo = Just "Additional info",
+              serviceResponseDisruptionReason = Just "Weather",
+              serviceResponseLastUpdatedDate = Just $ UTCTime (fromOrdinalDate 2022 32) 5000,
+              serviceResponseVessels =
+                [ VesselResponse
+                    { vesselResponseMmsi = 232001580,
+                      vesselResponseName = "Caledonian Isles",
+                      vesselResponseSpeed = Just 0.2,
+                      vesselResponseCourse = Just 226,
+                      vesselResponseLatitude = -5.135736,
+                      vesselResponseLongitude = 55.57808,
+                      vesselResponseLastReceived = UTCTime (fromOrdinalDate 2022 45) 6000
+                    }
+                ],
+              serviceResponseUpdated = UTCTime (fromOrdinalDate 2022 33) 5000
+            }
+          `shouldBe` encode
+            [aesonQQ|
           {
             "service_id": 5,
             "sort_order": 1,
@@ -194,18 +213,19 @@ spec = do
         |]
 
     describe "VesselResponse" $
-        it "encodes correctly" $
-          encode VesselResponse
-          { vesselResponseMmsi = 232001580
-          , vesselResponseName = "Caledonian Isles"
-          , vesselResponseSpeed = Just 0.2
-          , vesselResponseCourse = Just 226
-          , vesselResponseLatitude = -5.135736
-          , vesselResponseLongitude = 55.57808
-          , vesselResponseLastReceived = UTCTime (fromOrdinalDate 2022 45) 6000
-          }
-          `shouldBe`
-          encode [aesonQQ|
+      it "encodes correctly" $
+        encode
+          VesselResponse
+            { vesselResponseMmsi = 232001580,
+              vesselResponseName = "Caledonian Isles",
+              vesselResponseSpeed = Just 0.2,
+              vesselResponseCourse = Just 226,
+              vesselResponseLatitude = -5.135736,
+              vesselResponseLongitude = 55.57808,
+              vesselResponseLastReceived = UTCTime (fromOrdinalDate 2022 45) 6000
+            }
+          `shouldBe` encode
+            [aesonQQ|
             {
               "mmsi": 232001580,
               "name": "Caledonian Isles",
@@ -219,12 +239,13 @@ spec = do
 
     describe "CreateInstallationRequest" $
       it "encodes correctly" $
-        encode CreateInstallationRequest
-        { createInstallationRequestDeviceToken = "20f2d2e336a0c62c8c5f3dc1bb3d3f36e830ce14230bc8fa547fd16fb8f917b5"
-        , createInstallationRequestDeviceType = IOS
-        }
-        `shouldBe`
-        encode [aesonQQ|
+        encode
+          CreateInstallationRequest
+            { createInstallationRequestDeviceToken = "20f2d2e336a0c62c8c5f3dc1bb3d3f36e830ce14230bc8fa547fd16fb8f917b5",
+              createInstallationRequestDeviceType = IOS
+            }
+          `shouldBe` encode
+            [aesonQQ|
           {
             "device_token": "20f2d2e336a0c62c8c5f3dc1bb3d3f36e830ce14230bc8fa547fd16fb8f917b5",
             "device_type": "IOS"
@@ -233,11 +254,12 @@ spec = do
 
     describe "AddServiceRequest" $
       it "encodes correctly" $
-        encode AddServiceRequest
-        { addServiceRequestServiceID = 5
-        }
-        `shouldBe`
-        encode [aesonQQ|
+        encode
+          AddServiceRequest
+            { addServiceRequestServiceID = 5
+            }
+          `shouldBe` encode
+            [aesonQQ|
           {
             "service_id": 5
           }

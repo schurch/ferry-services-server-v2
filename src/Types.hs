@@ -1,47 +1,59 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Types where
 
-import           Control.Monad.Reader                 (ReaderT, asks)
-import           Data.Aeson                           (FromJSON (parseJSON),
-                                                       KeyValue ((.=)),
-                                                       Options (fieldLabelModifier, omitNothingFields),
-                                                       ToJSON (toJSON),
-                                                       Value (..), camelTo2,
-                                                       defaultOptions, encode,
-                                                       genericParseJSON,
-                                                       genericToJSON, object,
-                                                       withScientific)
-import           Data.Char                            (toLower, toUpper)
-import           Data.Maybe                           (fromMaybe)
-import           Data.Pool                            (Pool)
-import           Data.Proxy
-import           Data.Scientific                      (Scientific,
-                                                       toBoundedInteger)
-import           Data.Text.Lazy                       (Text)
-import           Data.Time.Clock                      (UTCTime)
-import           Data.Typeable                        (Typeable, typeRep)
-import           Data.UUID                            (UUID)
-import           Database.Postgis                     (Geometry, readGeometry,
-                                                       writeGeometry)
-import           Database.PostgreSQL.Simple           (Connection, FromRow,
-                                                       ToRow)
-import           Database.PostgreSQL.Simple.FromField (FromField (..))
-import           Database.PostgreSQL.Simple.ToField   (ToField (..))
-import           GHC.Generics                         (Generic)
-import           System.Logger                        (Logger, log)
-import           System.Logger.Class                  (MonadLogger, log)
-import           Web.Scotty.Trans                     (ActionT, ScottyT)
-
-import qualified Data.ByteString.Lazy                 as B
-import qualified Data.ByteString.Lazy.Char8           as C
+import Control.Monad.Reader (ReaderT, asks)
+import Data.Aeson
+  ( FromJSON (parseJSON),
+    KeyValue ((.=)),
+    Options (fieldLabelModifier, omitNothingFields),
+    ToJSON (toJSON),
+    Value (..),
+    camelTo2,
+    defaultOptions,
+    encode,
+    genericParseJSON,
+    genericToJSON,
+    object,
+    withScientific,
+  )
+import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy.Char8 as C
+import Data.Char (toLower, toUpper)
+import Data.Maybe (fromMaybe)
+import Data.Pool (Pool)
+import Data.Proxy
+import Data.Scientific
+  ( Scientific,
+    toBoundedInteger,
+  )
+import Data.Text.Lazy (Text)
+import Data.Time (LocalTime, UTCTime)
+import Data.Typeable (Typeable, typeRep)
+import Data.UUID (UUID)
+import Database.Postgis
+  ( Geometry,
+    readGeometry,
+    writeGeometry,
+  )
+import Database.PostgreSQL.Simple
+  ( Connection,
+    FromRow,
+    ToRow,
+  )
+import Database.PostgreSQL.Simple.FromField (FromField (..))
+import Database.PostgreSQL.Simple.ToField (ToField (..))
+import GHC.Generics (Generic)
+import System.Logger (Logger, log)
+import System.Logger.Class (MonadLogger, log)
+import Web.Scotty.Trans (ActionT, ScottyT)
 
 data Env = Env
-  { logger         :: Logger
-  , connectionPool :: Pool Connection
+  { logger :: Logger,
+    connectionPool :: Pool Connection
   }
 
 type Application = ReaderT Env IO
@@ -53,6 +65,7 @@ instance MonadLogger Application where
 
 -- Web server
 type Scotty = ScottyT Text Application ()
+
 type Action = ActionT Text Application
 
 instance MonadLogger Types.Action where
@@ -69,31 +82,33 @@ instance MonadLogger Types.Action where
 --   "ADM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
 -- }
 data PushPayload = PushPayload
-  { pushPayloadDefault :: String
-  , pushPayloadContent :: PushPayloadContent
+  { pushPayloadDefault :: String,
+    pushPayloadContent :: PushPayloadContent
   }
-  deriving Show
+  deriving (Show)
 
-data PushPayloadContent = ApplePayload APSPayload | GooglePayload GCMPayload deriving Show
+data PushPayloadContent = ApplePayload APSPayload | GooglePayload GCMPayload deriving (Show)
 
 instance ToJSON PushPayload where
-  toJSON (PushPayload text (ApplePayload apns)) = object
-    [ "default" .= text
-    , "APNS" .= (C.unpack . encode $ apns)
-    , "APNS_SANDBOX" .= (C.unpack . encode $ apns)
-    , "GCM" .= Null
-    ]
-  toJSON (PushPayload text (GooglePayload gcm)) = object
-    [ "default" .= text
-    , "APNS" .= Null
-    , "APNS_SANDBOX" .= Null
-    , "GCM" .= (C.unpack . encode $ gcm)
-    ]
+  toJSON (PushPayload text (ApplePayload apns)) =
+    object
+      [ "default" .= text,
+        "APNS" .= (C.unpack . encode $ apns),
+        "APNS_SANDBOX" .= (C.unpack . encode $ apns),
+        "GCM" .= Null
+      ]
+  toJSON (PushPayload text (GooglePayload gcm)) =
+    object
+      [ "default" .= text,
+        "APNS" .= Null,
+        "APNS_SANDBOX" .= Null,
+        "GCM" .= (C.unpack . encode $ gcm)
+      ]
 
 -- Apple
 data APSPayload = APSPayload
-  { apsPayloadAps       :: APSPayloadBody
-  , apsPayloadServiceID :: Int
+  { apsPayloadAps :: APSPayloadBody,
+    apsPayloadServiceID :: Int
   }
   deriving (Generic, Show)
 
@@ -101,8 +116,8 @@ instance ToJSON APSPayload where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayload)
 
 data APSPayloadBody = APSPayloadBody
-  { apsPayloadBodyAlert :: String
-  , apsPayloadBodySound :: String
+  { apsPayloadBodyAlert :: String,
+    apsPayloadBodySound :: String
   }
   deriving (Generic, Show)
 
@@ -111,9 +126,9 @@ instance ToJSON APSPayloadBody where
 
 -- Google
 data GCMPayload = GCMPayload
-  { gcmPayloadData         :: GCMPayloadData
-  , gcmPayloadPriority     :: String
-  , gcmPayloadAndroid      :: GCMPayloadAndroid
+  { gcmPayloadData :: GCMPayloadData,
+    gcmPayloadPriority :: String,
+    gcmPayloadAndroid :: GCMPayloadAndroid
   }
   deriving (Generic, Show)
 
@@ -121,9 +136,9 @@ instance ToJSON GCMPayload where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPayload)
 
 data GCMPayloadData = GCMPayloadData
-  { gcmPayloadDataServiceID :: Int
-  , gcmPayloadDataTitle     :: String
-  , gcmPayloadDataBody      :: String
+  { gcmPayloadDataServiceID :: Int,
+    gcmPayloadDataTitle :: String,
+    gcmPayloadDataBody :: String
   }
   deriving (Generic, Show)
 
@@ -147,10 +162,10 @@ instance Enum ServiceStatus where
   toEnum 2 = Cancelled
   toEnum _ = Unknown
 
-  fromEnum Normal    = 0
+  fromEnum Normal = 0
   fromEnum Disrupted = 1
   fromEnum Cancelled = 2
-  fromEnum Unknown   = -99
+  fromEnum Unknown = -99
 
 instance ToJSON ServiceStatus where
   toJSON = toJSON . fromEnum
@@ -178,101 +193,111 @@ instance FromField DeviceType where
 
 -- Database Types
 instance ToField Geometry where
-  toField  =  toField . writeGeometry
+  toField = toField . writeGeometry
 
 instance FromField Geometry where
   fromField f m = case m of
-              Just bs -> return $ readGeometry . B.fromStrict $ bs
-              Nothing -> error "Invalid Field"
+    Just bs -> return $ readGeometry . B.fromStrict $ bs
+    Nothing -> error "Invalid Field"
 
 data Service = Service
-  { serviceID               :: Int
-  , serviceArea             :: String
-  , serviceRoute            :: String
-  , serviceStatus           :: ServiceStatus
-  , serviceAdditionalInfo   :: Maybe String
-  , serviceDisruptionReason :: Maybe String
-  , serviceOrganisationID   :: Int
-  , serviceLastUpdatedDate  :: Maybe UTCTime
-  , serviceUpdated          :: UTCTime
+  { serviceID :: Int,
+    serviceArea :: String,
+    serviceRoute :: String,
+    serviceStatus :: ServiceStatus,
+    serviceAdditionalInfo :: Maybe String,
+    serviceDisruptionReason :: Maybe String,
+    serviceOrganisationID :: Int,
+    serviceLastUpdatedDate :: Maybe UTCTime,
+    serviceUpdated :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data Installation = Installation
-  { installationID          :: UUID
-  , installationDeviceToken :: String
-  , installationDeviceType  :: DeviceType
-  , installationEndpointARN :: String
-  , installationpUpatedDate :: UTCTime
+  { installationID :: UUID,
+    installationDeviceToken :: String,
+    installationDeviceType :: DeviceType,
+    installationEndpointARN :: String,
+    installationpUpatedDate :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data ServiceLocation = ServiceLocation
-  { serviceLocationServiceID  :: Int
-  , serviceLocationLocationID :: Int
-  , serviceLocationName       :: String
-  , serviceLocationCoordinate :: Geometry
+  { serviceLocationServiceID :: Int,
+    serviceLocationLocationID :: Int,
+    serviceLocationName :: String,
+    serviceLocationCoordinate :: Geometry
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data Location = Location
-  { locationLocationID :: Int
-  , locationName       :: String
-  , locationCoordinate :: Geometry
-  , locationCreated    :: UTCTime
+  { locationLocationID :: Int,
+    locationName :: String,
+    locationCoordinate :: Geometry,
+    locationCreated :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data LocationWeather = LocationWeather
-  { locationWeatherLocationID    :: Int
-  , locationWeatherDescription   :: String
-  , locationWeatherIcon          :: String
-  , locationWeatherTemperature   :: Scientific
-  , locationWeatherWindSpeed     :: Scientific
-  , locationWeatherWindDirection :: Scientific
-  , locationWeatherUpdated       :: UTCTime
-  , locationWeatherCreated       :: UTCTime
+  { locationWeatherLocationID :: Int,
+    locationWeatherDescription :: String,
+    locationWeatherIcon :: String,
+    locationWeatherTemperature :: Scientific,
+    locationWeatherWindSpeed :: Scientific,
+    locationWeatherWindDirection :: Scientific,
+    locationWeatherUpdated :: UTCTime,
+    locationWeatherCreated :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data Vessel = Vessel
-  { vesselMmsi           :: Int
-  , vesselName           :: String
-  , vesselSpeed          :: Maybe Scientific
-  , vesselCourse         :: Maybe Scientific
-  , vesselCoordinate     :: Geometry
-  , vesselLastReceived   :: UTCTime
-  , vesselUpdated        :: UTCTime
-  , vesselOrganisationID :: Int
+  { vesselMmsi :: Int,
+    vesselName :: String,
+    vesselSpeed :: Maybe Scientific,
+    vesselCourse :: Maybe Scientific,
+    vesselCoordinate :: Geometry,
+    vesselLastReceived :: UTCTime,
+    vesselUpdated :: UTCTime,
+    vesselOrganisationID :: Int
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 data ServiceVessel = ServiceVessel
-  { serviceVesselSeviceID       :: Int
-  , serviceVesselMmsi           :: Int
-  , serviceVesselName           :: String
-  , serviceVesselSpeed          :: Maybe Scientific
-  , serviceVesselCourse         :: Maybe Scientific
-  , serviceVesselCoordinate     :: Geometry
-  , serviceVesselLastReceived   :: UTCTime
-  , serviceVesselUpdated        :: UTCTime
-  , serviceVesselOrganisationID :: Int
+  { serviceVesselSeviceID :: Int,
+    serviceVesselMmsi :: Int,
+    serviceVesselName :: String,
+    serviceVesselSpeed :: Maybe Scientific,
+    serviceVesselCourse :: Maybe Scientific,
+    serviceVesselCoordinate :: Geometry,
+    serviceVesselLastReceived :: UTCTime,
+    serviceVesselUpdated :: UTCTime,
+    serviceVesselOrganisationID :: Int
+  }
+  deriving (Generic, Show, ToRow, FromRow)
+
+data LocationDeparture = LocationDeparture
+  { locationDepartureFromLocationID :: Int,
+    locationDepartureToLocationID :: Int,
+    locationDepartureToLocationName :: String,
+    locationDepartureToLocationCoordinate :: Geometry,
+    locationDepartureDepartue :: LocalTime,
+    locationDepartureArrival :: LocalTime
   }
   deriving (Generic, Show, ToRow, FromRow)
 
 -- API Types
 data ServiceResponse = ServiceResponse
-  { serviceResponseServiceID        :: Int
-  , serviceResponseSortOrder        :: Int
-  , serviceResponseArea             :: String
-  , serviceResponseRoute            :: String
-  , serviceResponseStatus           :: ServiceStatus
-  , serviceResponseLocations        :: [LocationResponse]
-  , serviceResponseAdditionalInfo   :: Maybe String
-  , serviceResponseDisruptionReason :: Maybe String
-  , serviceResponseLastUpdatedDate  :: Maybe UTCTime
-  , serviceResponseVessels          :: [VesselResponse]
-  , serviceResponseUpdated          :: UTCTime
+  { serviceResponseServiceID :: Int,
+    serviceResponseSortOrder :: Int,
+    serviceResponseArea :: String,
+    serviceResponseRoute :: String,
+    serviceResponseStatus :: ServiceStatus,
+    serviceResponseLocations :: [LocationResponse],
+    serviceResponseAdditionalInfo :: Maybe String,
+    serviceResponseDisruptionReason :: Maybe String,
+    serviceResponseLastUpdatedDate :: Maybe UTCTime,
+    serviceResponseVessels :: [VesselResponse],
+    serviceResponseUpdated :: UTCTime
   }
   deriving (Generic, Show)
 
@@ -283,8 +308,8 @@ instance FromJSON ServiceResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy ServiceResponse)
 
 data CreateInstallationRequest = CreateInstallationRequest
-  { createInstallationRequestDeviceToken :: String
-  , createInstallationRequestDeviceType  :: DeviceType
+  { createInstallationRequestDeviceToken :: String,
+    createInstallationRequestDeviceType :: DeviceType
   }
   deriving (Generic, Show)
 
@@ -306,11 +331,12 @@ instance ToJSON AddServiceRequest where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy AddServiceRequest)
 
 data LocationResponse = LocationResponse
-  { locationResponseID        :: Int
-  , locationResponseName      :: String
-  , locationResponseLatitude  :: Scientific
-  , locationResponseLongitude :: Scientific
-  , locationResponseWeather   :: Maybe LocationWeatherResponse
+  { locationResponseID :: Int,
+    locationResponseName :: String,
+    locationResponseLatitude :: Scientific,
+    locationResponseLongitude :: Scientific,
+    locationResponseScheduledDepartures :: Maybe [DepartureResponse],
+    locationResponseWeather :: Maybe LocationWeatherResponse
   }
   deriving (Generic, Show)
 
@@ -321,12 +347,12 @@ instance FromJSON LocationResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy LocationResponse)
 
 data LocationWeatherResponse = LocationWeatherResponse
-  { locationWeatherResponseIcon                  :: String
-  , locationWeatherResponseDescription           :: String
-  , locationWeatherResponseTemperatureCelsius    :: Int
-  , locationWeatherResponseWindSpeedMPH          :: Int
-  , locationWeatherResponseWindDirection         :: Scientific
-  , locationWeatherResponseWindDirectionCardinal :: String
+  { locationWeatherResponseIcon :: String,
+    locationWeatherResponseDescription :: String,
+    locationWeatherResponseTemperatureCelsius :: Int,
+    locationWeatherResponseWindSpeedMPH :: Int,
+    locationWeatherResponseWindDirection :: Scientific,
+    locationWeatherResponseWindDirectionCardinal :: String
   }
   deriving (Generic, Show)
 
@@ -337,13 +363,13 @@ instance FromJSON LocationWeatherResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy LocationWeatherResponse)
 
 data VesselResponse = VesselResponse
-  { vesselResponseMmsi         :: Int
-  , vesselResponseName         :: String
-  , vesselResponseSpeed        :: Maybe Scientific
-  , vesselResponseCourse       :: Maybe Scientific
-  , vesselResponseLatitude     :: Scientific
-  , vesselResponseLongitude    :: Scientific
-  , vesselResponseLastReceived :: UTCTime
+  { vesselResponseMmsi :: Int,
+    vesselResponseName :: String,
+    vesselResponseSpeed :: Maybe Scientific,
+    vesselResponseCourse :: Maybe Scientific,
+    vesselResponseLatitude :: Scientific,
+    vesselResponseLongitude :: Scientific,
+    vesselResponseLastReceived :: UTCTime
   }
   deriving (Generic, Show)
 
@@ -353,44 +379,56 @@ instance ToJSON VesselResponse where
 instance FromJSON VesselResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy VesselResponse)
 
+data DepartureResponse = DepartureResponse
+  { departureResponseDestination :: LocationResponse,
+    departureResponseDeparture :: UTCTime,
+    departureResponseArrival :: UTCTime
+  }
+  deriving (Generic, Show)
+
+instance ToJSON DepartureResponse where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy DepartureResponse)
+
+instance FromJSON DepartureResponse where
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy DepartureResponse)
+
 jsonOptions :: Typeable a => Proxy a -> Data.Aeson.Options
 jsonOptions type' =
-  let
-    typeName = show $ typeRep type'
-  in
-    defaultOptions
-    { fieldLabelModifier = camelTo2 '_' . drop (length typeName)
-    , omitNothingFields  = True
-    }
+  let typeName = show $ typeRep type'
+   in defaultOptions
+        { fieldLabelModifier = camelTo2 '_' . drop (length typeName),
+          omitNothingFields = True
+        }
 
 -- Scraper Types
 data AjaxServiceDetails = AjaxServiceDetails
-  { ajaxServiceDetailsReason       :: String
-  , ajaxServiceDetailsImage        :: String
-  , ajaxServiceDetailsDestName     :: String
-  , ajaxServiceDetailsCode         :: String
-  , ajaxServiceDetailsInfoIncluded :: String
-  , ajaxServiceDetailsInfoMsg      :: Maybe String
-  , ajaxServiceDetailsReported     :: String
-  , ajaxServiceDetailsId           :: String
-  , ajaxServiceDetailsWebDetail    :: String
-  , ajaxServiceDetailsUpdated      :: String
-  , ajaxServiceDetailsRouteName    :: String
-  , ajaxServiceDetailsStatus       :: String
+  { ajaxServiceDetailsReason :: String,
+    ajaxServiceDetailsImage :: String,
+    ajaxServiceDetailsDestName :: String,
+    ajaxServiceDetailsCode :: String,
+    ajaxServiceDetailsInfoIncluded :: String,
+    ajaxServiceDetailsInfoMsg :: Maybe String,
+    ajaxServiceDetailsReported :: String,
+    ajaxServiceDetailsId :: String,
+    ajaxServiceDetailsWebDetail :: String,
+    ajaxServiceDetailsUpdated :: String,
+    ajaxServiceDetailsRouteName :: String,
+    ajaxServiceDetailsStatus :: String
   }
   deriving (Generic, Show)
 
 instance FromJSON AjaxServiceDetails where
-  parseJSON = genericParseJSON
-    $ defaultOptions {
-      fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxServiceDetails))
-      }
+  parseJSON =
+    genericParseJSON $
+      defaultOptions
+        { fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxServiceDetails))
+        }
 
 -- Weather Fetcher Types
 data WeatherFetcherResult = WeatherFetcherResult
-  { weatherFetcherResultWeather :: [WeatherFetcherResultWeather]
-  , weatherFetcherResultMain    :: WeatherFetcherResultMain
-  , weatherFetcherResultWind    :: WeatherFetcherResultWind
+  { weatherFetcherResultWeather :: [WeatherFetcherResultWeather],
+    weatherFetcherResultMain :: WeatherFetcherResultMain,
+    weatherFetcherResultWind :: WeatherFetcherResultWind
   }
   deriving (Generic, Show)
 
@@ -398,8 +436,8 @@ instance FromJSON WeatherFetcherResult where
   parseJSON = genericParseJSON $ weatherFetcherJsonOptions (Proxy :: Proxy WeatherFetcherResult)
 
 data WeatherFetcherResultWeather = WeatherFetcherResultWeather
-  { weatherFetcherResultWeatherIcon        :: String
-  , weatherFetcherResultWeatherDescription :: String
+  { weatherFetcherResultWeatherIcon :: String,
+    weatherFetcherResultWeatherDescription :: String
   }
   deriving (Generic, Show)
 
@@ -415,8 +453,8 @@ instance FromJSON WeatherFetcherResultMain where
   parseJSON = genericParseJSON $ weatherFetcherJsonOptions (Proxy :: Proxy WeatherFetcherResultMain)
 
 data WeatherFetcherResultWind = WeatherFetcherResultWind
-  { weatherFetcherResultWindSpeed :: Scientific
-  , weatherFetcherResultWindDeg   :: Scientific
+  { weatherFetcherResultWindSpeed :: Scientific,
+    weatherFetcherResultWindDeg :: Scientific
   }
   deriving (Generic, Show)
 
@@ -425,42 +463,42 @@ instance FromJSON WeatherFetcherResultWind where
 
 weatherFetcherJsonOptions :: Typeable a => Proxy a -> Options
 weatherFetcherJsonOptions type' =
-  let
-    typeName = show $ typeRep type'
-  in
-    defaultOptions { fieldLabelModifier = camelTo2 '_' . drop (length typeName) }
+  let typeName = show $ typeRep type'
+   in defaultOptions {fieldLabelModifier = camelTo2 '_' . drop (length typeName)}
 
 -- Vessel Fetcher Types
 data AjaxVessels = AjaxVessels
-  { ajaxVesselsData       :: [AjaxVessel]
-  , ajaxVesselsTotalCount :: Int
+  { ajaxVesselsData :: [AjaxVessel],
+    ajaxVesselsTotalCount :: Int
   }
   deriving (Generic, Show)
 
 instance FromJSON AjaxVessels where
-  parseJSON = genericParseJSON
-    $ defaultOptions {
-      fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessels))
-      }
+  parseJSON =
+    genericParseJSON $
+      defaultOptions
+        { fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessels))
+        }
 
 data AjaxVessel = AjaxVessel
-  { ajaxVesselShipname :: String
-  , ajaxVesselMmsi     :: String
-  , ajaxVesselLat      :: String
-  , ajaxVesselLon      :: String
-  , ajaxVesselSpeed    :: Maybe String
-  , ajaxVesselCourse   :: Maybe String
-  , ajaxVesselLastPos  :: Int -- Unix timestamp
+  { ajaxVesselShipname :: String,
+    ajaxVesselMmsi :: String,
+    ajaxVesselLat :: String,
+    ajaxVesselLon :: String,
+    ajaxVesselSpeed :: Maybe String,
+    ajaxVesselCourse :: Maybe String,
+    ajaxVesselLastPos :: Int -- Unix timestamp
   }
   deriving (Generic, Show)
 
 instance FromJSON AjaxVessel where
-  parseJSON = genericParseJSON
-    $ defaultOptions {
-      fieldLabelModifier = map toUpper . camelTo2 '_' . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessel))
-      }
+  parseJSON =
+    genericParseJSON $
+      defaultOptions
+        { fieldLabelModifier = map toUpper . camelTo2 '_' . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessel))
+        }
 
 -- Helpers
 toLowerFirstLetter :: String -> String
-toLowerFirstLetter []       = []
+toLowerFirstLetter [] = []
 toLowerFirstLetter (x : xs) = toLower x : xs

@@ -1,31 +1,45 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
-import           Control.Concurrent                     (threadDelay)
-import           Control.Exception                      (SomeException, catch)
-import           Control.Monad                          (forM_, forever, void,
-                                                         when)
-import           Control.Monad.Trans.Reader             (runReaderT)
-import           Data.Pool                              (createPool)
-import           Data.String                            (fromString)
-import           Database.PostgreSQL.Simple             (close,
-                                                         connectPostgreSQL)
-import           System.Environment                     (getEnv)
-import           System.Log.Raven                       (initRaven, register,
-                                                         silentFallback)
-import           System.Log.Raven.Transport.HttpConduit (sendRecord)
-import           System.Log.Raven.Types                 (SentryLevel (Error),
-                                                         SentryRecord (..))
-import           System.Logger                          (Logger,
-                                                         Output (StdOut),
-                                                         create, err, info)
-import           System.Logger.Class                    (Logger, debug)
-import           System.Logger.Message                  (msg)
-
-import           Scraper
-import           Types
+import Control.Concurrent (threadDelay)
+import Control.Exception (SomeException, catch)
+import Control.Monad
+  ( forM_,
+    forever,
+    void,
+    when,
+  )
+import Control.Monad.Trans.Reader (runReaderT)
+import Data.Pool (createPool)
+import Data.String (fromString)
+import Database.PostgreSQL.Simple
+  ( close,
+    connectPostgreSQL,
+  )
+import Scraper
+import System.Environment (getEnv)
+import System.Log.Raven
+  ( initRaven,
+    register,
+    silentFallback,
+  )
+import System.Log.Raven.Transport.HttpConduit (sendRecord)
+import System.Log.Raven.Types
+  ( SentryLevel (Error),
+    SentryRecord (..),
+  )
+import System.Logger
+  ( Logger,
+    Output (StdOut),
+    create,
+    err,
+    info,
+  )
+import System.Logger.Class (Logger, debug)
+import System.Logger.Message (msg)
+import Types
 
 main :: IO ()
 main = do
@@ -49,14 +63,15 @@ main = do
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do
   err logger (msg $ "An error occured: " <> show exception)
-  sentryDSN     <- getEnv "SCRAPER_SENTRY_DSN"
-  env           <- getEnv "ENVIRONMENT"
+  sentryDSN <- getEnv "SCRAPER_SENTRY_DSN"
+  env <- getEnv "ENVIRONMENT"
   sentryService <- initRaven sentryDSN id sendRecord silentFallback
-  register sentryService
-           "scraper-logger"
-           Error
-           (show exception)
-           (recordUpdate env)
+  register
+    sentryService
+    "scraper-logger"
+    Error
+    (show exception)
+    (recordUpdate env)
 
 recordUpdate :: String -> SentryRecord -> SentryRecord
-recordUpdate env record = record { srEnvironment = Just env }
+recordUpdate env record = record {srEnvironment = Just env}
