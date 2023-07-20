@@ -42,6 +42,16 @@ services:
       - envfile.docker-test
     tty: true
     command: /opt/ferry-services/ferry-services-vessel-fetcher-exe
+  transxchange-ingester-test:
+    image: stefanchurch/ferry-services-transxchange-ingester:latest
+    container_name: ferry-services-transxchange-ingester-test
+    depends_on:
+      - "db-test"
+    restart: always
+    env_file:
+      - envfile.docker-test
+    tty: true
+    command: /opt/ferry-services/ferry-services-transxchange-ingester-exe
   db-test:
     image: "mdillon/postgis"
     container_name: ferry-services-db-test
