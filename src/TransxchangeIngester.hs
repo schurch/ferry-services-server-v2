@@ -87,7 +87,7 @@ ingest = do
   ftpPassword <- liftIO $ getEnv "TRAVELLINE_FTP_PASSWORD"
   let ftpConnectionDetails =
         FTPConnectionDetails ftpAddress ftpUsername ftpPassword
-  transxchangeData <- downloadAndParseZip ftpConnectionDetails "S" ["FSACM05"]
+  transxchangeData <- downloadAndParseZip ftpConnectionDetails "S" ["FSACM05", "FSACM03"]
   updateTransxchangeData transxchangeData
   info (msg @String "Done")
 

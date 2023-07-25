@@ -123,4 +123,4 @@ CREATE TABLE serviced_organisation_working_days (
 
 ALTER TABLE vehicle_journeys ADD COLUMN non_operation_serviced_organisation_code TEXT NULL;
 
-COMMIt;
+COMMIT;
