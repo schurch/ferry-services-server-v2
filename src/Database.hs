@@ -385,6 +385,20 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
               AND
               query_date <= end_date
       ),
+      serviced_org_not_operating_today AS (
+          SELECT 
+              vehicle_journey_code
+          FROM 
+              vehicle_journeys vj
+          CROSS JOIN
+              constants
+          INNER JOIN
+              serviced_organisation_working_days sowd ON sowd.serviced_organisation_code = vj.non_operation_serviced_organisation_code
+          WHERE 
+              query_date >= start_date
+              AND
+              query_date <= end_date
+      ),
       utc_departure_time AS (
           SELECT 
               vj.vehicle_journey_code,
@@ -396,7 +410,7 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
           fl.location_id AS from_location_id, 
           tl.location_id AS to_location_id, 
           tl.name AS to_location_name, 
-          tl.coordinate AS to_location_name, 
+          tl.coordinate AS to_location_coordinate, 
           udp.departure :: TIMESTAMP AS departure,
           (udp.departure + t.run_time) :: TIMESTAMP AS arrival
       FROM 
@@ -433,6 +447,8 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
           derived_day_of_week = ANY (vj.days_of_week)
           AND
           vj.vehicle_journey_code NOT IN (SELECT * FROM not_operating_today)
+          AND
+          vj.vehicle_journey_code NOT IN (SELECT * FROM serviced_org_not_operating_today)
       ORDER BY
           fl.name,
           vj.departure_time
