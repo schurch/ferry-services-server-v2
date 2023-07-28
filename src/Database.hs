@@ -409,7 +409,7 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
           FROM
               journey_pattern_timing_links jptl
           INNER JOIN
-              timings t on t.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
+              timings t ON t.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
       )
       SELECT
           fl.location_id AS from_location_id, 
