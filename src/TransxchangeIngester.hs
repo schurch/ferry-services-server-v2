@@ -95,7 +95,8 @@ ingest = do
         "FSACM03",
         "FSACM25",
         "FSBCM07",
-        "FSACM11"
+        "FSACM11",
+        "FSACM09"
       ]
   updateTransxchangeData transxchangeData
   info (msg @String "Done")

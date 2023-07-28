@@ -399,28 +399,53 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
               AND
               query_date <= end_date
       ),
-      utc_departure_time AS (
+      multi_journey_time AS (
           SELECT 
-              vj.vehicle_journey_code,
-              (query_date + vj.departure_time) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC' AS departure
-          FROM 
-              vehicle_journeys vj, constants
+              jptl.journey_pattern_timing_link_id,
+              LAG(t.run_time) OVER (
+                  PARTITION BY jptl.journey_pattern_section_id 
+                  ORDER BY jptl.journey_pattern_timing_link_id
+              ) + t.wait_time AS time
+          FROM
+              journey_pattern_timing_links jptl
+          INNER JOIN
+              timings t on t.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
       )
       SELECT
           fl.location_id AS from_location_id, 
           tl.location_id AS to_location_id, 
           tl.name AS to_location_name, 
           tl.coordinate AS to_location_coordinate, 
-          udp.departure :: TIMESTAMP AS departure,
-          (udp.departure + t.run_time) :: TIMESTAMP AS arrival
+          (
+              (
+                  query_date +
+                  COALESCE (
+                      SUM (mjt.time) OVER (
+                          PARTITION BY jptl.journey_pattern_section_id 
+                          ORDER BY jptl.journey_pattern_timing_link_id
+                      ) + vj.departure_time,
+                      departure_time
+                  )
+              ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
+          ) :: TIMESTAMP AS departure,
+          (
+              (
+                  query_date +
+                  COALESCE (
+                      SUM (mjt.time) OVER (
+                          PARTITION BY jptl.journey_pattern_section_id 
+                          ORDER BY jptl.journey_pattern_timing_link_id
+                      ) + vj.departure_time,
+                      departure_time
+                  ) + t.run_time 
+              ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
+          ) :: TIMESTAMP AS arrival
       FROM 
           vehicle_journeys vj
       CROSS JOIN
           constants
       CROSS JOIN
           day_of_week
-      INNER JOIN
-          utc_departure_time udp ON vj.vehicle_journey_code = udp.vehicle_journey_code 
       INNER JOIN 
           journey_patterns jp ON vj.journey_pattern_id = jp.journey_pattern_id
       INNER JOIN 
@@ -435,6 +460,8 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
           locations fl ON fl.stop_point_id = jptl.from_stop_point
       INNER JOIN
           locations tl ON tl.stop_point_id = jptl.to_stop_point
+      INNER JOIN
+          multi_journey_time mjt ON mjt.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
       WHERE 
           s.service_id = ?
           AND
@@ -451,7 +478,7 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
           vj.vehicle_journey_code NOT IN (SELECT * FROM serviced_org_not_operating_today)
       ORDER BY
           fl.name,
-          vj.departure_time
+          departure
     |]
     (date, serviceID)
 
