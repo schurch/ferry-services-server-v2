@@ -14,11 +14,12 @@ import Control.Concurrent
     threadDelay,
     waitQSem,
   )
-import Control.Exception (finally)
+import Control.Exception (finally, tryJust)
 import qualified Control.Exception as E
 import Control.Monad
   ( forM,
     forever,
+    guard,
     void,
     when,
   )
@@ -35,6 +36,7 @@ import Data.Map
   ( fromListWith,
     toList,
   )
+import Data.Maybe (catMaybes)
 import qualified Data.Vector as V
 import Database (updateTransxchangeData)
 import GHC.Generics (Generic)
@@ -66,6 +68,7 @@ import System.Directory
     removeFile,
   )
 import System.Environment (getEnv)
+import System.IO.Error (isDoesNotExistError)
 import System.Logger (Level (..), log)
 import System.Logger.Class (Logger, debug, info)
 import System.Logger.Message (msg)
@@ -96,7 +99,10 @@ ingest = do
         "FSACM25",
         "FSBCM07",
         "FSACM11",
-        "FSACM09"
+        "FSACM09",
+        "FSANL02", -- NorthLink
+        "FSANL01",
+        "FSAWF01" -- Western Ferries
       ]
   updateTransxchangeData transxchangeData
   info (msg @String "Done")
@@ -116,7 +122,7 @@ downloadAndParseZip ftpConnectionDetails zip files = do
     downloadAndParse logger zipFileName = do
       liftIO $ downloadFile logger ftpConnectionDetails zipFileName
       withArchive zipFileName (unpackInto zip)
-      liftIO $ forM files $ \file -> do
+      result <- forM files $ \file -> do
         let filename = "SVR" <> file <> ".xml"
         System.Logger.log
           logger
@@ -128,8 +134,13 @@ downloadAndParseZip ftpConnectionDetails zip files = do
                 <> zipFileName
                 <> " ..."
           )
-        fileContents <- readFile $ zip <> "/" <> filename
-        return $ parseTransxchangeXML fileContents
+        fileContents <- tryJust (guard . isDoesNotExistError) $ readFile $ zip <> "/" <> filename
+        case fileContents of
+          Left _ -> do
+            System.Logger.log logger Error (msg @String $ filename <> " missing")
+            return Nothing
+          Right fileContents' -> return . Just . parseTransxchangeXML $ fileContents'
+      return $ catMaybes result
 
     cleanup :: String -> IO ()
     cleanup zipFileName = removeFileIfExists zipFileName >> removeDirectoryRecursive zip
