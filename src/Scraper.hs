@@ -60,7 +60,7 @@ fetchWesternFerries = do
     Service
       { serviceID = 2000,
         serviceUpdated = time,
-        serviceArea = "COWAL & DUNOON (Western Ferries)",
+        serviceArea = "COWAL & DUNOON",
         serviceRoute = "McInroy's Point (Gourock) - Hunters Quay (Dunoon)",
         serviceStatus = status,
         serviceAdditionalInfo = if null additionalInfo then Nothing else Just additionalInfo,
