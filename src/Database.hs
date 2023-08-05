@@ -324,7 +324,7 @@ getServiceVessels = withConnection $ \connection ->
     connection
     [sql|
     WITH bounding_box AS (
-      SELECT sl.service_id, ST_Expand(ST_Extent(l.coordinate), 0.01) AS bounds
+      SELECT sl.service_id, ST_Expand(ST_Extent(l.coordinate), 0.02) AS bounds
       FROM locations l
       JOIN service_locations sl ON l.location_id = sl.location_id
       GROUP BY sl.service_id
@@ -455,7 +455,7 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
       INNER JOIN 
           transxchange_services txcs ON txcs.service_code = vj.service_code
       INNER JOIN 
-          services s ON s.transxchange_service_code = txcs.service_code
+          services s ON s.service_id = txcs.service_id
       INNER JOIN
           locations fl ON fl.stop_point_id = jptl.from_stop_point
       INNER JOIN
@@ -502,8 +502,6 @@ updateTransxchangeData transxchangeData = withConnection $ \connection ->
         DELETE FROM serviced_organisations;
         DELETE FROM lines;
         DELETE FROM journey_patterns;
-        DELETE FROM transxchange_services;
-        DELETE FROM operators;
         DELETE FROM journey_pattern_timing_links;
         DELETE FROM journey_pattern_sections;
         DELETE FROM routes;
