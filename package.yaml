@@ -30,6 +30,7 @@ library:
     - amazonka-sns
     - binary
     - bytestring
+    - cassava
     - containers
     - data-default
     - directory

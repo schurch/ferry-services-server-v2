@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 91caef67dcfdc90b95dc16cfb2c437a71dfbb29be78af1c5dba61c2d0f8e86f0
+-- hash: 4ebd8a3715f01bbd248157ec801d1cbf555d3c92011eb51d927d9c1b5be6807a
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -50,6 +50,7 @@ library
     , base >=4.7 && <5
     , binary
     , bytestring
+    , cassava
     , containers
     , data-default
     , directory

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -28,6 +29,11 @@ import Control.Monad.Reader (asks)
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (isSpace)
+import Data.Csv
+  ( FromNamedRecord (..),
+    decodeByName,
+    (.:),
+  )
 import Data.List
   ( dropWhileEnd,
     intercalate,
@@ -83,28 +89,72 @@ data FTPConnectionDetails = FTPConnectionDetails
     password :: String
   }
 
+data ServiceReportService = ServiceReportService
+  { rowId :: !Int,
+    regionCode :: !String,
+    regionOperatorCode :: !String,
+    serviceCode :: !String,
+    lineName :: !String,
+    description :: !String,
+    startDate :: !String,
+    nationalOperatorCode :: !String,
+    dataSource :: !String
+  }
+  deriving (Generic, Show)
+
+instance FromNamedRecord ServiceReportService where
+  parseNamedRecord r =
+    ServiceReportService
+      <$> r
+      .: "RowId"
+      <*> r
+      .: "RegionCode"
+      <*> r
+      .: "RegionOperatorCode"
+      <*> r
+      .: "ServiceCode"
+      <*> r
+      .: "LineName"
+      <*> r
+      .: "Description"
+      <*> r
+      .: "StartDate"
+      <*> r
+      .: "NationalOperatorCode"
+      <*> r
+      .: "DataSource"
+
 ingest :: Application ()
 ingest = do
   ftpAddress <- liftIO $ getEnv "TRAVELLINE_FTP_ADDRESS"
   ftpUsername <- liftIO $ getEnv "TRAVELLINE_FTP_USERNAME"
   ftpPassword <- liftIO $ getEnv "TRAVELLINE_FTP_PASSWORD"
+  logger <- asks logger
   let ftpConnectionDetails =
         FTPConnectionDetails ftpAddress ftpUsername ftpPassword
-  transxchangeData <-
-    downloadAndParseZip
-      ftpConnectionDetails
-      "S"
-      [ "FSACM05",
-        "FSACM03",
-        "FSACM25",
-        "FSBCM07",
-        "FSACM11",
-        "FSACM09",
-        "FSANL02", -- NorthLink
-        "FSANL01",
-        "FSAWF01" -- Western Ferries
-      ]
-  updateTransxchangeData transxchangeData
+  liftIO $ downloadFile logger ftpConnectionDetails "servicereport.csv"
+  csvData <- liftIO $ BL.readFile "servicereport.csv"
+  case decodeByName csvData of
+    Left err -> error err
+    Right (_, services) -> do
+      let servicesToIngest =
+            filter (\s -> nationalOperatorCode s `elem` ["CALM", "NLKF", "WFRL"])
+              . V.toList
+              $ services
+      -- Create a list of files based on the containing zip file. e.g. [(S, [FSACM12, FSACM14]), (SW, [FSACM11, FSACM18])]
+      let groupedFiles =
+            toList $
+              fromListWith
+                (++)
+                [ (regionCode, [serviceCode])
+                  | ServiceReportService {regionCode = regionCode, serviceCode = serviceCode} <-
+                      servicesToIngest
+                ]
+      allTransxchangeData <-
+        forM groupedFiles $
+          uncurry (downloadAndParseZip ftpConnectionDetails)
+      updateTransxchangeData $ concat allTransxchangeData
+  liftIO $ removeFileIfExists "servicereport.csv"
   info (msg @String "Done")
 
 downloadAndParseZip ::
