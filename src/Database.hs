@@ -439,7 +439,8 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
                       departure_time
                   ) + t.run_time 
               ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
-          ) :: TIMESTAMP AS arrival
+          ) :: TIMESTAMP AS arrival,
+          NULLIF(vj.note, '')
       FROM 
           vehicle_journeys vj
       CROSS JOIN

@@ -185,8 +185,8 @@ createDeparturesLookup serviceID = do
   locationDepartures <- lift $ DB.getLocationDepartures serviceID (utctDay time)
   return $
     M.fromListWith (++) $
-      [ (fromLocationID, [DepartureResponse (LocationResponse toLocationID toLocationName (getLatitude toLocationCoordinate) (getLongitude toLocationCoordinate) Nothing Nothing) (convertToUTC departureTime) (convertToUTC arrivalTime)])
-        | (LocationDeparture fromLocationID toLocationID toLocationName toLocationCoordinate departureTime arrivalTime) <- reverse locationDepartures
+      [ (fromLocationID, [DepartureResponse (LocationResponse toLocationID toLocationName (getLatitude toLocationCoordinate) (getLongitude toLocationCoordinate) Nothing Nothing) (convertToUTC departureTime) (convertToUTC arrivalTime) notes])
+        | (LocationDeparture fromLocationID toLocationID toLocationName toLocationCoordinate departureTime arrivalTime notes) <- reverse locationDepartures
       ]
   where
     convertToUTC :: LocalTime -> UTCTime

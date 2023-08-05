@@ -281,7 +281,8 @@ data LocationDeparture = LocationDeparture
     locationDepartureToLocationName :: String,
     locationDepartureToLocationCoordinate :: Geometry,
     locationDepartureDepartue :: LocalTime,
-    locationDepartureArrival :: LocalTime
+    locationDepartureArrival :: LocalTime,
+    locationDepartureNotes :: Maybe String
   }
   deriving (Generic, Show, ToRow, FromRow)
 
@@ -382,7 +383,8 @@ instance FromJSON VesselResponse where
 data DepartureResponse = DepartureResponse
   { departureResponseDestination :: LocationResponse,
     departureResponseDeparture :: UTCTime,
-    departureResponseArrival :: UTCTime
+    departureResponseArrival :: UTCTime,
+    departureResponseNotes :: Maybe String
   }
   deriving (Generic, Show)
 
