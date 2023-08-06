@@ -114,7 +114,7 @@ arranService :: ResponseMatcher
 arranService = jsonReponseMatcher checkArranServiceResponse
 
 checkArranServiceResponse :: ServiceResponse -> Maybe String
-checkArranServiceResponse (ServiceResponse 5 _ "ARRAN" "Ardrossan (ARD) - Brodick (BRO)" _ _ _ _ _ _ _) = Nothing
+checkArranServiceResponse (ServiceResponse 5 _ "ARRAN" "Ardrossan (ARD) - Brodick (BRO)" _ _ _ _ _ _ _ _) = Nothing
 checkArranServiceResponse response = return $ "Unexpected response: " <> show response
 
 jsonReponseMatcher :: FromJSON a => (a -> Maybe String) -> ResponseMatcher

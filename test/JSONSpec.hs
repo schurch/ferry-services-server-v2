@@ -169,6 +169,7 @@ spec = do
                       vesselResponseLastReceived = UTCTime (fromOrdinalDate 2022 45) 6000
                     }
                 ],
+              serviceResponseOperator = Nothing,
               serviceResponseUpdated = UTCTime (fromOrdinalDate 2022 33) 5000
             }
           `shouldBe` encode
