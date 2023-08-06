@@ -323,7 +323,7 @@ instance FromJSON ServiceResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy ServiceResponse)
 
 data OrganisationResponse = OrganisationResponse
-  { organisationResponseOperatorID :: Int,
+  { organisationResponseID :: Int,
     organisationResponseName :: String,
     organisationResponseWebsite :: Maybe String,
     organisationResponseLocalNumber :: Maybe String,
