@@ -22,6 +22,7 @@ module Database
     getVessels,
     getServiceVessels,
     getLocationDepartures,
+    getServiceOrganisations,
     updateTransxchangeData,
   )
 where
@@ -482,6 +483,16 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
           departure
     |]
     (date, serviceID)
+
+getServiceOrganisations :: Application [ServiceOrganisation]
+getServiceOrganisations = withConnection $ \connection ->
+  query_
+    connection
+    [sql|
+      SELECT s.service_id, o.organisation_id, o.name, o.website, o.local_phone, o.international_phone, o.email, o.x, o.facebook
+      FROM services s
+      INNER JOIN organisations o ON s.organisation_id = o.organisation_id
+    |]
 
 updateTransxchangeData :: [TransXChangeData] -> Application ()
 updateTransxchangeData transxchangeData = withConnection $ \connection ->

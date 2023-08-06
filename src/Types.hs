@@ -286,6 +286,19 @@ data LocationDeparture = LocationDeparture
   }
   deriving (Generic, Show, ToRow, FromRow)
 
+data ServiceOrganisation = ServiceOrganisation
+  { serviceOrganisationServiceID :: Int,
+    serviceOrganisationOrganisationID :: Int,
+    serviceOrganisationName :: String,
+    serviceOrganisationWebsite :: Maybe String,
+    serviceOrganisationLocalPhone :: Maybe String,
+    serviceOrganisationInternationalPhone :: Maybe String,
+    serviceOrganisationEmail :: Maybe String,
+    serviceOrganisationX :: Maybe String,
+    serviceOrganisationFacebook :: Maybe String
+  }
+  deriving (Generic, Show, ToRow, FromRow)
+
 -- API Types
 data ServiceResponse = ServiceResponse
   { serviceResponseServiceID :: Int,
@@ -298,6 +311,7 @@ data ServiceResponse = ServiceResponse
     serviceResponseDisruptionReason :: Maybe String,
     serviceResponseLastUpdatedDate :: Maybe UTCTime,
     serviceResponseVessels :: [VesselResponse],
+    serviceResponseOperator :: Maybe OrganisationResponse,
     serviceResponseUpdated :: UTCTime
   }
   deriving (Generic, Show)
@@ -307,6 +321,24 @@ instance ToJSON ServiceResponse where
 
 instance FromJSON ServiceResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy ServiceResponse)
+
+data OrganisationResponse = OrganisationResponse
+  { organisationResponseOperatorID :: Int,
+    organisationResponseName :: String,
+    organisationResponseWebsite :: Maybe String,
+    organisationResponseLocalNumber :: Maybe String,
+    organisationResponseInternationalNumber :: Maybe String,
+    organisationResponseEmail :: Maybe String,
+    organisationResponseX :: Maybe String,
+    organisationResponseFacebook :: Maybe String
+  }
+  deriving (Generic, Show)
+
+instance FromJSON OrganisationResponse where
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OrganisationResponse)
+
+instance ToJSON OrganisationResponse where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy OrganisationResponse)
 
 data CreateInstallationRequest = CreateInstallationRequest
   { createInstallationRequestDeviceToken :: String,

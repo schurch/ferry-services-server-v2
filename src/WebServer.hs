@@ -168,6 +168,8 @@ type ServiceLocationLookup = M.Map Int [LocationResponse]
 -- Lookup vessels for a service ID
 type ServiceVesselLookup = M.Map Int [VesselResponse]
 
+type ServiceOrganisationLookup = M.Map Int OrganisationResponse
+
 type LocationScheduledDeparturesLookup = M.Map Int [DepartureResponse]
 
 getService :: Int -> Action (Maybe ServiceResponse)
@@ -177,7 +179,8 @@ getService serviceID = do
   locationDepartureLookup <- createDeparturesLookup serviceID
   locationLookup <- getLocationLookup (Just locationDepartureLookup)
   vesselLookup <- getServiceVesselLookup
-  return $ serviceToServiceResponseWithLocationLookup vesselLookup locationLookup 1 time <$> service
+  organisationLookup <- getServiceOrganisationLookup
+  return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup 1 time <$> service
 
 createDeparturesLookup :: Int -> Action LocationScheduledDeparturesLookup
 createDeparturesLookup serviceID = do
@@ -198,8 +201,9 @@ getServices = do
   time <- liftIO getCurrentTime
   locationLookup <- getLocationLookup Nothing
   vesselLookup <- getServiceVesselLookup
+  organisationLookup <- getServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponseWithLocationLookup vesselLookup locationLookup sortOrder time service
+    return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrder time service
 
 createInstallation ::
   UUID -> CreateInstallationRequest -> Action [ServiceResponse]
@@ -236,8 +240,9 @@ getServicesForInstallation installationID = do
   time <- liftIO getCurrentTime
   locationLookup <- getLocationLookup Nothing
   vesselLookup <- getServiceVesselLookup
+  organisationLookup <- getServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponseWithLocationLookup vesselLookup locationLookup sortOrder time service
+    return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrder time service
 
 getVessels :: Action [VesselResponse]
 getVessels = do
@@ -270,9 +275,9 @@ vesselToVesselResponse Vessel {..} =
       vesselResponseLastReceived = vesselLastReceived
     }
 
-serviceToServiceResponseWithLocationLookup ::
-  ServiceVesselLookup -> ServiceLocationLookup -> Int -> UTCTime -> Service -> ServiceResponse
-serviceToServiceResponseWithLocationLookup vesselLookup locationLookup sortOrder currentTime Service {..} =
+serviceToServiceResponse ::
+  ServiceVesselLookup -> ServiceLocationLookup -> ServiceOrganisationLookup -> Int -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrder currentTime Service {..} =
   ServiceResponse
     { serviceResponseServiceID = serviceID,
       serviceResponseSortOrder = sortOrder,
@@ -292,6 +297,7 @@ serviceToServiceResponseWithLocationLookup vesselLookup locationLookup sortOrder
       serviceResponseVessels =
         fromMaybe [] $
           M.lookup serviceID vesselLookup,
+      serviceResponseOperator = M.lookup serviceID organisationLookup,
       serviceResponseUpdated = serviceUpdated
     }
 
@@ -356,11 +362,19 @@ getLocationLookup scheduledDeparturesLookup = do
     lookupDepartures :: Int -> Maybe [DepartureResponse]
     lookupDepartures locationID = fromMaybe [] . M.lookup locationID <$> scheduledDeparturesLookup
 
+getServiceOrganisationLookup :: Action ServiceOrganisationLookup
+getServiceOrganisationLookup = do
+  serviceOrganisations <- lift DB.getServiceOrganisations
+  return $
+    M.fromList $
+      [ (serviceID, OrganisationResponse organisationID name website localNumber internationalNumber email x facebook)
+        | (ServiceOrganisation serviceID organisationID name website localNumber internationalNumber email x facebook) <- serviceOrganisations
+      ]
+
 getServiceVesselLookup :: Action ServiceVesselLookup
 getServiceVesselLookup = do
   serviceVessels <- lift DB.getServiceVessels
   time <- liftIO getCurrentTime
-  vessels <- filter (vesselFilter time) <$> lift DB.getVessels
   return $
     M.fromListWith (++) $
       [ (serviceID, [vesselToVesselResponse (Vessel mmsi name speed course coordinate lastReceived updated organisationID)])
