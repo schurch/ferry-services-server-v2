@@ -26,7 +26,7 @@ import Data.Scientific
     fromFloatDigits,
     toRealFloat,
   )
-import Data.Text.Lazy (Text, toStrict)
+import Data.Text.Lazy (Text, toStrict, unpack)
 import Data.Time
   ( LocalTime,
     UTCTime (UTCTime),
@@ -35,6 +35,7 @@ import Data.Time
     localTimeToUTC,
     utctDay,
   )
+import Data.Time.Calendar (Day)
 import Data.UUID (UUID, fromText)
 import qualified Database as DB
 import Database.Postgis
@@ -74,6 +75,7 @@ import System.Logger
   )
 import System.Logger.Message (msg)
 import Types
+import Utility (stringToDay)
 import Web.Scotty.Trans
   ( Parsable (parseParam),
     delete,
@@ -85,6 +87,7 @@ import Web.Scotty.Trans
     param,
     post,
     redirect,
+    rescue,
     setHeader,
   )
 
@@ -109,7 +112,8 @@ webApp requestLogger = do
     json services
   get "/api/services/:serviceID" $ do
     serviceID <- param "serviceID"
-    service <- getService serviceID
+    departuresDate <- param "departuresDate" `rescue` (\_ -> return Nothing)
+    service <- getService serviceID departuresDate
     json service
   post "/api/installations/:installationID" $ do
     installationID <- param "installationID"
@@ -136,6 +140,9 @@ webApp requestLogger = do
 
 instance Parsable UUID where
   parseParam = maybeToEither "Error parsing UUID" . fromText . toStrict
+
+instance Parsable (Maybe Day) where
+  parseParam = Right . stringToDay . unpack
 
 maybeToEither :: Text -> Maybe a -> Either Text a
 maybeToEither errorMessage Nothing = Left errorMessage
@@ -172,20 +179,21 @@ type ServiceOrganisationLookup = M.Map Int OrganisationResponse
 
 type LocationScheduledDeparturesLookup = M.Map Int [DepartureResponse]
 
-getService :: Int -> Action (Maybe ServiceResponse)
-getService serviceID = do
+getService :: Int -> Maybe Day -> Action (Maybe ServiceResponse)
+getService serviceID departuresDate = do
   service <- lift $ DB.getService serviceID
   time <- liftIO getCurrentTime
-  locationDepartureLookup <- createDeparturesLookup serviceID
+  locationDepartureLookup <- createDeparturesLookup serviceID departuresDate
   locationLookup <- getLocationLookup (Just locationDepartureLookup)
   vesselLookup <- getServiceVesselLookup
   organisationLookup <- getServiceOrganisationLookup
   return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup 1 time <$> service
 
-createDeparturesLookup :: Int -> Action LocationScheduledDeparturesLookup
-createDeparturesLookup serviceID = do
+createDeparturesLookup :: Int -> Maybe Day -> Action LocationScheduledDeparturesLookup
+createDeparturesLookup serviceID departuresDate = do
   time <- liftIO getCurrentTime
-  locationDepartures <- lift $ DB.getLocationDepartures serviceID (utctDay time)
+  let date = fromMaybe (utctDay time) departuresDate
+  locationDepartures <- lift $ DB.getLocationDepartures serviceID date
   return $
     M.fromListWith (++) $
       [ (fromLocationID, [DepartureResponse (LocationResponse toLocationID toLocationName (getLatitude toLocationCoordinate) (getLongitude toLocationCoordinate) Nothing Nothing) (convertToUTC departureTime) (convertToUTC arrivalTime) notes])
