@@ -3,14 +3,20 @@
 module Utility
   ( stringToDay,
     splitOn,
+    trim,
   )
 where
 
+import Data.Char (isSpace)
+import Data.List (dropWhileEnd)
 import Data.Time.Calendar
   ( Day,
     fromGregorianValid,
   )
 import Text.Read (readMaybe)
+
+trim :: String -> String
+trim = dropWhileEnd isSpace . dropWhile isSpace
 
 splitOn :: (Foldable t, Eq a) => a -> t a -> [[a]]
 splitOn delimiter = foldr f [[]]

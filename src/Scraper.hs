@@ -2,7 +2,13 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Scraper where
+module Scraper
+  ( fetchShetlandFerriesAndNotify,
+    fetchCalMacStatusesAndNotify,
+    fetchNorthLinkServicesAndNotify,
+    fetchWesternFerriesAndNotify,
+  )
+where
 
 import AWS
 import Control.Concurrent (threadDelay)
@@ -10,7 +16,7 @@ import Control.Exception (SomeException, catch)
 import Control.Monad (forM_, forever, void, when)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
-import Data.Aeson (eitherDecode, encode)
+import Data.Aeson (Value (String), eitherDecode, encode)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.List (find, nub, (\\))
@@ -33,13 +39,94 @@ import Network.HTTP.Types.Header
 import System.Logger.Class (Logger, info)
 import System.Logger.Message (msg)
 import System.Timeout (timeout)
-import Text.HTML.TagSoup (Tag (..), fromAttrib, isTagOpen, parseTags, renderTags, (~/=))
+import Text.HTML.TagSoup (Tag (..), fromAttrib, isTagOpen, isTagOpenName, parseTags, renderTags, (~/=))
 import Text.Regex (mkRegex, subRegex)
 import Types
+import Utility (trim)
 
 newtype ScrapedServices = ScrapedServices {unScrapedServices :: [Service]}
 
 newtype DatabaseServices = DatabaseServices {unDatabaseServices :: [Service]}
+
+fetchShetlandFerriesAndNotify :: Application ()
+fetchShetlandFerriesAndNotify = do
+  info (msg @String "Fetching Shetland Ferries services")
+  scrapedServices <- liftIO fetchShetlandFerries
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 4
+  DB.saveServices $ unScrapedServices scrapedServices
+  notifyForServices scrapedServices databaseServices
+
+fetchShetlandFerries :: IO ScrapedServices
+fetchShetlandFerries = do
+  htmlTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://www.shetland.gov.uk/ferrystatus"
+  let disruptionTags = takeWhile (~/= ("</div>" :: String)) . dropWhile (~/= ("<div class=routestatus>" :: String)) $ htmlTags
+  let statuses = map (trim . fromAttrib "class") . filter (isTagOpenName "ul") $ disruptionTags
+  time <- liftIO getCurrentTime
+  return $
+    ScrapedServices
+      [ Service
+          { serviceID = 3000,
+            serviceUpdated = time,
+            serviceArea = "BLUEMULL SOUND",
+            serviceRoute = "Gutcher - Belmont - Hamars Ness",
+            serviceStatus = statusTextToStatus $ statuses !! 0,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 4,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 3001,
+            serviceUpdated = time,
+            serviceArea = "YELL",
+            serviceRoute = "Toft - Ulsta",
+            serviceStatus = statusTextToStatus $ statuses !! 1,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 4,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 3003,
+            serviceUpdated = time,
+            serviceArea = "WHALSAY",
+            serviceRoute = "Laxo - Symbister",
+            serviceStatus = statusTextToStatus $ statuses !! 2,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 4,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 3002,
+            serviceUpdated = time,
+            serviceArea = "BRESSAY",
+            serviceRoute = "Lerwick - Bressay",
+            serviceStatus = statusTextToStatus $ statuses !! 3,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 4,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 3004,
+            serviceUpdated = time,
+            serviceArea = "SKERRIES",
+            serviceRoute = "Laxo - Symbister - Skerries - Vidlin - Lerwick",
+            serviceStatus = statusTextToStatus $ statuses !! 4,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 4,
+            serviceLastUpdatedDate = Nothing
+          }
+      ]
+  where
+    statusTextToStatus :: String -> ServiceStatus
+    statusTextToStatus text
+      | text == "Route_status_ok" = Normal
+      | text == "Route_status_amber" = Disrupted
+      | text == "Route_status_red" = Cancelled
+      | otherwise = error "Unknown image status"
 
 fetchWesternFerriesAndNotify :: Application ()
 fetchWesternFerriesAndNotify = do

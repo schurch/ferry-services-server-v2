@@ -28,15 +28,13 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Lazy as BL
-import Data.Char (isSpace)
 import Data.Csv
   ( FromNamedRecord (..),
     decodeByName,
     (.:),
   )
 import Data.List
-  ( dropWhileEnd,
-    intercalate,
+  ( intercalate,
   )
 import Data.Map
   ( fromListWith,
@@ -81,7 +79,7 @@ import System.Logger.Message (msg)
 import TransxchangeParser (parseTransxchangeXML)
 import TransxchangeTypes (TransXChangeData (TransXChangeData))
 import Types (Application, Env (..))
-import Utility (splitOn)
+import Utility (splitOn, trim)
 
 data FTPConnectionDetails = FTPConnectionDetails
   { address :: String,
@@ -241,9 +239,6 @@ extractAddressAndPort response =
       port2 = read p2
       port = show $ (port1 * 256) + port2
    in (host, port)
-
-trim :: String -> String
-trim = dropWhileEnd isSpace . dropWhile isSpace
 
 runTCPClient :: HostName -> ServiceName -> (Socket -> IO a) -> IO a
 runTCPClient host port client = withSocketsDo $ do
