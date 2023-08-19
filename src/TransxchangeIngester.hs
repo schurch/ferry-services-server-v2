@@ -136,7 +136,7 @@ ingest = do
     Left err -> error err
     Right (_, services) -> do
       let servicesToIngest =
-            filter (\s -> nationalOperatorCode s `elem` ["CALM", "NLKF", "WFRL"])
+            filter (\s -> nationalOperatorCode s `elem` ["CALM", "NLKF", "WFRL", "SHET"])
               . V.toList
               $ services
       -- Create a list of files based on the containing zip file. e.g. [(S, [FSACM12, FSACM14]), (SW, [FSACM11, FSACM18])]

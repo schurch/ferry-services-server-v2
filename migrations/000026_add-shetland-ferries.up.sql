@@ -42,4 +42,22 @@ INSERT INTO service_locations (service_id, location_id) VALUES (3004, 74);
 INSERT INTO service_locations (service_id, location_id) VALUES (3004, 75);
 INSERT INTO service_locations (service_id, location_id) VALUES (3004, 76);
 
+UPDATE transxchange_services SET service_id = 3000 WHERE service_code = 'SLASF02';
+UPDATE transxchange_services SET service_id = 3001 WHERE service_code = 'SLASF01';
+UPDATE transxchange_services SET service_id = 3002 WHERE service_code = 'SLASF04';
+UPDATE transxchange_services SET service_id = 3003 WHERE service_code = 'SLASF05';
+UPDATE transxchange_services SET service_id = 3004 WHERE service_code = 'SLASF03';
+
+UPDATE locations SET stop_point_id = '9300GUT' WHERE location_id = 66;
+UPDATE locations SET stop_point_id = '9300BMT' WHERE location_id = 67;
+UPDATE locations SET stop_point_id = '9300ODD' WHERE location_id = 68;
+UPDATE locations SET stop_point_id = '9300TOF' WHERE location_id = 69;
+UPDATE locations SET stop_point_id = '9300ULS' WHERE location_id = 70;
+UPDATE locations SET stop_point_id = '9300LRK' WHERE location_id = 71;
+UPDATE locations SET stop_point_id = '9300MYF' WHERE location_id = 72;
+UPDATE locations SET stop_point_id = '9300LAX' WHERE location_id = 73;
+UPDATE locations SET stop_point_id = '9300SYM' WHERE location_id = 74;
+UPDATE locations SET stop_point_id = '9300OUT' WHERE location_id = 75;
+UPDATE locations SET stop_point_id = '9300VID' WHERE location_id = 76;
+
 COMMIT;
