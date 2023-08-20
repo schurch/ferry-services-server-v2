@@ -422,7 +422,7 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
                   query_date +
                   COALESCE (
                       SUM (mjt.time) OVER (
-                          PARTITION BY jptl.journey_pattern_section_id 
+                          PARTITION BY jptl.journey_pattern_section_id, vj.vehicle_journey_code
                           ORDER BY jptl.journey_pattern_timing_link_id
                       ) + vj.departure_time,
                       departure_time
@@ -434,7 +434,7 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
                   query_date +
                   COALESCE (
                       SUM (mjt.time) OVER (
-                          PARTITION BY jptl.journey_pattern_section_id 
+                          PARTITION BY jptl.journey_pattern_section_id, vj.vehicle_journey_code
                           ORDER BY jptl.journey_pattern_timing_link_id
                       ) + vj.departure_time,
                       departure_time
