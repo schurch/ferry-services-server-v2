@@ -3,7 +3,8 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Scraper
-  ( fetchShetlandFerriesAndNotify,
+  ( fetchOrkneyFerriesAndNotify,
+    fetchShetlandFerriesAndNotify,
     fetchCalMacStatusesAndNotify,
     fetchNorthLinkServicesAndNotify,
     fetchWesternFerriesAndNotify,
@@ -47,6 +48,130 @@ import Utility (trim)
 newtype ScrapedServices = ScrapedServices {unScrapedServices :: [Service]}
 
 newtype DatabaseServices = DatabaseServices {unDatabaseServices :: [Service]}
+
+fetchOrkneyFerriesAndNotify :: Application ()
+fetchOrkneyFerriesAndNotify = do
+  info (msg @String "Fetching Orkney Ferries services")
+  scrapedServices <- liftIO fetchOrkneyFerries
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 5
+  DB.saveServices $ unScrapedServices scrapedServices
+  notifyForServices scrapedServices databaseServices
+
+fetchOrkneyFerries :: IO ScrapedServices
+fetchOrkneyFerries = do
+  htmlTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://www.orkneyferries.co.uk/info/current-service-update"
+  let disruptionTags = takeWhile (~/= ("<a href=/info/about>" :: String)) . dropWhile (~/= ("<h4>" :: String)) $ htmlTags
+  let statuses = map (trim . fromAttrib "src") . filter (isTagOpenName "img") $ disruptionTags
+  time <- liftIO getCurrentTime
+  return $
+    ScrapedServices
+      [ Service
+          { serviceID = 4000,
+            serviceUpdated = time,
+            serviceArea = "EDAY",
+            serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
+            serviceStatus = statusImageTextToStatus $ statuses !! 0,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 5,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 4001,
+            serviceUpdated = time,
+            serviceArea = "SANDAY",
+            serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
+            serviceStatus = statusImageTextToStatus $ statuses !! 1,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 5,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 4002,
+            serviceUpdated = time,
+            serviceArea = "STRONSAY",
+            serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
+            serviceStatus = statusImageTextToStatus $ statuses !! 2,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 5,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 4003,
+            serviceUpdated = time,
+            serviceArea = "WESTRAY",
+            serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
+            serviceStatus = statusImageTextToStatus $ statuses !! 3,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 5,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 4004,
+            serviceUpdated = time,
+            serviceArea = "SHAPINSAY",
+            serviceRoute = "Kirkwall - Shapinsay",
+            serviceStatus = statusImageTextToStatus $ statuses !! 4,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 5,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 4005,
+            serviceUpdated = time,
+            serviceArea = "GRAEMSAY",
+            serviceRoute = "Stromness - Graemsay - Hoy",
+            serviceStatus = statusImageTextToStatus $ statuses !! 5,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 5,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 4006,
+            serviceUpdated = time,
+            serviceArea = "HOUTON",
+            serviceRoute = "Houton - Flotta - Lyness - Longhope",
+            serviceStatus = statusImageTextToStatus $ statuses !! 6,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 5,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 4007,
+            serviceUpdated = time,
+            serviceArea = "ROUSAY, EGILSAY & WYRE",
+            serviceRoute = "Tingwall - Rousay - Egilsay - Wyre",
+            serviceStatus = statusImageTextToStatus $ statuses !! 7,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 5,
+            serviceLastUpdatedDate = Nothing
+          },
+        Service
+          { serviceID = 4008,
+            serviceUpdated = time,
+            serviceArea = "PIEROWALL - PAPA WESTRAY",
+            serviceRoute = "Westray Pierowall - Papa Westray",
+            serviceStatus = statusImageTextToStatus $ statuses !! 8,
+            serviceAdditionalInfo = Nothing,
+            serviceDisruptionReason = Nothing,
+            serviceOrganisationID = 5,
+            serviceLastUpdatedDate = Nothing
+          }
+      ]
+  where
+    statusImageTextToStatus :: String -> ServiceStatus
+    statusImageTextToStatus text
+      | text == "/site/assets/files/1454/tick.40x0-hidpi.png" = Normal
+      | text == "/site/assets/files/1454/warning.40x0-hidpi.png" = Disrupted
+      | text == "/site/assets/files/1454/no_entry.40x0-hidpi.png" = Cancelled
+      | otherwise = error $ "Unknown orkney ferries status " <> text
 
 fetchShetlandFerriesAndNotify :: Application ()
 fetchShetlandFerriesAndNotify = do
@@ -126,7 +251,7 @@ fetchShetlandFerries = do
       | text == "Route_status_ok" = Normal
       | text == "Route_status_amber" = Disrupted
       | text == "Route_status_red" = Cancelled
-      | otherwise = error "Unknown image status"
+      | otherwise = error $ "Unknown shetland ferries status " <> text
 
 fetchWesternFerriesAndNotify :: Application ()
 fetchWesternFerriesAndNotify = do
@@ -167,7 +292,7 @@ fetchWesternFerries = do
       | text == Just "status-green" = Normal
       | text == Just "status-amber" = Disrupted
       | text == Just "status-red" = Cancelled
-      | otherwise = error "Unknown image status"
+      | otherwise = error $ "Unknown western ferries status " <> fromMaybe "" text
 
 fetchNorthLinkServicesAndNotify :: Application ()
 fetchNorthLinkServicesAndNotify = do
@@ -203,7 +328,7 @@ fetchNorthLinkService = do
       | text == "green" = Normal
       | text == "amber" = Disrupted
       | text == "red" = Cancelled
-      | otherwise = error "Unknown image status"
+      | otherwise = error $ "Unknown northlink status " <> text
 
 fetchCalMacStatusesAndNotify :: Application ()
 fetchCalMacStatusesAndNotify = do
@@ -273,7 +398,7 @@ ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) =
       | image == "beware" = Disrupted
       | image == "affected" = Disrupted
       | image == "cancelled" = Cancelled
-      | otherwise = error "Unknown image status"
+      | otherwise = error $ "Unknown calmac status " <> image
 
     stringToUTCTime :: String -> UTCTime
     stringToUTCTime time = posixSecondsToUTCTime $ fromInteger (read time) / 1000

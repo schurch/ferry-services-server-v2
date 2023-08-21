@@ -59,6 +59,7 @@ main = do
     catch (runReaderT fetchNorthLinkServicesAndNotify env) (handleException logger)
     catch (runReaderT fetchWesternFerriesAndNotify env) (handleException logger)
     catch (runReaderT fetchShetlandFerriesAndNotify env) (handleException logger)
+    catch (runReaderT fetchOrkneyFerriesAndNotify env) (handleException logger)
     threadDelay (15 * 60 * 1000 * 1000) -- 15 mins
 
 handleException :: Logger -> SomeException -> IO ()
