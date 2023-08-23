@@ -441,7 +441,7 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
                   ) + t.run_time 
               ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
           ) :: TIMESTAMP AS arrival,
-          NULLIF(vj.note, '')
+          NULLIF(vj.note, '') AS Notes
       FROM 
           vehicle_journeys vj
       CROSS JOIN
@@ -456,16 +456,16 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
           timings t ON t.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
       INNER JOIN 
           transxchange_services txcs ON txcs.service_code = vj.service_code
-      INNER JOIN 
-          services s ON s.service_id = txcs.service_id
       INNER JOIN
           locations fl ON fl.stop_point_id = jptl.from_stop_point
       INNER JOIN
           locations tl ON tl.stop_point_id = jptl.to_stop_point
       INNER JOIN
           multi_journey_time mjt ON mjt.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
+      INNER JOIN
+          transxchangeservice_services txss ON txcs.service_code = txss.service_code
       WHERE 
-          s.service_id = ?
+          txss.service_id = ?
           AND
           (
               query_date >= txcs.start_date AND query_date <= txcs.end_date
