@@ -32,6 +32,7 @@ UPDATE locations SET stop_point_id = '9300PWY' WHERE location_id = 96;
 
 UPDATE service_locations SET location_id = 60 WHERE service_id = 4005 AND location_id = 84;
 
+DELETE FROM location_weather WHERE location_id = 84;
 DELETE FROM locations WHERE location_id = 84;
 
 INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4000, 'ORAOF05');
