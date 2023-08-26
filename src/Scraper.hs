@@ -195,7 +195,7 @@ fetchShetlandFerries = do
             serviceArea = "BLUEMULL SOUND",
             serviceRoute = "Gutcher - Belmont - Hamars Ness",
             serviceStatus = statusTextToStatus $ statuses !! 0,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just $ createAdditionalInfo "Bluemull Sound" "01595 743971",
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 4,
             serviceLastUpdatedDate = Nothing
@@ -206,7 +206,7 @@ fetchShetlandFerries = do
             serviceArea = "YELL",
             serviceRoute = "Toft - Ulsta",
             serviceStatus = statusTextToStatus $ statuses !! 1,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just $ createAdditionalInfo "Yell Sound" "01595 743972",
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 4,
             serviceLastUpdatedDate = Nothing
@@ -217,7 +217,7 @@ fetchShetlandFerries = do
             serviceArea = "WHALSAY",
             serviceRoute = "Laxo - Symbister",
             serviceStatus = statusTextToStatus $ statuses !! 2,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just $ createAdditionalInfo "Whalsay" "01595 743973",
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 4,
             serviceLastUpdatedDate = Nothing
@@ -228,7 +228,7 @@ fetchShetlandFerries = do
             serviceArea = "BRESSAY",
             serviceRoute = "Lerwick - Bressay",
             serviceStatus = statusTextToStatus $ statuses !! 3,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just $ createAdditionalInfo "Bressay" "01595 743974",
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 4,
             serviceLastUpdatedDate = Nothing
@@ -239,7 +239,7 @@ fetchShetlandFerries = do
             serviceArea = "SKERRIES",
             serviceRoute = "Laxo - Symbister - Skerries - Vidlin - Lerwick",
             serviceStatus = statusTextToStatus $ statuses !! 4,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just $ createAdditionalInfo "Skerries" "01595 743975",
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 4,
             serviceLastUpdatedDate = Nothing
@@ -252,6 +252,19 @@ fetchShetlandFerries = do
       | text == "Route_status_amber" = Disrupted
       | text == "Route_status_red" = Cancelled
       | otherwise = error $ "Unknown shetland ferries status " <> text
+
+    createAdditionalInfo :: String -> String -> String
+    createAdditionalInfo serviceName phoneNumber =
+      "For more information on the "
+        <> serviceName
+        <> " service, phone <a='href=tel:"
+        <> phoneNumber
+        <> "'>"
+        <> phoneNumber
+        <> "</a>."
+        <> "<p>To subscribe to the Shetland Ferries SMS and email alert system please email "
+        <> "<a href='mailto:ferries.admin@shetland.gov.uk?subject=SMS%2FEmail%20Subscription&amp;body=Name%3A%0A%0AAddress%3A%0A%0AMobile%20Number%3A%0A%0AEmail%20Address%3A%0A%0ASubscribed%20Routes%20(e.g%20Bluemull%2C%20Yell%2C%20Whalsay%20etc)%3A%0A%0AEmail%20Alerts%20(Yes%2FNo)%3A%0A%0ASMS%20Alerts%20(Yes%2FNo)%3A'>ferries.admin@shetland.gov.uk</a>"
+        <> " with your details</p>"
 
 fetchWesternFerriesAndNotify :: Application ()
 fetchWesternFerriesAndNotify = do
