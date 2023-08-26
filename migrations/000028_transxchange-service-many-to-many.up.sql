@@ -35,14 +35,14 @@ UPDATE service_locations SET location_id = 60 WHERE service_id = 4005 AND locati
 DELETE FROM location_weather WHERE location_id = 84;
 DELETE FROM locations WHERE location_id = 84;
 
-INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4000, 'ORAOF05');
-INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4001, 'ORAOF05');
-INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4002, 'ORAOF05');
-INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4003, 'ORAOF05');
-INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4004, 'ORAOF04');
-INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4005, 'ORAOF01');
-INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4006, 'ORAOF02');
-INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4007, 'ORAOF03');
-INSERT INTO transxchangeservice_services (service_id, service_code) VALUES (4008, 'ORAOF07');
+INSERT INTO transxchangeservice_services (service_id, service_code) SELECT 4000, 'ORAOF05' WHERE EXISTS (SELECT service_code FROM transxchange_services tx WHERE tx.service_code = 'ORAOF05');
+INSERT INTO transxchangeservice_services (service_id, service_code) SELECT 4001, 'ORAOF05' WHERE EXISTS (SELECT service_code FROM transxchange_services tx WHERE tx.service_code = 'ORAOF05');
+INSERT INTO transxchangeservice_services (service_id, service_code) SELECT 4002, 'ORAOF05' WHERE EXISTS (SELECT service_code FROM transxchange_services tx WHERE tx.service_code = 'ORAOF05');
+INSERT INTO transxchangeservice_services (service_id, service_code) SELECT 4003, 'ORAOF05' WHERE EXISTS (SELECT service_code FROM transxchange_services tx WHERE tx.service_code = 'ORAOF05');
+INSERT INTO transxchangeservice_services (service_id, service_code) SELECT 4004, 'ORAOF04' WHERE EXISTS (SELECT service_code FROM transxchange_services tx WHERE tx.service_code = 'ORAOF04');
+INSERT INTO transxchangeservice_services (service_id, service_code) SELECT 4005, 'ORAOF01' WHERE EXISTS (SELECT service_code FROM transxchange_services tx WHERE tx.service_code = 'ORAOF01');
+INSERT INTO transxchangeservice_services (service_id, service_code) SELECT 4006, 'ORAOF02' WHERE EXISTS (SELECT service_code FROM transxchange_services tx WHERE tx.service_code = 'ORAOF02');
+INSERT INTO transxchangeservice_services (service_id, service_code) SELECT 4007, 'ORAOF03' WHERE EXISTS (SELECT service_code FROM transxchange_services tx WHERE tx.service_code = 'ORAOF03');
+INSERT INTO transxchangeservice_services (service_id, service_code) SELECT 4008, 'ORAOF07' WHERE EXISTS (SELECT service_code FROM transxchange_services tx WHERE tx.service_code = 'ORAOF07');
 
 COMMIT;

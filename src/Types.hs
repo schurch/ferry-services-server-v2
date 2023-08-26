@@ -116,13 +116,22 @@ instance ToJSON APSPayload where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayload)
 
 data APSPayloadBody = APSPayloadBody
-  { apsPayloadBodyAlert :: String,
+  { apsPayloadBodyAlert :: APSPayloadBodyAlert,
     apsPayloadBodySound :: String
   }
   deriving (Generic, Show)
 
 instance ToJSON APSPayloadBody where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayloadBody)
+
+data APSPayloadBodyAlert = APSPayloadBodyAlert
+  { apsPayloadBodyAlertTitle :: String,
+    apsPayloadBodyAlertBody :: String
+  }
+  deriving (Generic, Show)
+
+instance ToJSON APSPayloadBodyAlert where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayloadBodyAlert)
 
 -- Google
 data GCMPayload = GCMPayload

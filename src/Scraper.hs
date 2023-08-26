@@ -421,10 +421,11 @@ notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) =
                 filter
                   ((==) IOS . installationDeviceType)
                   interestedInstallations
+          let (iosTitle, iosBody) = serviceToIOSNotificationMessage service
           forM_ iOSInterestedInstallations $
             \Installation {installationID = installationID, installationEndpointARN = endpointARN} ->
               do
-                let payload = createApplePushPayload defaultNotificationMessage (serviceID service)
+                let payload = createApplePushPayload defaultNotificationMessage iosTitle iosBody (serviceID service)
                 sendNotification installationID endpointARN payload
 
           let androidInterestedInstallations =
@@ -460,28 +461,43 @@ notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) =
       | serviceStatus == Unknown =
           error "Do not message for unknow service"
 
-    serviceToAndroidNotificationMessage :: Service -> (String, String)
-    serviceToAndroidNotificationMessage Service {serviceRoute = serviceRoute, serviceStatus = serviceStatus}
+    serviceToIOSNotificationMessage :: Service -> (String, String)
+    serviceToIOSNotificationMessage Service {serviceArea = serviceArea, serviceRoute = serviceRoute, serviceStatus = serviceStatus}
       | serviceStatus == Normal =
-          ("Sailings resumed", serviceRoute)
+          (serviceArea, "Normal services have resumed for " <> serviceRoute)
       | serviceStatus == Disrupted =
-          ("Sailings disrupted", serviceRoute)
+          (serviceArea, "There is a disruption to the service " <> serviceRoute)
       | serviceStatus == Cancelled =
-          ("Sailings cancelled", serviceRoute)
+          (serviceArea, "Sailings have been cancelled for " <> serviceRoute)
       | serviceStatus == Unknown =
           error "Do not message for unknow service"
 
-    createApplePushPayload :: String -> Int -> PushPayload
-    createApplePushPayload message serviceID =
+    serviceToAndroidNotificationMessage :: Service -> (String, String)
+    serviceToAndroidNotificationMessage Service {serviceArea = serviceArea, serviceRoute = serviceRoute, serviceStatus = serviceStatus}
+      | serviceStatus == Normal =
+          (serviceArea <> " sailings resumed", serviceRoute)
+      | serviceStatus == Disrupted =
+          (serviceArea <> " sailings disrupted", serviceRoute)
+      | serviceStatus == Cancelled =
+          (serviceArea <> " sailings cancelled", serviceRoute)
+      | serviceStatus == Unknown =
+          error "Do not message for unknow service"
+
+    createApplePushPayload :: String -> String -> String -> Int -> PushPayload
+    createApplePushPayload defaultMessage title body serviceID =
       let apsPayload =
             APSPayload
               ( APSPayloadBody
-                  { apsPayloadBodyAlert = message,
+                  { apsPayloadBodyAlert =
+                      APSPayloadBodyAlert
+                        { apsPayloadBodyAlertTitle = title,
+                          apsPayloadBodyAlertBody = body
+                        },
                     apsPayloadBodySound = "default"
                   }
               )
               serviceID
-       in PushPayload message (ApplePayload apsPayload)
+       in PushPayload defaultMessage (ApplePayload apsPayload)
 
     createAndroidPushPayload :: String -> String -> String -> Int -> PushPayload
     createAndroidPushPayload defaultMessage title body serviceID =

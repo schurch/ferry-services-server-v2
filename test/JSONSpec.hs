@@ -19,7 +19,11 @@ spec = do
           APSPayload
             { apsPayloadAps =
                 APSPayloadBody
-                  { apsPayloadBodyAlert = "There is a disruption to the Arran service",
+                  { apsPayloadBodyAlert =
+                      APSPayloadBodyAlert
+                        { apsPayloadBodyAlertTitle = "Arran",
+                          apsPayloadBodyAlertBody = "There is a disruption to the service Ardrossan - Brodick"
+                        },
                     apsPayloadBodySound = "default"
                   },
               apsPayloadServiceID = 5
@@ -30,7 +34,10 @@ spec = do
             "service_id": 5,
             "aps": {
                 "sound": "default",
-                "alert": "There is a disruption to the Arran service"
+                "alert": {
+                  "title": "Arran",
+                  "body": "There is a disruption to the service Ardrossan - Brodick"
+                }
             }
           }
         |]
@@ -76,7 +83,11 @@ spec = do
                   ( APSPayload
                       { apsPayloadAps =
                           APSPayloadBody
-                            { apsPayloadBodyAlert = "There is a disruption to the Arran service",
+                            { apsPayloadBodyAlert =
+                                APSPayloadBodyAlert
+                                  { apsPayloadBodyAlertTitle = "Arran",
+                                    apsPayloadBodyAlertBody = "There is a disruption to the service Ardrossan - Brodick"
+                                  },
                               apsPayloadBodySound = "default"
                             },
                         apsPayloadServiceID = 5
@@ -87,8 +98,8 @@ spec = do
             [aesonQQ|
             {
               "default": "Default payload message",
-              "APNS": "{\"aps\":{\"alert\":\"There is a disruption to the Arran service\",\"sound\":\"default\"},\"service_id\":5}",
-              "APNS_SANDBOX": "{\"aps\":{\"alert\":\"There is a disruption to the Arran service\",\"sound\":\"default\"},\"service_id\":5}",
+              "APNS": "{\"aps\":{\"alert\":{\"body\":\"There is a disruption to the service Ardrossan - Brodick\",\"title\":\"Arran\"},\"sound\":\"default\"},\"service_id\":5}",
+              "APNS_SANDBOX": "{\"aps\":{\"alert\":{\"body\":\"There is a disruption to the service Ardrossan - Brodick\",\"title\":\"Arran\"},\"sound\":\"default\"},\"service_id\":5}",
               "GCM": null
             }
           |]
