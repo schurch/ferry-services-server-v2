@@ -64,7 +64,7 @@ fetchOrkneyFerries = do
   let disruptionTags = takeWhile (~/= ("<a href=/info/about>" :: String)) . dropWhile (~/= ("<h4>" :: String)) $ htmlTags
   let statuses = map (trim . fromAttrib "src") . filter (isTagOpenName "img") $ disruptionTags
   newsTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://www.orkneyferries.co.uk/news"
-  let additionalInfo = replace "\226\128\147" "-" . replace "\226\128\153" "'" . renderTree . (: []) . head . tagTree . dropWhile (~/= ("<div class=uk-placeholder>" :: String)) $ newsTags
+  let additionalInfo = "<style>ul>li { margin-bottom: 20px; } ul>li li { margin-bottom: 0px; }</style>" <> (replace "\226\128\147" "-" . replace "\226\128\153" "'" . renderTree . (: []) . head . tagTree . dropWhile (~/= ("<div class=uk-placeholder>" :: String)) $ newsTags)
   time <- liftIO getCurrentTime
   return $
     ScrapedServices
