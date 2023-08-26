@@ -41,6 +41,7 @@ import System.Logger.Class (Logger, info)
 import System.Logger.Message (msg)
 import System.Timeout (timeout)
 import Text.HTML.TagSoup (Tag (..), fromAttrib, isTagOpen, isTagOpenName, parseTags, renderTags, (~/=))
+import Text.HTML.TagSoup.Tree (renderTree, tagTree)
 import Text.Regex (mkRegex, subRegex)
 import Types
 import Utility (trim)
@@ -62,6 +63,8 @@ fetchOrkneyFerries = do
   htmlTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://www.orkneyferries.co.uk/info/current-service-update"
   let disruptionTags = takeWhile (~/= ("<a href=/info/about>" :: String)) . dropWhile (~/= ("<h4>" :: String)) $ htmlTags
   let statuses = map (trim . fromAttrib "src") . filter (isTagOpenName "img") $ disruptionTags
+  newsTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://www.orkneyferries.co.uk/news"
+  let additionalInfo = replace "\226\128\147" "-" . replace "\226\128\153" "'" . renderTree . (: []) . head . tagTree . dropWhile (~/= ("<div class=uk-placeholder>" :: String)) $ newsTags
   time <- liftIO getCurrentTime
   return $
     ScrapedServices
@@ -71,7 +74,7 @@ fetchOrkneyFerries = do
             serviceArea = "EDAY",
             serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
             serviceStatus = statusImageTextToStatus $ statuses !! 0,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just additionalInfo,
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 5,
             serviceLastUpdatedDate = Nothing
@@ -82,7 +85,7 @@ fetchOrkneyFerries = do
             serviceArea = "SANDAY",
             serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
             serviceStatus = statusImageTextToStatus $ statuses !! 1,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just additionalInfo,
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 5,
             serviceLastUpdatedDate = Nothing
@@ -93,7 +96,7 @@ fetchOrkneyFerries = do
             serviceArea = "STRONSAY",
             serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
             serviceStatus = statusImageTextToStatus $ statuses !! 2,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just additionalInfo,
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 5,
             serviceLastUpdatedDate = Nothing
@@ -104,7 +107,7 @@ fetchOrkneyFerries = do
             serviceArea = "WESTRAY",
             serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
             serviceStatus = statusImageTextToStatus $ statuses !! 3,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just additionalInfo,
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 5,
             serviceLastUpdatedDate = Nothing
@@ -115,7 +118,7 @@ fetchOrkneyFerries = do
             serviceArea = "SHAPINSAY",
             serviceRoute = "Kirkwall - Shapinsay",
             serviceStatus = statusImageTextToStatus $ statuses !! 4,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just additionalInfo,
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 5,
             serviceLastUpdatedDate = Nothing
@@ -126,7 +129,7 @@ fetchOrkneyFerries = do
             serviceArea = "GRAEMSAY",
             serviceRoute = "Stromness - Graemsay - Hoy",
             serviceStatus = statusImageTextToStatus $ statuses !! 5,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just additionalInfo,
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 5,
             serviceLastUpdatedDate = Nothing
@@ -137,7 +140,7 @@ fetchOrkneyFerries = do
             serviceArea = "HOUTON",
             serviceRoute = "Houton - Flotta - Lyness - Longhope",
             serviceStatus = statusImageTextToStatus $ statuses !! 6,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just additionalInfo,
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 5,
             serviceLastUpdatedDate = Nothing
@@ -148,7 +151,7 @@ fetchOrkneyFerries = do
             serviceArea = "ROUSAY, EGILSAY & WYRE",
             serviceRoute = "Tingwall - Rousay - Egilsay - Wyre",
             serviceStatus = statusImageTextToStatus $ statuses !! 7,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just additionalInfo,
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 5,
             serviceLastUpdatedDate = Nothing
@@ -159,7 +162,7 @@ fetchOrkneyFerries = do
             serviceArea = "PIEROWALL - PAPA WESTRAY",
             serviceRoute = "Westray Pierowall - Papa Westray",
             serviceStatus = statusImageTextToStatus $ statuses !! 8,
-            serviceAdditionalInfo = Nothing,
+            serviceAdditionalInfo = Just additionalInfo,
             serviceDisruptionReason = Nothing,
             serviceOrganisationID = 5,
             serviceLastUpdatedDate = Nothing
