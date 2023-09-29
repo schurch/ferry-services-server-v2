@@ -20,7 +20,7 @@ import Control.Monad.Reader (asks)
 import Data.Aeson (Value (String), eitherDecode, encode)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as C
-import Data.List (find, nub, (\\))
+import Data.List (find, isInfixOf, nub, (\\))
 import Data.List.Utils (replace)
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Pool (Pool, withResource)
@@ -171,9 +171,9 @@ fetchOrkneyFerries = do
   where
     statusImageTextToStatus :: String -> ServiceStatus
     statusImageTextToStatus text
-      | text == "/site/assets/files/1454/tick.40x0-hidpi.png" = Normal
-      | text == "/site/assets/files/1454/warning.40x0-hidpi.png" = Disrupted
-      | text == "/site/assets/files/1454/no_entry.40x0-hidpi.png" = Cancelled
+      | "tick" `isInfixOf` text = Normal
+      | "warning" `isInfixOf` text = Disrupted
+      | "no_entry" `isInfixOf` text = Cancelled
       | otherwise = error $ "Unknown orkney ferries status " <> text
 
 fetchShetlandFerriesAndNotify :: Application ()
