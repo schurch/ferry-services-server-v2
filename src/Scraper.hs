@@ -60,10 +60,10 @@ fetchOrkneyFerriesAndNotify = do
 
 fetchOrkneyFerries :: IO ScrapedServices
 fetchOrkneyFerries = do
-  htmlTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://www.orkneyferries.co.uk/info/current-service-update"
+  htmlTags <- parseTags <$> fetchPage "https://www.orkneyferries.co.uk/info/current-service-update"
   let disruptionTags = takeWhile (~/= ("<a href=/info/about>" :: String)) . dropWhile (~/= ("<h4>" :: String)) $ htmlTags
   let statuses = map (trim . fromAttrib "src") . filter (isTagOpenName "img") $ disruptionTags
-  newsTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://www.orkneyferries.co.uk/news"
+  newsTags <- parseTags <$> fetchPage "https://www.orkneyferries.co.uk/news"
   let additionalInfo = "<style>ul>li { margin-bottom: 20px; } ul>li li { margin-bottom: 0px; }</style>" <> (replace "\226\128\147" "-" . replace "\226\128\153" "'" . renderTree . (: []) . head . tagTree . dropWhile (~/= ("<div class=uk-placeholder>" :: String)) $ newsTags)
   time <- liftIO getCurrentTime
   return $
@@ -186,7 +186,7 @@ fetchShetlandFerriesAndNotify = do
 
 fetchShetlandFerries :: IO ScrapedServices
 fetchShetlandFerries = do
-  htmlTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://www.shetland.gov.uk/ferrystatus"
+  htmlTags <- parseTags <$> fetchPage "https://www.shetland.gov.uk/ferrystatus"
   let disruptionTags = takeWhile (~/= ("</div>" :: String)) . dropWhile (~/= ("<div class=routestatus>" :: String)) $ htmlTags
   let statuses = map (trim . fromAttrib "class") . filter (isTagOpenName "ul") $ disruptionTags
   time <- liftIO getCurrentTime
@@ -279,8 +279,8 @@ fetchWesternFerriesAndNotify = do
 
 fetchWesternFerries :: Application Service
 fetchWesternFerries = do
-  htmlTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://status.western-ferries.co.uk/status/view"
-  additionalInfo <- B8.unpack . getResponseBody <$> httpBS "https://status.western-ferries.co.uk/status/content"
+  htmlTags <- parseTags <$> liftIO (fetchPage "https://status.western-ferries.co.uk/status/view")
+  additionalInfo <- liftIO (fetchPage "https://status.western-ferries.co.uk/status/content")
   let activeTag = find (\t -> isTagOpen t && isActiveTag (fromAttrib "class" t)) htmlTags
   let status = textToStatus $ statusClassText <$> activeTag
   time <- liftIO getCurrentTime
@@ -320,7 +320,7 @@ fetchNorthLinkServicesAndNotify = do
 
 fetchNorthLinkService :: Application Service
 fetchNorthLinkService = do
-  htmlTags <- parseTags . B8.unpack . getResponseBody <$> httpBS "https://www.northlinkferries.co.uk/opsnews/"
+  htmlTags <- parseTags <$> liftIO (fetchPage "https://www.northlinkferries.co.uk/opsnews/")
   let statusText = last . words . fromAttrib "class" . head . dropWhile (~/= ("<div id=page>" :: String)) $ htmlTags
   let disruptionInfo = renderTags . takeWhile (~/= ("<!-- .entry-content -->" :: String)) . dropWhile (~/= ("<div class=entry-content>" :: String)) $ htmlTags
   let strippedNewlines = replace "\194\160" "" . replace "\t" "" . replace "\n" ""
@@ -345,6 +345,14 @@ fetchNorthLinkService = do
       | text == "amber" = Disrupted
       | text == "red" = Cancelled
       | otherwise = error $ "Unknown northlink status " <> text
+
+fetchPage :: String -> IO String
+fetchPage location = do
+  request <- parseRequest location
+  response <- timeout (1000000 * 20) (B8.unpack . getResponseBody <$> httpBS request) -- 20 second timeout
+  case response of
+    Nothing -> error $ "Error fetching " <> location
+    Just result -> return result
 
 fetchCalMacStatusesAndNotify :: Application ()
 fetchCalMacStatusesAndNotify = do
