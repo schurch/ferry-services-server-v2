@@ -510,27 +510,14 @@ weatherFetcherJsonOptions type' =
    in defaultOptions {fieldLabelModifier = camelTo2 '_' . drop (length typeName)}
 
 -- Vessel Fetcher Types
-data AjaxVessels = AjaxVessels
-  { ajaxVesselsData :: [AjaxVessel],
-    ajaxVesselsTotalCount :: Int
-  }
-  deriving (Generic, Show)
-
-instance FromJSON AjaxVessels where
-  parseJSON =
-    genericParseJSON $
-      defaultOptions
-        { fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessels))
-        }
-
 data AjaxVessel = AjaxVessel
-  { ajaxVesselShipname :: String,
-    ajaxVesselMmsi :: String,
+  { ajaxVesselMmsi :: String,
+    ajaxVesselShipname :: String,
     ajaxVesselLat :: String,
     ajaxVesselLon :: String,
     ajaxVesselSpeed :: Maybe String,
     ajaxVesselCourse :: Maybe String,
-    ajaxVesselLastPos :: Int -- Unix timestamp
+    ajaxVesselTimestamp :: String
   }
   deriving (Generic, Show)
 
@@ -538,7 +525,7 @@ instance FromJSON AjaxVessel where
   parseJSON =
     genericParseJSON $
       defaultOptions
-        { fieldLabelModifier = map toUpper . camelTo2 '_' . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessel))
+        { fieldLabelModifier = map toUpper . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessel))
         }
 
 -- Helpers

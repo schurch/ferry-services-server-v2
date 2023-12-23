@@ -13,6 +13,12 @@ import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char (toLower, toUpper)
 import Data.Pool (Pool, withResource)
+import Data.Time
+  ( UTCTime,
+    defaultTimeLocale,
+    getCurrentTime,
+    parseTimeOrError,
+  )
 import Data.Time.Clock (UTCTime (..), getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Database as DB
@@ -37,7 +43,7 @@ import Network.HTTP.Types.Header
     hUserAgent,
   )
 import System.Environment (getEnv)
-import System.Logger.Class (debug)
+import System.Logger.Class (debug, err)
 import System.Logger.Message (msg)
 import System.Timeout (timeout)
 import Types
@@ -51,49 +57,55 @@ fetchVessels organisations = do
   forM_ organisations $ \(organisationID, mmsis) -> do
     forM_ mmsis $ \mmsi -> do
       vessel <- liftIO $ fetchVessel organisationID mmsi
-      debug (msg $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
-      DB.saveVessel vessel
+      case vessel of
+        Left error ->
+          err (msg $ "Error fetching " <> show mmsi)
+        Right vessel -> do
+          debug (msg $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
+          DB.saveVessel vessel
       liftIO $ threadDelay (4 * 1000 * 1000) -- 4 second delay
 
-fetchVessel :: OrganisationID -> MMSI -> IO Vessel
+fetchVessel :: OrganisationID -> MMSI -> IO (Either String Vessel)
 fetchVessel organisationID mmsi = do
-  let requestParameters = "asset_type=vessels&columns=shipname,mmsi,time_of_latest_position,lat_of_latest_position,lon_of_latest_position,speed,course&mmsi|eq|mmsi=" <> B8.pack (show mmsi)
+  -- let requestParameters = "asset_type=vessels&columns=shipname,mmsi,time_of_latest_position,lat_of_latest_position,lon_of_latest_position,speed,course&mmsi|eq|mmsi=" <> B8.pack (show mmsi)
   let headers =
-        [ (hAccept, "*/*"),
-          (hCookie, "SERVERID=app4"),
-          (hAcceptLanguage, "en-au"),
-          (hHost, "www.marinetraffic.com"),
+        [ (hAccept, "application/json, text/plain, */*"),
           (hUserAgent, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15"),
-          (hReferer, "https://www.marinetraffic.com/en/data/?" <> requestParameters),
+          (hAcceptLanguage, "en-US,en;q=0.5"),
+          ("X-NewRelic-ID", "undefined"),
+          ("Vessel-Image", "0054729193319b27a6d45397a3b5a4d83e17"),
           ("X-Requested-With", "XMLHttpRequest"),
-          ("Vessel-Image", "007fb60815c6558c472a846479502b668e08")
+          ("Alt-Used", "www.marinetraffic.com"),
+          ("Connection", "keep-alive"),
+          (hReferer, "https://www.marinetraffic.com/en/ais/home/centerx:-5.5/centery:56.4/zoom:8"),
+          ("Sec-Fetch-Dest", "empty"),
+          ("Sec-Fetch-Mode", "cors"),
+          ("Sec-Fetch-Site", "same-origin")
         ]
-  request <- setRequestHeaders headers <$> parseRequest (B8.unpack $ "https://www.marinetraffic.com/en/reports?" <> requestParameters)
+  request <- setRequestHeaders headers <$> parseRequest ("https://www.marinetraffic.com/map/getvesseljson/mmsi:" <> show mmsi)
   responseBody <-
     checkResponseBody
       <$> timeout (1000000 * 20) (C.fromStrict . getResponseBody <$> httpBS request) -- 20 second timeout
   let result = responseBody >>= eitherDecode
   time <- getCurrentTime
-  case result of
-    Left errorMessage -> error errorMessage
-    Right result' -> return $ ajaxToVessel time result'
+  return $ ajaxToVessel time <$> result
   where
-    ajaxToVessel :: UTCTime -> AjaxVessels -> Vessel
-    ajaxToVessel time AjaxVessels {..} =
-      let latitude = read . ajaxVesselLat . head $ ajaxVesselsData :: Double
-          longitude = read . ajaxVesselLon . head $ ajaxVesselsData :: Double
+    ajaxToVessel :: UTCTime -> AjaxVessel -> Vessel
+    ajaxToVessel time AjaxVessel {..} =
+      let latitude = read ajaxVesselLat :: Double
+          longitude = read ajaxVesselLon :: Double
        in Vessel
-            { vesselMmsi = read . ajaxVesselMmsi . head $ ajaxVesselsData,
-              vesselName = capitaliseWords . ajaxVesselShipname . head $ ajaxVesselsData,
-              vesselSpeed = read <$> (ajaxVesselSpeed . head $ ajaxVesselsData),
-              vesselCourse = read <$> (ajaxVesselCourse . head $ ajaxVesselsData),
+            { vesselMmsi = read ajaxVesselMmsi,
+              vesselName = capitaliseWords ajaxVesselShipname,
+              vesselSpeed = read <$> ajaxVesselSpeed,
+              vesselCourse = read <$> ajaxVesselCourse,
               vesselCoordinate = GeoPoint (Just 4326) (Point (Position latitude longitude Nothing Nothing)),
-              vesselLastReceived = toUTC . ajaxVesselLastPos . head $ ajaxVesselsData,
+              vesselLastReceived = toUTC ajaxVesselTimestamp,
               vesselUpdated = time,
               vesselOrganisationID = organisationID
             }
-    toUTC :: Int -> UTCTime
-    toUTC = posixSecondsToUTCTime . fromInteger . toInteger
+    toUTC :: String -> UTCTime
+    toUTC = parseTimeOrError True defaultTimeLocale "%Y-%m-%d %H:%M:%S"
     capitaliseWords :: String -> String
     capitaliseWords string = unwords $ toUpperFirstLetter <$> words string
     toUpperFirstLetter :: String -> String
