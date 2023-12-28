@@ -170,10 +170,8 @@ loggerSettings logger = case level logger of
     removeTrailingNewline =
       BS.reverse . BS.dropWhile (== fromIntegral (ord '\n')) . BS.reverse
 
--- Lookup locations for a service ID
 type ServiceLocationLookup = M.Map Int [LocationResponse]
 
--- Lookup vessels for a service ID
 type ServiceVesselLookup = M.Map Int [VesselResponse]
 
 type ServiceOrganisationLookup = M.Map Int OrganisationResponse
@@ -188,57 +186,18 @@ getService serviceID departuresDate = do
   time <- liftIO getCurrentTime
   locationDepartureLookup <- createDeparturesLookup serviceID departuresDate
   nextDepatureLookup <- createNextDepartureLookup serviceID
-  locationLookup <- getLocationLookup (Just locationDepartureLookup) (Just nextDepatureLookup)
-  vesselLookup <- getServiceVesselLookup
-  organisationLookup <- getServiceOrganisationLookup
+  locationLookup <- createLocationLookup (Just locationDepartureLookup) (Just nextDepatureLookup)
+  vesselLookup <- createServiceVesselLookup
+  organisationLookup <- createServiceOrganisationLookup
   return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup 1 time <$> service
-
-createNextDepartureLookup :: Int -> Action LocationNextDepartureLookup
-createNextDepartureLookup serviceID = do
-  time <- liftIO getCurrentTime
-  departuresLookup <- createDeparturesLookup serviceID (Just $ utctDay time)
-  return $ M.mapMaybe (findNextDepature time) departuresLookup
-  where
-    findNextDepature :: UTCTime -> [DepartureResponse] -> Maybe DepartureResponse
-    findNextDepature time = find (\d -> departureResponseDeparture d > time) . sortOn departureResponseDeparture
-
-createDeparturesLookup :: Int -> Maybe Day -> Action LocationScheduledDeparturesLookup
-createDeparturesLookup serviceID departuresDate = do
-  time <- liftIO getCurrentTime
-  let date = fromMaybe (utctDay time) departuresDate
-  locationDepartures <- lift $ DB.getLocationDepartures serviceID date
-  return $
-    M.fromListWith (++) $
-      [(fromLocationID, [convertToDepartureResponse locationDeparture]) | locationDeparture@(LocationDeparture fromLocationID _ _ _ _ _ _) <- reverse locationDepartures]
-
-convertToDepartureResponse :: LocationDeparture -> DepartureResponse
-convertToDepartureResponse LocationDeparture {..} =
-  DepartureResponse
-    { departureResponseDestination =
-        LocationResponse
-          { locationResponseID = locationDepartureToLocationID,
-            locationResponseName = locationDepartureToLocationName,
-            locationResponseLatitude = getLatitude locationDepartureToLocationCoordinate,
-            locationResponseLongitude = getLatitude locationDepartureToLocationCoordinate,
-            locationResponseScheduledDepartures = Nothing,
-            locationResponseNextDeparture = Nothing,
-            locationResponseWeather = Nothing
-          },
-      departureResponseDeparture = convertToUTC locationDepartureDepartue,
-      departureResponseArrival = convertToUTC locationDepartureArrival,
-      departureResponseNotes = locationDepartureNotes
-    }
-  where
-    convertToUTC :: LocalTime -> UTCTime
-    convertToUTC = localTimeToUTC (read "UTC")
 
 getServices :: Action [ServiceResponse]
 getServices = do
   services <- lift DB.getServices
   time <- liftIO getCurrentTime
-  locationLookup <- getLocationLookup Nothing Nothing
-  vesselLookup <- getServiceVesselLookup
-  organisationLookup <- getServiceOrganisationLookup
+  locationLookup <- createLocationLookup Nothing Nothing
+  vesselLookup <- createServiceVesselLookup
+  organisationLookup <- createServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
     return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrder time service
 
@@ -275,9 +234,9 @@ getServicesForInstallation :: UUID -> Action [ServiceResponse]
 getServicesForInstallation installationID = do
   services <- lift $ DB.getServicesForInstallation installationID
   time <- liftIO getCurrentTime
-  locationLookup <- getLocationLookup Nothing Nothing
-  vesselLookup <- getServiceVesselLookup
-  organisationLookup <- getServiceOrganisationLookup
+  locationLookup <- createLocationLookup Nothing Nothing
+  vesselLookup <- createServiceVesselLookup
+  organisationLookup <- createServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
     return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrder time service
 
@@ -286,19 +245,10 @@ getVessels = do
   time <- liftIO getCurrentTime
   vessels <- filter (vesselFilter time) <$> lift DB.getVessels
   return $ vesselToVesselResponse <$> vessels
-
-vesselFilter :: UTCTime -> Vessel -> Bool
-vesselFilter currentTime Vessel {vesselLastReceived = vesselLastReceived} =
-  vesselTimeFilter currentTime vesselLastReceived
-
-serviceVesselFilter :: UTCTime -> ServiceVessel -> Bool
-serviceVesselFilter currentTime ServiceVessel {serviceVesselLastReceived = vesselLastReceived} =
-  vesselTimeFilter currentTime vesselLastReceived
-
-vesselTimeFilter :: UTCTime -> UTCTime -> Bool
-vesselTimeFilter currentTime lastReceived =
-  let diff = diffUTCTime currentTime lastReceived
-   in diff < 1800
+  where
+    vesselFilter :: UTCTime -> Vessel -> Bool
+    vesselFilter currentTime Vessel {vesselLastReceived = vesselLastReceived} =
+      vesselTimeFilter currentTime vesselLastReceived
 
 vesselToVesselResponse :: Vessel -> VesselResponse
 vesselToVesselResponse Vessel {..} =
@@ -337,12 +287,12 @@ serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrde
       serviceResponseOperator = M.lookup serviceID organisationLookup,
       serviceResponseUpdated = serviceUpdated
     }
-
--- Unknown status if over 30 mins ago
-serviceStatusForTime :: UTCTime -> UTCTime -> ServiceStatus -> ServiceStatus
-serviceStatusForTime currentTime serviceUpdated serviceStatus =
-  let diff = diffUTCTime currentTime serviceUpdated
-   in if diff > 1800 then Unknown else serviceStatus
+  where
+    -- Unknown status if over 30 mins ago
+    serviceStatusForTime :: UTCTime -> UTCTime -> ServiceStatus -> ServiceStatus
+    serviceStatusForTime currentTime serviceUpdated serviceStatus =
+      let diff = diffUTCTime currentTime serviceUpdated
+       in if diff > 1800 then Unknown else serviceStatus
 
 -- Pseudo code from AWS docs:
 -- retrieve the latest device token from the mobile operating system
@@ -385,10 +335,49 @@ registerDeviceToken installationID deviceToken deviceType = do
         $ updateDeviceTokenForEndpoint logger' currentEndpointARN deviceToken
       return currentEndpointARN
 
-getLocationLookup :: Maybe LocationScheduledDeparturesLookup -> Maybe LocationNextDepartureLookup -> Action ServiceLocationLookup
-getLocationLookup scheduledDeparturesLookup nextDepatureLookup = do
+createNextDepartureLookup :: Int -> Action LocationNextDepartureLookup
+createNextDepartureLookup serviceID = do
+  time <- liftIO getCurrentTime
+  departuresLookup <- createDeparturesLookup serviceID (Just $ utctDay time)
+  return $ M.mapMaybe (findNextDepature time) departuresLookup
+  where
+    findNextDepature :: UTCTime -> [DepartureResponse] -> Maybe DepartureResponse
+    findNextDepature time = find (\d -> departureResponseDeparture d > time) . sortOn departureResponseDeparture
+
+createDeparturesLookup :: Int -> Maybe Day -> Action LocationScheduledDeparturesLookup
+createDeparturesLookup serviceID departuresDate = do
+  time <- liftIO getCurrentTime
+  let date = fromMaybe (utctDay time) departuresDate
+  locationDepartures <- lift $ DB.getLocationDepartures serviceID date
+  return $
+    M.fromListWith (++) $
+      [(fromLocationID, [departureResponse locationDeparture]) | locationDeparture@(LocationDeparture fromLocationID _ _ _ _ _ _) <- reverse locationDepartures]
+  where
+    departureResponse :: LocationDeparture -> DepartureResponse
+    departureResponse LocationDeparture {..} =
+      DepartureResponse
+        { departureResponseDestination =
+            LocationResponse
+              { locationResponseID = locationDepartureToLocationID,
+                locationResponseName = locationDepartureToLocationName,
+                locationResponseLatitude = getLatitude locationDepartureToLocationCoordinate,
+                locationResponseLongitude = getLatitude locationDepartureToLocationCoordinate,
+                locationResponseScheduledDepartures = Nothing,
+                locationResponseNextDeparture = Nothing,
+                locationResponseWeather = Nothing
+              },
+          departureResponseDeparture = convertToUTC locationDepartureDepartue,
+          departureResponseArrival = convertToUTC locationDepartureArrival,
+          departureResponseNotes = locationDepartureNotes
+        }
+
+    convertToUTC :: LocalTime -> UTCTime
+    convertToUTC = localTimeToUTC (read "UTC")
+
+createLocationLookup :: Maybe LocationScheduledDeparturesLookup -> Maybe LocationNextDepartureLookup -> Action ServiceLocationLookup
+createLocationLookup scheduledDeparturesLookup nextDepatureLookup = do
   serviceLocations <- lift DB.getServiceLocations
-  locationWeatherLookup <- getLocationWeatherLookup
+  locationWeatherLookup <- createLocationWeatherLookup
   return $
     M.fromListWith (++) $
       [ (serviceID, [LocationResponse locationID name (getLatitude coordinate) (getLongitude coordinate) (lookupDepartures locationID) (lookupNextDepature locationID) (M.lookup locationID locationWeatherLookup)])
@@ -401,8 +390,8 @@ getLocationLookup scheduledDeparturesLookup nextDepatureLookup = do
     lookupDepartures :: Int -> Maybe [DepartureResponse]
     lookupDepartures locationID = fromMaybe [] . M.lookup locationID <$> scheduledDeparturesLookup
 
-getServiceOrganisationLookup :: Action ServiceOrganisationLookup
-getServiceOrganisationLookup = do
+createServiceOrganisationLookup :: Action ServiceOrganisationLookup
+createServiceOrganisationLookup = do
   serviceOrganisations <- lift DB.getServiceOrganisations
   return $
     M.fromList $
@@ -410,8 +399,8 @@ getServiceOrganisationLookup = do
         | (ServiceOrganisation serviceID organisationID name website localNumber internationalNumber email x facebook) <- serviceOrganisations
       ]
 
-getServiceVesselLookup :: Action ServiceVesselLookup
-getServiceVesselLookup = do
+createServiceVesselLookup :: Action ServiceVesselLookup
+createServiceVesselLookup = do
   serviceVessels <- lift DB.getServiceVessels
   time <- liftIO getCurrentTime
   return $
@@ -420,9 +409,13 @@ getServiceVesselLookup = do
         | vessel@(ServiceVessel serviceID mmsi name speed course coordinate lastReceived updated organisationID) <- serviceVessels,
           serviceVesselFilter time vessel
       ]
+  where
+    serviceVesselFilter :: UTCTime -> ServiceVessel -> Bool
+    serviceVesselFilter currentTime ServiceVessel {serviceVesselLastReceived = vesselLastReceived} =
+      vesselTimeFilter currentTime vesselLastReceived
 
-getLocationWeatherLookup :: Action (M.Map Int LocationWeatherResponse)
-getLocationWeatherLookup = do
+createLocationWeatherLookup :: Action (M.Map Int LocationWeatherResponse)
+createLocationWeatherLookup = do
   locationWeathers <- lift DB.getLocationWeathers
   return $
     M.fromList $
@@ -456,3 +449,8 @@ getLatitude _ = error "Expected point"
 getLongitude :: Geometry -> Scientific
 getLongitude (GeoPoint _ (Point (Position _ longitude _ _))) = fromFloatDigits longitude
 getLongitude _ = error "Expected point"
+
+vesselTimeFilter :: UTCTime -> UTCTime -> Bool
+vesselTimeFilter currentTime lastReceived =
+  let diff = diffUTCTime currentTime lastReceived
+   in diff < 1800
