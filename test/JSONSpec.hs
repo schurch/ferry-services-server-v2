@@ -154,6 +154,7 @@ spec = do
                       locationResponseLatitude = 55.576606,
                       locationResponseLongitude = -5.139172,
                       locationResponseScheduledDepartures = Nothing,
+                      locationResponseNextDeparture = Nothing,
                       locationResponseWeather =
                         Just
                           LocationWeatherResponse
