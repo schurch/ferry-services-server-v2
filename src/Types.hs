@@ -378,6 +378,7 @@ data LocationResponse = LocationResponse
     locationResponseLatitude :: Scientific,
     locationResponseLongitude :: Scientific,
     locationResponseScheduledDepartures :: Maybe [DepartureResponse],
+    locationResponseNextDeparture :: Maybe DepartureResponse,
     locationResponseWeather :: Maybe LocationWeatherResponse
   }
   deriving (Generic, Show)
