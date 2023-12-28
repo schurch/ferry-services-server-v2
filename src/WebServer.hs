@@ -228,9 +228,9 @@ convertToDepartureResponse LocationDeparture {..} =
       departureResponseArrival = convertToUTC locationDepartureArrival,
       departureResponseNotes = locationDepartureNotes
     }
-
-convertToUTC :: LocalTime -> UTCTime
-convertToUTC = localTimeToUTC (read "UTC")
+  where
+    convertToUTC :: LocalTime -> UTCTime
+    convertToUTC = localTimeToUTC (read "UTC")
 
 getServices :: Action [ServiceResponse]
 getServices = do
@@ -397,7 +397,7 @@ getLocationLookup scheduledDeparturesLookup nextDepatureLookup = do
       ]
   where
     lookupNextDepature :: Int -> Maybe DepartureResponse
-    lookupNextDepature locationID = M.lookup locationID =<< nextDepatureLookup
+    lookupNextDepature locationID = nextDepatureLookup >>= M.lookup locationID
     lookupDepartures :: Int -> Maybe [DepartureResponse]
     lookupDepartures locationID = fromMaybe [] . M.lookup locationID <$> scheduledDeparturesLookup
 
