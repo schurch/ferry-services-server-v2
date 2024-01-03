@@ -42,6 +42,16 @@ services:
       - envfile.docker-test
     tty: true
     command: /opt/ferry-services/ferry-services-vessel-fetcher-exe
+  rail-departure-fetcher-test:
+    image: stefanchurch/ferry-services-rail-departure-fetcher:latest
+    container_name: ferry-services-rail-departure-fetcher-test
+    depends_on:
+      - "db-test"
+    restart: always
+    env_file:
+      - envfile.docker-test
+    tty: true
+    command: /opt/ferry-services/ferry-services-rail-departure-fetcher-exe
   transxchange-ingester-test:
     image: stefanchurch/ferry-services-transxchange-ingester:latest
     container_name: ferry-services-transxchange-ingester-test

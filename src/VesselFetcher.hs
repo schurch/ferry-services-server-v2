@@ -67,7 +67,6 @@ fetchVessels organisations = do
 
 fetchVessel :: OrganisationID -> MMSI -> IO (Either String Vessel)
 fetchVessel organisationID mmsi = do
-  -- let requestParameters = "asset_type=vessels&columns=shipname,mmsi,time_of_latest_position,lat_of_latest_position,lon_of_latest_position,speed,course&mmsi|eq|mmsi=" <> B8.pack (show mmsi)
   let headers =
         [ (hAccept, "application/json, text/plain, */*"),
           (hUserAgent, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15"),

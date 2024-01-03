@@ -180,13 +180,16 @@ type LocationScheduledDeparturesLookup = M.Map Int [DepartureResponse]
 
 type LocationNextDepartureLookup = M.Map Int DepartureResponse
 
+type LocationNextRailDepartureLookup = M.Map Int RailDepartureResponse
+
 getService :: Int -> Maybe Day -> Action (Maybe ServiceResponse)
 getService serviceID departuresDate = do
   service <- lift $ DB.getService serviceID
   time <- liftIO getCurrentTime
   locationDepartureLookup <- createDeparturesLookup serviceID departuresDate
   nextDepatureLookup <- createNextDepartureLookup serviceID
-  locationLookup <- createLocationLookup (Just locationDepartureLookup) (Just nextDepatureLookup)
+  nextRailDepartureLookup <- createNextRailDepartureLookup
+  locationLookup <- createLocationLookup (Just locationDepartureLookup) (Just nextDepatureLookup) (Just nextRailDepartureLookup)
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
   return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup 1 time <$> service
@@ -195,7 +198,7 @@ getServices :: Action [ServiceResponse]
 getServices = do
   services <- lift DB.getServices
   time <- liftIO getCurrentTime
-  locationLookup <- createLocationLookup Nothing Nothing
+  locationLookup <- createLocationLookup Nothing Nothing Nothing
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
@@ -234,7 +237,7 @@ getServicesForInstallation :: UUID -> Action [ServiceResponse]
 getServicesForInstallation installationID = do
   services <- lift $ DB.getServicesForInstallation installationID
   time <- liftIO getCurrentTime
-  locationLookup <- createLocationLookup Nothing Nothing
+  locationLookup <- createLocationLookup Nothing Nothing Nothing
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
@@ -344,6 +347,29 @@ createNextDepartureLookup serviceID = do
     findNextDepature :: UTCTime -> [DepartureResponse] -> Maybe DepartureResponse
     findNextDepature time = find (\d -> departureResponseDeparture d > time) . sortOn departureResponseDeparture
 
+createNextRailDepartureLookup :: Action LocationNextRailDepartureLookup
+createNextRailDepartureLookup = do
+  time <- liftIO getCurrentTime
+  railDepartures <- lift $ DB.getLocationRailDepartures (utctDay time)
+  let departuresLookup =
+        M.fromListWith (++) $
+          [(locationID, [locationRailDepartureToRailDepartureResponse locationRailDeparture]) | locationRailDeparture@(LocationRailDeparture locationID _ _ _ _ _ _ _ _) <- railDepartures]
+  return $ M.mapMaybe (findNextDepature time) departuresLookup
+  where
+    locationRailDepartureToRailDepartureResponse :: LocationRailDeparture -> RailDepartureResponse
+    locationRailDepartureToRailDepartureResponse railDeparture =
+      RailDepartureResponse
+        { railDepartureResponseFrom = locationRailDepartureDepartureName railDeparture,
+          railDepartureResponseTo = locationRailDepartureDestinationName railDeparture,
+          railDepartureResponseDeparture = convertLocalTimeToUTC $ locationRailDepartureScheduledDepartureTime railDeparture,
+          railDepartureResponseDepartureInfo = locationRailDepartureEstimatedDepartureTime railDeparture,
+          railDepartureResponsePlatform = locationRailDeparturePlatform railDeparture,
+          railDepartureResponseIsCancelled = locationRailDepartureCancelled railDeparture
+        }
+
+    findNextDepature :: UTCTime -> [RailDepartureResponse] -> Maybe RailDepartureResponse
+    findNextDepature time = find (\d -> railDepartureResponseDeparture d > time) . sortOn railDepartureResponseDeparture
+
 createDeparturesLookup :: Int -> Maybe Day -> Action LocationScheduledDeparturesLookup
 createDeparturesLookup serviceID departuresDate = do
   time <- liftIO getCurrentTime
@@ -364,29 +390,42 @@ createDeparturesLookup serviceID departuresDate = do
                 locationResponseLongitude = getLatitude locationDepartureToLocationCoordinate,
                 locationResponseScheduledDepartures = Nothing,
                 locationResponseNextDeparture = Nothing,
+                locationResponseNextRailDeparture = Nothing,
                 locationResponseWeather = Nothing
               },
-          departureResponseDeparture = convertToUTC locationDepartureDepartue,
-          departureResponseArrival = convertToUTC locationDepartureArrival,
+          departureResponseDeparture = convertLocalTimeToUTC locationDepartureDepartue,
+          departureResponseArrival = convertLocalTimeToUTC locationDepartureArrival,
           departureResponseNotes = locationDepartureNotes
         }
 
-    convertToUTC :: LocalTime -> UTCTime
-    convertToUTC = localTimeToUTC (read "UTC")
-
-createLocationLookup :: Maybe LocationScheduledDeparturesLookup -> Maybe LocationNextDepartureLookup -> Action ServiceLocationLookup
-createLocationLookup scheduledDeparturesLookup nextDepatureLookup = do
+createLocationLookup :: Maybe LocationScheduledDeparturesLookup -> Maybe LocationNextDepartureLookup -> Maybe LocationNextRailDepartureLookup -> Action ServiceLocationLookup
+createLocationLookup scheduledDeparturesLookup nextDepatureLookup nextRailDepartureLookup = do
   serviceLocations <- lift DB.getServiceLocations
   locationWeatherLookup <- createLocationWeatherLookup
   return $
     M.fromListWith (++) $
-      [ (serviceID, [LocationResponse locationID name (getLatitude coordinate) (getLongitude coordinate) (lookupDepartures locationID) (lookupNextDepature locationID) (M.lookup locationID locationWeatherLookup)])
+      [ ( serviceID,
+          [ LocationResponse
+              locationID
+              name
+              (getLatitude coordinate)
+              (getLongitude coordinate)
+              (lookupDepartures locationID)
+              (lookupNextDepature locationID)
+              (lookupNextRailDeparture locationID)
+              (M.lookup locationID locationWeatherLookup)
+          ]
+        )
         | (ServiceLocation serviceID locationID name coordinate) <-
             serviceLocations
       ]
   where
     lookupNextDepature :: Int -> Maybe DepartureResponse
     lookupNextDepature locationID = nextDepatureLookup >>= M.lookup locationID
+
+    lookupNextRailDeparture :: Int -> Maybe RailDepartureResponse
+    lookupNextRailDeparture locationID = nextRailDepartureLookup >>= M.lookup locationID
+
     lookupDepartures :: Int -> Maybe [DepartureResponse]
     lookupDepartures locationID = fromMaybe [] . M.lookup locationID <$> scheduledDeparturesLookup
 
@@ -454,3 +493,6 @@ vesselTimeFilter :: UTCTime -> UTCTime -> Bool
 vesselTimeFilter currentTime lastReceived =
   let diff = diffUTCTime currentTime lastReceived
    in diff < 1800
+
+convertLocalTimeToUTC :: LocalTime -> UTCTime
+convertLocalTimeToUTC = localTimeToUTC (read "UTC")

@@ -57,6 +57,16 @@ services:
       - envfile.docker-prod
     tty: true
     command: /opt/ferry-services/ferry-services-vessel-fetcher-exe
+  rail-departure-fetcher-prod:
+    image: stefanchurch/ferry-services-rail-departure-fetcher:latest
+    container_name: ferry-services-rail-departure-fetcher-prod
+    depends_on:
+      - "db-prod"
+    restart: always
+    env_file:
+      - envfile.docker-prod
+    tty: true
+    command: /opt/ferry-services/ferry-services-rail-departure-fetcher-exe
   transxchange-ingester-prod:
     image: stefanchurch/ferry-services-transxchange-ingester:latest
     container_name: ferry-services-transxchange-ingester-prod

@@ -31,7 +31,7 @@ import Data.Scientific
     toBoundedInteger,
   )
 import Data.Text.Lazy (Text)
-import Data.Time (LocalTime, UTCTime)
+import Data.Time (LocalTime, TimeOfDay, UTCTime)
 import Data.Typeable (Typeable, typeRep)
 import Data.UUID (UUID)
 import Database.Postgis
@@ -308,6 +308,19 @@ data ServiceOrganisation = ServiceOrganisation
   }
   deriving (Generic, Show, ToRow, FromRow)
 
+data LocationRailDeparture = LocationRailDeparture
+  { locationRailDepartureFromLocationID :: Int,
+    locationRailDepartureDepartureCRS :: String,
+    locationRailDepartureDepartureName :: String,
+    locationRailDepartureDestinationCRS :: String,
+    locationRailDepartureDestinationName :: String,
+    locationRailDepartureScheduledDepartureTime :: LocalTime,
+    locationRailDepartureEstimatedDepartureTime :: String,
+    locationRailDepartureCancelled :: Bool,
+    locationRailDeparturePlatform :: Maybe String
+  }
+  deriving (Generic, Show, ToRow, FromRow)
+
 -- API Types
 data ServiceResponse = ServiceResponse
   { serviceResponseServiceID :: Int,
@@ -379,6 +392,7 @@ data LocationResponse = LocationResponse
     locationResponseLongitude :: Scientific,
     locationResponseScheduledDepartures :: Maybe [DepartureResponse],
     locationResponseNextDeparture :: Maybe DepartureResponse,
+    locationResponseNextRailDeparture :: Maybe RailDepartureResponse,
     locationResponseWeather :: Maybe LocationWeatherResponse
   }
   deriving (Generic, Show)
@@ -435,6 +449,22 @@ instance ToJSON DepartureResponse where
 
 instance FromJSON DepartureResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy DepartureResponse)
+
+data RailDepartureResponse = RailDepartureResponse
+  { railDepartureResponseFrom :: String,
+    railDepartureResponseTo :: String,
+    railDepartureResponseDeparture :: UTCTime,
+    railDepartureResponseDepartureInfo :: String,
+    railDepartureResponsePlatform :: Maybe String,
+    railDepartureResponseIsCancelled :: Bool
+  }
+  deriving (Generic, Show)
+
+instance ToJSON RailDepartureResponse where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy RailDepartureResponse)
+
+instance FromJSON RailDepartureResponse where
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy RailDepartureResponse)
 
 jsonOptions :: Typeable a => Proxy a -> Data.Aeson.Options
 jsonOptions type' =
@@ -528,6 +558,43 @@ instance FromJSON AjaxVessel where
       defaultOptions
         { fieldLabelModifier = map toUpper . drop (length . show . typeRep $ (Proxy :: Proxy AjaxVessel))
         }
+
+-- Rail Departure Fetcher Types
+data RailDepartureFetcherResult = RailDepartureFetcherResult
+  { railDepartureFetcherResultLocationName :: String,
+    railDepartureFetcherResultCrs :: String,
+    railDepartureFetcherResultTrainServices :: Maybe [RailDepartureFetcherTrainService]
+  }
+  deriving (Generic, Show)
+
+instance FromJSON RailDepartureFetcherResult where
+  parseJSON = genericParseJSON $ railDepartureFetcherJsonOptions (Proxy :: Proxy RailDepartureFetcherResult)
+
+data RailDepartureFetcherTrainService = RailDepartureFetcherTrainService
+  { railDepartureFetcherTrainServiceDestination :: [RailDepartureFetcherLocation],
+    railDepartureFetcherTrainServiceStd :: String,
+    railDepartureFetcherTrainServiceEtd :: String,
+    railDepartureFetcherTrainServicePlatform :: Maybe String,
+    railDepartureFetcherTrainServiceIsCancelled :: Bool
+  }
+  deriving (Generic, Show)
+
+instance FromJSON RailDepartureFetcherTrainService where
+  parseJSON = genericParseJSON $ railDepartureFetcherJsonOptions (Proxy :: Proxy RailDepartureFetcherTrainService)
+
+data RailDepartureFetcherLocation = RailDepartureFetcherLocation
+  { railDepartureFetcherLocationLocationName :: String,
+    railDepartureFetcherLocationCrs :: String
+  }
+  deriving (Generic, Show)
+
+instance FromJSON RailDepartureFetcherLocation where
+  parseJSON = genericParseJSON $ railDepartureFetcherJsonOptions (Proxy :: Proxy RailDepartureFetcherLocation)
+
+railDepartureFetcherJsonOptions :: Typeable a => Proxy a -> Options
+railDepartureFetcherJsonOptions type' =
+  let typeName = show $ typeRep type'
+   in defaultOptions {fieldLabelModifier = toLowerFirstLetter . drop (length typeName)}
 
 -- Helpers
 toLowerFirstLetter :: String -> String

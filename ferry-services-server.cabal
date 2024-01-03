@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4ebd8a3715f01bbd248157ec801d1cbf555d3c92011eb51d927d9c1b5be6807a
+-- hash: 4e87bf69fce2268661ba433c57e28eb8dae36505e54a56c2d14ff28d54878c21
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -28,6 +28,7 @@ library
   exposed-modules:
       AWS
       Database
+      RailDepartureFetcher
       Scraper
       TransxchangeIngester
       TransxchangeParser
@@ -71,6 +72,7 @@ library
     , time
     , tinylog
     , unordered-containers
+    , utf8-string
     , uuid
     , vector
     , wai
@@ -80,6 +82,23 @@ library
     , warp
     , xml
     , zip
+  default-language: Haskell2010
+
+executable ferry-services-rail-departure-fetcher-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_ferry_services_server
+  hs-source-dirs:
+      rail-departure-fetcher
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , ferry-services-server
+    , postgresql-simple
+    , raven-haskell
+    , resource-pool
+    , tinylog
+    , transformers
   default-language: Haskell2010
 
 executable ferry-services-scraper-exe
