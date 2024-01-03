@@ -572,6 +572,7 @@ instance FromJSON RailDepartureFetcherResult where
 
 data RailDepartureFetcherTrainService = RailDepartureFetcherTrainService
   { railDepartureFetcherTrainServiceDestination :: [RailDepartureFetcherLocation],
+    railDepartureFetcherTrainServiceCurrentDestinations :: Maybe [RailDepartureFetcherLocation],
     railDepartureFetcherTrainServiceStd :: String,
     railDepartureFetcherTrainServiceEtd :: String,
     railDepartureFetcherTrainServicePlatform :: Maybe String,

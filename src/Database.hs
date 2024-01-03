@@ -82,7 +82,7 @@ insertRailDepartureFetcherResult railDeparturesFetcherResult locationID = withCo
       let departureCRS = railDepartureFetcherResultCrs
           departureName = railDepartureFetcherResultLocationName
        in case railDepartureFetcherResultTrainServices of
-            Just trainServices -> convertToRailDeparture departureCRS departureName locationID <$> trainServices
+            Just trainServices -> convertToRailDeparture departureCRS departureName locationID <$> filter (isValidService departureCRS) trainServices
             Nothing -> []
 
     convertToRailDeparture :: String -> String -> Int -> RailDepartureFetcherTrainService -> (String, String, String, String, TimeOfDay, String, Bool, Maybe String, Int)
@@ -97,6 +97,11 @@ insertRailDepartureFetcherResult railDeparturesFetcherResult locationID = withCo
         railDepartureFetcherTrainServicePlatform trainService,
         locationID
       )
+
+    isValidService :: String -> RailDepartureFetcherTrainService -> Bool
+    isValidService departureCRS trainService =
+      let currentDestination = railDepartureFetcherLocationCrs . head <$> railDepartureFetcherTrainServiceCurrentDestinations trainService
+       in currentDestination /= Just departureCRS
 
     deleteOldData :: Connection -> RailDepartureFetcherResult -> IO ()
     deleteOldData connection railDeparturesFetcherResult = do
