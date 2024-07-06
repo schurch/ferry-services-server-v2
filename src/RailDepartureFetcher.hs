@@ -30,7 +30,8 @@ fetchRailDepartures =
       ("OBN", 19),
       ("MLG", 44),
       ("THS", 59),
-      ("ABD", 61)
+      ("ABD", 61),
+      ("TRN", 97)
     ]
     fetchRailDeparture
 
