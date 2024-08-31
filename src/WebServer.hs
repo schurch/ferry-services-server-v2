@@ -45,6 +45,7 @@ import Database.Postgis
     Position (Position),
   )
 import Database.PostgreSQL.Simple (Connection)
+import Network.HTTP.Types.Status (status404)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.AddHeaders (addHeaders)
 import Network.Wai.Middleware.Cors
@@ -90,6 +91,7 @@ import Web.Scotty.Trans
     redirect,
     rescue,
     setHeader,
+    status,
   )
 
 webApp :: Middleware -> Scotty
@@ -121,6 +123,16 @@ webApp requestLogger = do
     request <- jsonData
     services <- createInstallation installationID request
     json services
+  get "/api/installations/:installationID/push-status" $ do
+    installationID <- param "installationID"
+    pushStatus <- getPushStatus installationID
+    maybe (status status404) json pushStatus
+  post "/api/installations/:installationID/push-status" $ do
+    installationID <- param "installationID"
+    request <- jsonData
+    lift $ DB.updatePushEnabled installationID (pushStatusEnabled request)
+    pushStatus <- getPushStatus installationID
+    maybe (status status404) json pushStatus
   get "/api/installations/:installationID/services" $ do
     installationID <- param "installationID"
     services <- getServicesForInstallation installationID
@@ -181,6 +193,11 @@ type LocationScheduledDeparturesLookup = M.Map Int [DepartureResponse]
 type LocationNextDepartureLookup = M.Map Int DepartureResponse
 
 type LocationNextRailDepartureLookup = M.Map Int RailDepartureResponse
+
+getPushStatus :: UUID -> Action (Maybe PushStatus)
+getPushStatus installationID = do
+  installation <- lift $ DB.getInstallationWithID installationID
+  return $ PushStatus . installationPushEnabled <$> installation
 
 getService :: Int -> Maybe Day -> Action (Maybe ServiceResponse)
 getService serviceID departuresDate = do

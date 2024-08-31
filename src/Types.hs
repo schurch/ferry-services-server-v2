@@ -227,6 +227,7 @@ data Installation = Installation
     installationDeviceToken :: String,
     installationDeviceType :: DeviceType,
     installationEndpointARN :: String,
+    installationPushEnabled :: Bool,
     installationpUpatedDate :: UTCTime
   }
   deriving (Generic, Show, ToRow, FromRow)
@@ -384,6 +385,17 @@ instance FromJSON AddServiceRequest where
 
 instance ToJSON AddServiceRequest where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy AddServiceRequest)
+
+data PushStatus = PushStatus
+  { pushStatusEnabled :: Bool
+  }
+  deriving (Generic, Show)
+
+instance FromJSON PushStatus where
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy PushStatus)
+
+instance ToJSON PushStatus where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy PushStatus)
 
 data LocationResponse = LocationResponse
   { locationResponseID :: Int,

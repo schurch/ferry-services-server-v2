@@ -15,6 +15,7 @@ module Database
     addServiceToInstallation,
     deleteServiceForInstallation,
     getServicesForInstallation,
+    updatePushEnabled,
     getInstallationWithID,
     getIntererestedInstallationsForServiceID,
     saveServices,
@@ -278,13 +279,24 @@ getServicesForInstallation installationID =
       |]
       (Only installationID)
 
+updatePushEnabled :: UUID -> Bool -> Application ()
+updatePushEnabled installationID pushEnabled = do
+  withConnection $ \connection ->
+    void $
+      execute
+        connection
+        [sql|
+          UPDATE Installations SET push_enabled = ? WHERE installation_id = ?
+        |]
+        (pushEnabled, installationID)
+
 getInstallationWithID :: UUID -> Application (Maybe Installation)
 getInstallationWithID installationID = do
   results <- withConnection $ \connection ->
     query
       connection
       [sql|
-        SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
+        SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.push_enabled, i.updated
         FROM installations i
         WHERE installation_id = ?
       |]
@@ -298,10 +310,10 @@ getIntererestedInstallationsForServiceID serviceID =
     query
       connection
       [sql|
-        SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.updated
+        SELECT i.installation_id, i.device_token, i.device_type, i.endpoint_arn, i.push_enabled, i.updated
         FROM installation_services s
         JOIN installations i ON s.installation_id = i.installation_id
-        WHERE s.service_id = ?
+        WHERE s.service_id = ? AND i.push_enabled = TRUE
       |]
       (Only serviceID)
 

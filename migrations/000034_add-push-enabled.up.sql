@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE installations ADD push_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+
+COMMIT;
