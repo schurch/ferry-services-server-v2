@@ -51,7 +51,7 @@ main = do
   forever $ do
     info logger (msg @String "Fetching transxchange data")
     catch (runReaderT ingest env) (handleException logger)
-    threadDelay (7 * 24 * 60 * 60 * 1000 * 1000) -- 7 days
+    threadDelay (1 * 24 * 60 * 60 * 1000 * 1000) -- 1 day
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do
