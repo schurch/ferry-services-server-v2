@@ -487,6 +487,57 @@ jsonOptions type' =
         }
 
 -- Scraper Types
+data CalMacAPIRequestBody = CalMacAPIRequestBody
+  { calMacAPIRequestBodyQuery :: String
+  }
+  deriving (Generic, Show)
+
+instance ToJSON CalMacAPIRequestBody where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy CalMacAPIRequestBody)
+
+data CalMacAPIResponse = CalMacAPIResponse
+  { calMacAPIResponseData :: CalMacAPIResponseData
+  }
+  deriving (Generic, Show)
+
+instance FromJSON CalMacAPIResponse where
+  parseJSON = genericParseJSON $ calMacAPIResponseJsonOptions (Proxy :: Proxy CalMacAPIResponse)
+
+data CalMacAPIResponseData = CalMacAPIResponseData
+  { calMacAPIResponseDataRoutes :: [CalMacAPIResponseRoute]
+  }
+  deriving (Generic, Show)
+
+instance FromJSON CalMacAPIResponseData where
+  parseJSON = genericParseJSON $ calMacAPIResponseJsonOptions (Proxy :: Proxy CalMacAPIResponseData)
+
+data CalMacAPIResponseRoute = CalMacAPIResponseRoute
+  { calMacAPIResponseRouteName :: String,
+    calMacAPIResponseRouteStatus :: String,
+    calMacAPIResponseRouteRouteCode :: String,
+    calMacAPIResponseRouteLocation :: CalMacAPIResponseRouteLocation
+  }
+  deriving (Generic, Show)
+
+instance FromJSON CalMacAPIResponseRoute where
+  parseJSON = genericParseJSON $ calMacAPIResponseJsonOptions (Proxy :: Proxy CalMacAPIResponseRoute)
+
+data CalMacAPIResponseRouteLocation = CalMacAPIResponseRouteLocation
+  { calMacAPIResponseRouteLocationName :: String
+  }
+  deriving (Generic, Show)
+
+instance FromJSON CalMacAPIResponseRouteLocation where
+  parseJSON = genericParseJSON $ calMacAPIResponseJsonOptions (Proxy :: Proxy CalMacAPIResponseRouteLocation)
+
+calMacAPIResponseJsonOptions :: Typeable a => Proxy a -> Data.Aeson.Options
+calMacAPIResponseJsonOptions type' =
+  let typeName = show $ typeRep type'
+   in defaultOptions
+        { fieldLabelModifier = toLowerFirstLetter . drop (length typeName),
+          omitNothingFields = True
+        }
+
 data AjaxServiceDetails = AjaxServiceDetails
   { ajaxServiceDetailsReason :: String,
     ajaxServiceDetailsImage :: String,

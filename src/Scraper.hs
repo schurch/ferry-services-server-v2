@@ -12,6 +12,7 @@ module Scraper
 where
 
 import AWS
+import Amazonka (AWSRequest (response))
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, catch)
 import Control.Monad (forM_, forever, void, when)
@@ -22,6 +23,7 @@ import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.List (find, isInfixOf, nub, (\\))
 import Data.List.Utils (replace)
+import Data.Map (Map, findWithDefault, fromList)
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Pool (Pool, withResource)
 import Data.Time.Clock (UTCTime, getCurrentTime)
@@ -29,12 +31,15 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.UUID (UUID)
 import qualified Database as DB
 import Database.PostgreSQL.Simple (Connection)
-import Network.HTTP.Simple (getResponseBody, httpBS, parseRequest, setRequestHeaders)
+import Network.HTTP.Simple (getResponseBody, httpBS, parseRequest, setRequestBodyJSON, setRequestHeaders, setRequestMethod)
 import Network.HTTP.Types.Header
   ( hAccept,
     hAcceptEncoding,
+    hAcceptLanguage,
+    hConnection,
     hContentType,
     hHost,
+    hOrigin,
     hUserAgent,
   )
 import System.Logger.Class (Logger, info)
@@ -372,20 +377,28 @@ fetchCalMacStatusesAndNotify = do
     fetchCalMacServices :: IO ScrapedServices
     fetchCalMacServices = do
       let headers =
-            [ (hContentType, "application/json; charset=utf-8"),
+            [ (hContentType, "application/json"),
               (hAcceptEncoding, "gzip, deflate"),
-              (hAccept, "application/json, text/javascript, */*; q=0.01"),
-              (hUserAgent, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.2 Safari/605.1.15"),
-              (hHost, "status.calmac.info")
+              (hAccept, "*/*"),
+              (hUserAgent, "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"),
+              (hHost, "apim.calmac.co.uk"),
+              ("Sec-Fetch-Site", "cross-site"),
+              (hAcceptLanguage, "en-GB,en;q=0.9"),
+              ("Sec-Fetch-Mode", "cors"),
+              (hOrigin, "capacitor://localhost"),
+              (hConnection, "keep-alive"),
+              ("Sec-Fetch-Dest", "empty")
             ]
-      request <- setRequestHeaders headers <$> parseRequest "http://status.calmac.info/?ajax=json"
+      let requestBodyQuery = "{\n  routes {\n    name\n    id\n    routeCode\n    ports {\n      portCode\n      name\n      order\n      isFreight\n      hideOnMap\n      __typename\n    }\n    routeStatuses {\n      id\n      title\n      status\n      subStatus\n      updatedAtDateTime\n      __typename\n    }\n    location {\n      name\n      __typename\n    }\n    status\n    isFreight\n    hideOnMap\n    __typename\n  }\n}"
+      request <- setRequestBodyJSON (CalMacAPIRequestBody requestBodyQuery) . setRequestMethod "POST" . setRequestHeaders headers <$> parseRequest "https://apim.calmac.co.uk/graphql"
       responseBody <-
         checkResponseBody
           <$> timeout (1000000 * 20) (C.fromStrict . getResponseBody <$> httpBS request) -- 20 second timeout
       time <- getCurrentTime
       let result = do
-            ajaxResult <- responseBody >>= eitherDecode
-            Right $ ajaxResultToService time <$> zip [1 ..] ajaxResult
+            response <- responseBody >>= eitherDecode
+            let routes = calMacAPIResponseDataRoutes . calMacAPIResponseData $ response
+            Right $ calmacRouteToService time <$> routes
       case result of
         Left errorMessage -> error errorMessage
         Right result' -> return $ ScrapedServices result'
@@ -394,38 +407,62 @@ fetchCalMacStatusesAndNotify = do
     checkResponseBody =
       maybe (Left "Timeout while waiting for services response") Right
 
-ajaxResultToService :: UTCTime -> (Int, AjaxServiceDetails) -> Service
-ajaxResultToService time (sortOrder, AjaxServiceDetails {..}) =
+calmacRouteToService :: UTCTime -> CalMacAPIResponseRoute -> Service
+calmacRouteToService time CalMacAPIResponseRoute {..} =
   Service
-    { serviceID = read ajaxServiceDetailsCode,
+    { serviceID = findWithDefault (read calMacAPIResponseRouteRouteCode) calMacAPIResponseRouteRouteCode statusIDLookup,
       serviceUpdated = time,
-      serviceArea = ajaxServiceDetailsDestName,
-      serviceRoute = ajaxServiceDetailsRouteName,
-      serviceStatus = imageToStatus ajaxServiceDetailsImage,
-      serviceAdditionalInfo =
-        Just $
-          ajaxServiceDetailsWebDetail
-            <> fromMaybe "" ajaxServiceDetailsInfoMsg,
-      serviceDisruptionReason = reasonToMaybe ajaxServiceDetailsReason,
+      serviceArea = calMacAPIResponseRouteLocationName calMacAPIResponseRouteLocation,
+      serviceRoute = calMacAPIResponseRouteName,
+      serviceStatus = statusToServiceStatus calMacAPIResponseRouteStatus,
+      serviceAdditionalInfo = Nothing,
+      serviceDisruptionReason = Nothing,
       serviceOrganisationID = 1,
-      serviceLastUpdatedDate = Just $ stringToUTCTime ajaxServiceDetailsUpdated
+      serviceLastUpdatedDate = Nothing
     }
   where
-    reasonToMaybe :: String -> Maybe String
-    reasonToMaybe reason
-      | reason == "NONE" = Nothing
-      | otherwise = Just reason
+    statusToServiceStatus :: String -> ServiceStatus
+    statusToServiceStatus status
+      | status == "NORMAL" = Normal
+      | status == "BE_AWARE" = Disrupted
+      | status == "DISRUPTIONS" = Disrupted
+      | status == "ALL_SAILINGS_CANCELLED" = Cancelled
+      | otherwise = error $ "Unknown calmac status " <> status
 
-    imageToStatus :: String -> ServiceStatus
-    imageToStatus image
-      | image == "normal" = Normal
-      | image == "beware" = Disrupted
-      | image == "affected" = Disrupted
-      | image == "cancelled" = Cancelled
-      | otherwise = error $ "Unknown calmac status " <> image
-
-    stringToUTCTime :: String -> UTCTime
-    stringToUTCTime time = posixSecondsToUTCTime $ fromInteger (read time) / 1000
+    statusIDLookup :: Map String Int
+    statusIDLookup =
+      fromList
+        [ ("001", 1),
+          ("007", 2),
+          ("002", 3),
+          ("006", 4),
+          ("003", 5),
+          ("004", 6),
+          ("005", 7),
+          ("060", 8),
+          ("030", 9),
+          ("053", 10),
+          ("031", 11),
+          ("036", 12),
+          ("056", 13),
+          ("054", 14),
+          ("055", 15),
+          ("052", 16),
+          ("061", 17),
+          ("033", 18),
+          ("051", 19),
+          ("032", 20),
+          ("080", 21),
+          ("022", 22),
+          ("065", 23),
+          ("034", 24),
+          ("035", 25),
+          ("300", 35),
+          ("038", 37),
+          ("043", 38),
+          ("011", 39),
+          ("301", 41)
+        ]
 
 notifyForServices :: ScrapedServices -> DatabaseServices -> Application ()
 notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) = do
