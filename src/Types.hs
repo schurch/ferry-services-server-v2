@@ -538,29 +538,6 @@ calMacAPIResponseJsonOptions type' =
           omitNothingFields = True
         }
 
-data AjaxServiceDetails = AjaxServiceDetails
-  { ajaxServiceDetailsReason :: String,
-    ajaxServiceDetailsImage :: String,
-    ajaxServiceDetailsDestName :: String,
-    ajaxServiceDetailsCode :: String,
-    ajaxServiceDetailsInfoIncluded :: String,
-    ajaxServiceDetailsInfoMsg :: Maybe String,
-    ajaxServiceDetailsReported :: String,
-    ajaxServiceDetailsId :: String,
-    ajaxServiceDetailsWebDetail :: String,
-    ajaxServiceDetailsUpdated :: String,
-    ajaxServiceDetailsRouteName :: String,
-    ajaxServiceDetailsStatus :: String
-  }
-  deriving (Generic, Show)
-
-instance FromJSON AjaxServiceDetails where
-  parseJSON =
-    genericParseJSON $
-      defaultOptions
-        { fieldLabelModifier = toLowerFirstLetter . drop (length . show . typeRep $ (Proxy :: Proxy AjaxServiceDetails))
-        }
-
 -- Weather Fetcher Types
 data WeatherFetcherResult = WeatherFetcherResult
   { weatherFetcherResultWeather :: [WeatherFetcherResultWeather],

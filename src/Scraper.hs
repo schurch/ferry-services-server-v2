@@ -410,7 +410,7 @@ fetchCalMacStatusesAndNotify = do
 calmacRouteToService :: UTCTime -> CalMacAPIResponseRoute -> Service
 calmacRouteToService time CalMacAPIResponseRoute {..} =
   Service
-    { serviceID = findWithDefault (read calMacAPIResponseRouteRouteCode) calMacAPIResponseRouteRouteCode statusIDLookup,
+    { serviceID = findWithDefault (read calMacAPIResponseRouteRouteCode) calMacAPIResponseRouteRouteCode serviceIDLookup,
       serviceUpdated = time,
       serviceArea = calMacAPIResponseRouteLocationName calMacAPIResponseRouteLocation,
       serviceRoute = calMacAPIResponseRouteName,
@@ -429,8 +429,9 @@ calmacRouteToService time CalMacAPIResponseRoute {..} =
       | status == "ALL_SAILINGS_CANCELLED" = Cancelled
       | otherwise = error $ "Unknown calmac status " <> status
 
-    statusIDLookup :: Map String Int
-    statusIDLookup =
+    -- Try and map the calmac status code to the old service ids
+    serviceIDLookup :: Map String Int
+    serviceIDLookup =
       fromList
         [ ("001", 1),
           ("007", 2),
