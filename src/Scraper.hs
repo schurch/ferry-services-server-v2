@@ -22,7 +22,7 @@ import Control.Monad.Reader (asks)
 import Data.Aeson (Value (String), eitherDecode, encode)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as C
-import Data.List (find, isInfixOf, nub, (\\))
+import Data.List (find, isInfixOf, nub, sortOn, (\\))
 import Data.List.Utils (replace)
 import Data.Map (Map, findWithDefault, fromList)
 import Data.Maybe (fromJust, fromMaybe)
@@ -435,16 +435,25 @@ calmacRouteToService time CalMacAPIResponseRoute {..} =
     cleanupRouteText = replace "[" "(" . replace "]" ")" . replace "�" "-"
 
     routeStatusesToAdditionalInfo :: [CalMacAPIResponseRouteStatus] -> String
-    routeStatusesToAdditionalInfo statuses = unwords (statusToHTML <$> statuses)
+    routeStatusesToAdditionalInfo statuses = unwords (statusToHTML <$> sortStatuses statuses)
+
+    sortStatuses :: [CalMacAPIResponseRouteStatus] -> [CalMacAPIResponseRouteStatus]
+    sortStatuses statuses =
+      sortOn calMacAPIResponseRouteStatusTitle (filterStatuses "SAILING" statuses)
+        <> sortOn calMacAPIResponseRouteStatusTitle (filterStatuses "SERVICE" statuses)
+        <> sortOn calMacAPIResponseRouteStatusTitle (filterStatuses "INFORMATION" statuses)
+
+    filterStatuses :: String -> [CalMacAPIResponseRouteStatus] -> [CalMacAPIResponseRouteStatus]
+    filterStatuses status = filter (\s -> calMacAPIResponseRouteStatusStatus s == status)
 
     statusToHTML :: CalMacAPIResponseRouteStatus -> String
     statusToHTML CalMacAPIResponseRouteStatus {..} =
       "<h2>"
-        ++ calMacAPIResponseRouteStatusTitle
-        ++ "</h2>"
-        ++ "<p>"
-        ++ unpack (commonmarkToHtml [] (pack calMacAPIResponseRouteStatusDetail))
-        ++ "</p>"
+        <> calMacAPIResponseRouteStatusTitle
+        <> "</h2>"
+        <> "<p>"
+        <> unpack (commonmarkToHtml [] (pack calMacAPIResponseRouteStatusDetail))
+        <> "</p>"
 
     -- Try and map the calmac status code to the old service ids
     serviceIDLookup :: Map String Int
