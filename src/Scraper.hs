@@ -13,6 +13,7 @@ where
 
 import AWS
 import Amazonka (AWSRequest (response))
+import CMark (commonmarkToHtml)
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, catch)
 import Control.Monad (forM_, forever, void, when)
@@ -26,6 +27,7 @@ import Data.List.Utils (replace)
 import Data.Map (Map, findWithDefault, fromList)
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Pool (Pool, withResource)
+import Data.Text (pack, unpack)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.UUID (UUID)
@@ -76,7 +78,7 @@ fetchOrkneyFerries = do
       [ Service
           { serviceID = 4000,
             serviceUpdated = time,
-            serviceArea = "EDAY",
+            serviceArea = "Eday",
             serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
             serviceStatus = statusImageTextToStatus $ statuses !! 0,
             serviceAdditionalInfo = Just additionalInfo,
@@ -87,7 +89,7 @@ fetchOrkneyFerries = do
         Service
           { serviceID = 4001,
             serviceUpdated = time,
-            serviceArea = "SANDAY",
+            serviceArea = "Sanday",
             serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
             serviceStatus = statusImageTextToStatus $ statuses !! 1,
             serviceAdditionalInfo = Just additionalInfo,
@@ -98,7 +100,7 @@ fetchOrkneyFerries = do
         Service
           { serviceID = 4002,
             serviceUpdated = time,
-            serviceArea = "STRONSAY",
+            serviceArea = "Stronsay",
             serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
             serviceStatus = statusImageTextToStatus $ statuses !! 2,
             serviceAdditionalInfo = Just additionalInfo,
@@ -109,7 +111,7 @@ fetchOrkneyFerries = do
         Service
           { serviceID = 4003,
             serviceUpdated = time,
-            serviceArea = "WESTRAY",
+            serviceArea = "Westray",
             serviceRoute = "Kirkwall - Eday - Stronsay - Sanday - Rapness",
             serviceStatus = statusImageTextToStatus $ statuses !! 3,
             serviceAdditionalInfo = Just additionalInfo,
@@ -120,7 +122,7 @@ fetchOrkneyFerries = do
         Service
           { serviceID = 4004,
             serviceUpdated = time,
-            serviceArea = "SHAPINSAY",
+            serviceArea = "Shapinsay",
             serviceRoute = "Kirkwall - Shapinsay",
             serviceStatus = statusImageTextToStatus $ statuses !! 4,
             serviceAdditionalInfo = Just additionalInfo,
@@ -131,7 +133,7 @@ fetchOrkneyFerries = do
         Service
           { serviceID = 4005,
             serviceUpdated = time,
-            serviceArea = "GRAEMSAY",
+            serviceArea = "Graemsay",
             serviceRoute = "Stromness - Graemsay - Hoy",
             serviceStatus = statusImageTextToStatus $ statuses !! 5,
             serviceAdditionalInfo = Just additionalInfo,
@@ -142,7 +144,7 @@ fetchOrkneyFerries = do
         Service
           { serviceID = 4006,
             serviceUpdated = time,
-            serviceArea = "HOUTON",
+            serviceArea = "Houton",
             serviceRoute = "Houton - Flotta - Lyness - Longhope",
             serviceStatus = statusImageTextToStatus $ statuses !! 6,
             serviceAdditionalInfo = Just additionalInfo,
@@ -153,7 +155,7 @@ fetchOrkneyFerries = do
         Service
           { serviceID = 4007,
             serviceUpdated = time,
-            serviceArea = "ROUSAY, EGILSAY & WYRE",
+            serviceArea = "Rousay, Egilsay & Wyre",
             serviceRoute = "Tingwall - Rousay - Egilsay - Wyre",
             serviceStatus = statusImageTextToStatus $ statuses !! 7,
             serviceAdditionalInfo = Just additionalInfo,
@@ -164,7 +166,7 @@ fetchOrkneyFerries = do
         Service
           { serviceID = 4008,
             serviceUpdated = time,
-            serviceArea = "PIEROWALL - PAPA WESTRAY",
+            serviceArea = "Pierowall - Papa Westray",
             serviceRoute = "Westray Pierowall - Papa Westray",
             serviceStatus = statusImageTextToStatus $ statuses !! 8,
             serviceAdditionalInfo = Just additionalInfo,
@@ -200,7 +202,7 @@ fetchShetlandFerries = do
       [ Service
           { serviceID = 3000,
             serviceUpdated = time,
-            serviceArea = "BLUEMULL SOUND",
+            serviceArea = "Bluemull Sound",
             serviceRoute = "Gutcher - Belmont - Hamars Ness",
             serviceStatus = statusTextToStatus $ statuses !! 0,
             serviceAdditionalInfo = Just $ createAdditionalInfo "Bluemull Sound" "01595 743971",
@@ -211,7 +213,7 @@ fetchShetlandFerries = do
         Service
           { serviceID = 3001,
             serviceUpdated = time,
-            serviceArea = "YELL",
+            serviceArea = "Yell",
             serviceRoute = "Toft - Ulsta",
             serviceStatus = statusTextToStatus $ statuses !! 1,
             serviceAdditionalInfo = Just $ createAdditionalInfo "Yell Sound" "01595 743972",
@@ -222,7 +224,7 @@ fetchShetlandFerries = do
         Service
           { serviceID = 3003,
             serviceUpdated = time,
-            serviceArea = "WHALSAY",
+            serviceArea = "Whalsay",
             serviceRoute = "Laxo - Symbister",
             serviceStatus = statusTextToStatus $ statuses !! 2,
             serviceAdditionalInfo = Just $ createAdditionalInfo "Whalsay" "01595 743973",
@@ -233,7 +235,7 @@ fetchShetlandFerries = do
         Service
           { serviceID = 3002,
             serviceUpdated = time,
-            serviceArea = "BRESSAY",
+            serviceArea = "Bressay",
             serviceRoute = "Lerwick - Bressay",
             serviceStatus = statusTextToStatus $ statuses !! 3,
             serviceAdditionalInfo = Just $ createAdditionalInfo "Bressay" "01595 743974",
@@ -244,7 +246,7 @@ fetchShetlandFerries = do
         Service
           { serviceID = 3004,
             serviceUpdated = time,
-            serviceArea = "SKERRIES",
+            serviceArea = "Skerries",
             serviceRoute = "Laxo - Symbister - Skerries - Vidlin - Lerwick",
             serviceStatus = statusTextToStatus $ statuses !! 4,
             serviceAdditionalInfo = Just $ createAdditionalInfo "Skerries" "01595 743975",
@@ -293,7 +295,7 @@ fetchWesternFerries = do
     Service
       { serviceID = 2000,
         serviceUpdated = time,
-        serviceArea = "COWAL & DUNOON",
+        serviceArea = "Cowal & Dunoon",
         serviceRoute = "McInroy's Point (Gourock) - Hunters Quay (Dunoon)",
         serviceStatus = status,
         serviceAdditionalInfo = if null additionalInfo then Nothing else Just additionalInfo,
@@ -335,7 +337,7 @@ fetchNorthLinkService = do
     Service
       { serviceID = 1000,
         serviceUpdated = time,
-        serviceArea = "ORKNEY & SHETLAND",
+        serviceArea = "Orkney & Shetland",
         serviceRoute = "Scrabster - Stromness / Aberdeen - Kirkwall - Lerwick",
         serviceStatus = textToStatus statusText,
         serviceAdditionalInfo = Just $ strippedNewlines . strippedStyles $ disruptionInfo,
@@ -389,7 +391,7 @@ fetchCalMacStatusesAndNotify = do
               (hConnection, "keep-alive"),
               ("Sec-Fetch-Dest", "empty")
             ]
-      let requestBodyQuery = "{\n  routes {\n    name\n    id\n    routeCode\n    ports {\n      portCode\n      name\n      order\n      isFreight\n      hideOnMap\n      __typename\n    }\n    routeStatuses {\n      id\n      title\n      status\n      subStatus\n      updatedAtDateTime\n      __typename\n    }\n    location {\n      name\n      __typename\n    }\n    status\n    isFreight\n    hideOnMap\n    __typename\n  }\n}"
+      let requestBodyQuery = "{\n  routes {\n    name\n    id\n    routeCode\n    ports {\n      portCode\n      name\n      order\n      isFreight\n      hideOnMap\n      __typename\n    }\n    routeStatuses {\n      id\n      title\n      status\n      subStatus\n      title\n      startDateTime\n      endDateTime\n      detail\n      nextReviewDateTime\n      updatedAtDateTime\n      __typename\n    }\n    location {\n      name\n      __typename\n    }\n    status\n    isFreight\n    hideOnMap\n    __typename\n  }\n}"
       request <- setRequestBodyJSON (CalMacAPIRequestBody requestBodyQuery) . setRequestMethod "POST" . setRequestHeaders headers <$> parseRequest "https://apim.calmac.co.uk/graphql"
       responseBody <-
         checkResponseBody
@@ -413,9 +415,9 @@ calmacRouteToService time CalMacAPIResponseRoute {..} =
     { serviceID = findWithDefault (read calMacAPIResponseRouteRouteCode) calMacAPIResponseRouteRouteCode serviceIDLookup,
       serviceUpdated = time,
       serviceArea = calMacAPIResponseRouteLocationName calMacAPIResponseRouteLocation,
-      serviceRoute = calMacAPIResponseRouteName,
+      serviceRoute = cleanupRouteText calMacAPIResponseRouteName,
       serviceStatus = statusToServiceStatus calMacAPIResponseRouteStatus,
-      serviceAdditionalInfo = Nothing,
+      serviceAdditionalInfo = Just $ routeStatusesToAdditionalInfo calMacAPIResponseRouteRouteStatuses,
       serviceDisruptionReason = Nothing,
       serviceOrganisationID = 1,
       serviceLastUpdatedDate = Nothing
@@ -428,6 +430,21 @@ calmacRouteToService time CalMacAPIResponseRoute {..} =
       | status == "DISRUPTIONS" = Disrupted
       | status == "ALL_SAILINGS_CANCELLED" = Cancelled
       | otherwise = error $ "Unknown calmac status " <> status
+
+    cleanupRouteText :: String -> String
+    cleanupRouteText = replace "[" "(" . replace "]" ")" . replace "�" "-"
+
+    routeStatusesToAdditionalInfo :: [CalMacAPIResponseRouteStatus] -> String
+    routeStatusesToAdditionalInfo statuses = unwords (statusToHTML <$> statuses)
+
+    statusToHTML :: CalMacAPIResponseRouteStatus -> String
+    statusToHTML CalMacAPIResponseRouteStatus {..} =
+      "<h2>"
+        ++ calMacAPIResponseRouteStatusTitle
+        ++ "</h2>"
+        ++ "<p>"
+        ++ unpack (commonmarkToHtml [] (pack calMacAPIResponseRouteStatusDetail))
+        ++ "</p>"
 
     -- Try and map the calmac status code to the old service ids
     serviceIDLookup :: Map String Int

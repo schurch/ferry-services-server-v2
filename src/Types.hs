@@ -515,7 +515,8 @@ data CalMacAPIResponseRoute = CalMacAPIResponseRoute
   { calMacAPIResponseRouteName :: String,
     calMacAPIResponseRouteStatus :: String,
     calMacAPIResponseRouteRouteCode :: String,
-    calMacAPIResponseRouteLocation :: CalMacAPIResponseRouteLocation
+    calMacAPIResponseRouteLocation :: CalMacAPIResponseRouteLocation,
+    calMacAPIResponseRouteRouteStatuses :: [CalMacAPIResponseRouteStatus]
   }
   deriving (Generic, Show)
 
@@ -529,6 +530,16 @@ data CalMacAPIResponseRouteLocation = CalMacAPIResponseRouteLocation
 
 instance FromJSON CalMacAPIResponseRouteLocation where
   parseJSON = genericParseJSON $ calMacAPIResponseJsonOptions (Proxy :: Proxy CalMacAPIResponseRouteLocation)
+
+data CalMacAPIResponseRouteStatus = CalMacAPIResponseRouteStatus
+  { calMacAPIResponseRouteStatusTitle :: String,
+    calMacAPIResponseRouteStatusStatus :: String,
+    calMacAPIResponseRouteStatusDetail :: String
+  }
+  deriving (Generic, Show)
+
+instance FromJSON CalMacAPIResponseRouteStatus where
+  parseJSON = genericParseJSON $ calMacAPIResponseJsonOptions (Proxy :: Proxy CalMacAPIResponseRouteStatus)
 
 calMacAPIResponseJsonOptions :: Typeable a => Proxy a -> Data.Aeson.Options
 calMacAPIResponseJsonOptions type' =
