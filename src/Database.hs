@@ -440,9 +440,23 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
       ),
       timings AS (
           SELECT 
-              journey_pattern_timing_link_id,
-              COALESCE(NULLIF(regexp_replace(from_wait_time, '\D','','g'), '') :: interval, '0 seconds') AS wait_time,
-              COALESCE(NULLIF(regexp_replace(run_time, '\D','','g'), '') :: interval, '0 seconds') AS run_time
+            journey_pattern_timing_link_id,
+            CASE from_wait_time WHEN '' 
+                THEN make_interval()
+                ELSE make_interval(
+                        hours := (REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[1] :: Int,
+                        mins := (REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[2] :: Int,
+                        secs := (REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[3] :: Int
+                    )
+            END AS wait_time,
+            CASE run_time WHEN '' 
+                THEN make_interval()
+                ELSE make_interval(
+                        hours := (REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[1] :: Int,
+                        mins := (REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[2] :: Int,
+                        secs := (REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[3] :: Int
+                    )
+            END AS run_time
           FROM
               journey_pattern_timing_links
       ),

@@ -8,6 +8,7 @@ where
 import Data.Maybe
   ( fromJust,
     fromMaybe,
+    isJust,
   )
 import Data.String (IsString (..))
 import Data.Time.Calendar
@@ -35,18 +36,28 @@ parseTransxchangeXML input =
       servicedOrganisations =
         fromMaybe [] $
           getServicedOrganisations transXChangeElement,
-      routeSections = fromMaybe [] $ getRouteSections transXChangeElement,
-      routes = fromMaybe [] $ getRoutes transXChangeElement,
+      routeSections =
+        fromMaybe [] $
+          getRouteSections serviceCode' transXChangeElement,
+      routes =
+        fromMaybe [] $
+          getRoutes serviceCode' transXChangeElement,
       journeyPatternSections =
         fromMaybe [] $
-          getJourneyPatternSections transXChangeElement,
-      operators = fromMaybe [] $ getOperators transXChangeElement,
-      services = fromMaybe [] $ getServices transXChangeElement,
-      vehicleJourneys = fromMaybe [] $ getVehicleJourneys transXChangeElement
+          getJourneyPatternSections serviceCode' transXChangeElement,
+      operators =
+        fromMaybe [] $
+          getOperators transXChangeElement,
+      services = services,
+      vehicleJourneys =
+        fromMaybe [] $
+          getVehicleJourneys serviceCode' transXChangeElement
     }
   where
     xml = onlyElems $ parseXML input
     transXChangeElement = xml !! 1
+    services = fromMaybe [] $ getServices transXChangeElement
+    serviceCode' = serviceCode $ head services
 
 -- Helpers
 instance IsString QName where
@@ -103,8 +114,8 @@ getServicedOrganisations element = do
       return $ elementToDateRange <$> dateRangeElements
 
 -- Route Sections
-getRouteSections :: Element -> Maybe [RouteSection]
-getRouteSections element = do
+getRouteSections :: String -> Element -> Maybe [RouteSection]
+getRouteSections serviceCode element = do
   routeSectionsElement <- findChild "RouteSections" element
   let routeSectionElements = findChildren "RouteSection" routeSectionsElement
   return $ elementToRouteSection <$> routeSectionElements
@@ -112,14 +123,14 @@ getRouteSections element = do
     elementToRouteSection :: Element -> RouteSection
     elementToRouteSection element =
       RouteSection
-        { routeSectionId = attrValue "id" element,
+        { routeSectionId = attrValue "id" element <> "-" <> serviceCode,
           routeLinks = elementToRouteLink <$> findChildren "RouteLink" element
         }
 
     elementToRouteLink :: Element -> RouteLink
     elementToRouteLink element =
       RouteLink
-        { routeLinkId = attrValue "id" element,
+        { routeLinkId = attrValue "id" element <> "-" <> serviceCode,
           fromStopPointRef =
             maybe
               ""
@@ -136,8 +147,8 @@ getRouteSections element = do
         }
 
 -- Routes
-getRoutes :: Element -> Maybe [Route]
-getRoutes element = do
+getRoutes :: String -> Element -> Maybe [Route]
+getRoutes serviceCode element = do
   routesElement <- findChild "Routes" element
   let routeElements = findChildren "Route" routesElement
   return $ elementToRoute <$> routeElements
@@ -145,18 +156,18 @@ getRoutes element = do
     elementToRoute :: Element -> Route
     elementToRoute element =
       Route
-        { routeId = attrValue "id" element,
+        { routeId = attrValue "id" element <> "-" <> serviceCode,
           routeDescription = maybe "" strContent (findChild "Description" element),
           routeSectionRef =
             maybe
               ""
-              strContent
+              (\e -> strContent e <> "-" <> serviceCode)
               (findChild "RouteSectionRef" element)
         }
 
 -- JourneyPatternSection
-getJourneyPatternSections :: Element -> Maybe [JourneyPatternSection]
-getJourneyPatternSections element = do
+getJourneyPatternSections :: String -> Element -> Maybe [JourneyPatternSection]
+getJourneyPatternSections serviceCode element = do
   journeyPatternSectionsElement <- findChild "JourneyPatternSections" element
   let journeyPatternSectionsElements =
         findChildren "JourneyPatternSection" journeyPatternSectionsElement
@@ -165,7 +176,7 @@ getJourneyPatternSections element = do
     elementToJourneyPatternSection :: Element -> JourneyPatternSection
     elementToJourneyPatternSection element =
       JourneyPatternSection
-        { journeyPatterSectionId = attrValue "id" element,
+        { journeyPatterSectionId = attrValue "id" element <> "-" <> serviceCode,
           journeyPatternTimingLinks =
             elementToJourneyPatternTimingLink
               <$> findChildren
@@ -176,7 +187,7 @@ getJourneyPatternSections element = do
     elementToJourneyPatternTimingLink :: Element -> JourneyPatternTimingLink
     elementToJourneyPatternTimingLink element =
       JourneyPatternTimingLink
-        { journeyPatternTimingLinkId = attrValue "id" element,
+        { journeyPatternTimingLinkId = attrValue "id" element <> "-" <> serviceCode,
           journeyPatternFromWaitTime =
             maybe
               ""
@@ -212,7 +223,7 @@ getJourneyPatternSections element = do
               ( findChild "To" element
                   >>= findChild "TimingStatus"
               ),
-          routeLinkRef = maybe "" strContent (findChild "RouteLinkRef" element),
+          routeLinkRef = maybe "" (\e -> strContent e <> "-" <> serviceCode) (findChild "RouteLinkRef" element),
           journeyDirection = maybe "" strContent (findChild "Direction" element),
           runTime = maybe "" strContent (findChild "RunTime" element)
         }
@@ -246,13 +257,17 @@ getServices :: Element -> Maybe [Service]
 getServices element = do
   servicesElement <- findChild "Services" element
   let serviceElements = findChildren "Service" servicesElement
-  return $ elementToService <$> serviceElements
+  let serviceCode = getServiceCode $ head serviceElements
+  return $ elementToService serviceCode <$> serviceElements
   where
-    elementToService :: Element -> Service
-    elementToService element =
+    getServiceCode :: Element -> String
+    getServiceCode element = maybe "" strContent (findChild "ServiceCode" element)
+
+    elementToService :: String -> Element -> Service
+    elementToService serviceCode element =
       Service
-        { serviceCode = maybe "" strContent (findChild "ServiceCode" element),
-          TransxchangeTypes.lines = fromMaybe [] $ getLines element,
+        { serviceCode = serviceCode,
+          TransxchangeTypes.lines = fromMaybe [] $ getLines serviceCode element,
           operatingPeriod =
             maybe
               (DateRange Nothing Nothing)
@@ -268,13 +283,13 @@ getServices element = do
           standardService =
             maybe
               (StandardService "" "" [])
-              elementToStandardService
+              (elementToStandardService serviceCode)
               (findChild "StandardService" element)
         }
 
 -- Lines
-getLines :: Element -> Maybe [TransxchangeTypes.Line]
-getLines element = do
+getLines :: String -> Element -> Maybe [TransxchangeTypes.Line]
+getLines serviceCode element = do
   linesElement <- findChild "Lines" element
   let lineElements = findChildren "Line" linesElement
   return $ elementToLine <$> lineElements
@@ -282,13 +297,13 @@ getLines element = do
     elementToLine :: Element -> TransxchangeTypes.Line
     elementToLine element =
       TransxchangeTypes.Line
-        { lineId = attrValue "id" element,
+        { lineId = attrValue "id" element <> "-" <> serviceCode,
           lineName = maybe "" strContent (findChild "LineName" element)
         }
 
 -- Standard Service
-elementToStandardService :: Element -> StandardService
-elementToStandardService element =
+elementToStandardService :: String -> Element -> StandardService
+elementToStandardService serviceCode element =
   StandardService
     { origin = maybe "" strContent (findChild "Origin" element),
       destination = maybe "" strContent (findChild "Destination" element),
@@ -300,7 +315,7 @@ elementToStandardService element =
     elementToJourneyPattern :: Element -> JourneyPattern
     elementToJourneyPattern element =
       JourneyPattern
-        { journeyPatternId = attrValue "id" element,
+        { journeyPatternId = attrValue "id" element <> "-" <> serviceCode,
           journeyPatternDirection =
             maybe
               ""
@@ -309,7 +324,7 @@ elementToStandardService element =
           journeyPatternSectionRef =
             maybe
               ""
-              strContent
+              (\e -> strContent e <> "-" <> serviceCode)
               ( findChild
                   "JourneyPatternSectionRefs"
                   element
@@ -317,8 +332,8 @@ elementToStandardService element =
         }
 
 -- Vehicle journeys
-getVehicleJourneys :: Element -> Maybe [VehicleJourney]
-getVehicleJourneys element = do
+getVehicleJourneys :: String -> Element -> Maybe [VehicleJourney]
+getVehicleJourneys serviceCode element = do
   vehicleJourneysElement <- findChild "VehicleJourneys" element
   let vehicleJourneyElements =
         findChildren "VehicleJourney" vehicleJourneysElement
@@ -331,14 +346,18 @@ getVehicleJourneys element = do
           vehicleJourneyCode =
             maybe
               ""
-              strContent
+              (\e -> strContent e <> "-" <> serviceCode)
               (findChild "VehicleJourneyCode" element),
           serviceRef = maybe "" strContent (findChild "ServiceRef" element),
-          lineRef = maybe "" strContent (findChild "LineRef" element),
+          lineRef =
+            maybe
+              ""
+              (\e -> strContent e <> "-" <> serviceCode)
+              (findChild "LineRef" element),
           journeyPatternRef =
             maybe
               ""
-              strContent
+              (\e -> strContent e <> "-" <> serviceCode)
               (findChild "JourneyPatternRef" element),
           departureTime = maybe "" strContent (findChild "DepartureTime" element),
           daysOfWeek = fromMaybe [] $ weekDays element,
@@ -382,18 +401,28 @@ getVehicleJourneys element = do
     weekDays element = do
       operatingProfile <- findChild "OperatingProfile" element
       regularDayType <- findChild "RegularDayType" operatingProfile
-      daysOfWeekElement <- findChild "DaysOfWeek" regularDayType
-      return $ elementToDay <$> elChildren daysOfWeekElement
+      if isJust $ findChild "HolidaysOnly" regularDayType
+        then return [TransxchangeTypes.HolidaysOnly]
+        else do
+          daysOfWeekElement <- findChild "DaysOfWeek" regularDayType
+          return $ concatMap elementToDays (elChildren daysOfWeekElement)
 
-    elementToDay :: Element -> TransxchangeTypes.WeekDay
-    elementToDay element = case qName $ elName element of
-      "Monday" -> TransxchangeTypes.Monday
-      "Tuesday" -> TransxchangeTypes.Tuesday
-      "Wednesday" -> TransxchangeTypes.Wednesday
-      "Thursday" -> TransxchangeTypes.Thursday
-      "Friday" -> TransxchangeTypes.Friday
-      "Saturday" -> TransxchangeTypes.Saturday
-      "Sunday" -> TransxchangeTypes.Sunday
+    elementToDays :: Element -> [TransxchangeTypes.WeekDay]
+    elementToDays element = case qName $ elName element of
+      "Monday" -> [TransxchangeTypes.Monday]
+      "Tuesday" -> [TransxchangeTypes.Tuesday]
+      "Wednesday" -> [TransxchangeTypes.Wednesday]
+      "Thursday" -> [TransxchangeTypes.Thursday]
+      "Friday" -> [TransxchangeTypes.Friday]
+      "Saturday" -> [TransxchangeTypes.Saturday]
+      "Sunday" -> [TransxchangeTypes.Sunday]
+      "MondayToFriday" ->
+        [ TransxchangeTypes.Monday,
+          TransxchangeTypes.Tuesday,
+          TransxchangeTypes.Wednesday,
+          TransxchangeTypes.Thursday,
+          TransxchangeTypes.Friday
+        ]
 
 elementToDateRange :: Element -> DateRange
 elementToDateRange element =

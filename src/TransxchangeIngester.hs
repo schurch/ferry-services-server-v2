@@ -87,41 +87,6 @@ data FTPConnectionDetails = FTPConnectionDetails
     password :: String
   }
 
-data ServiceReportService = ServiceReportService
-  { rowId :: !Int,
-    regionCode :: !String,
-    regionOperatorCode :: !String,
-    serviceCode :: !String,
-    lineName :: !String,
-    description :: !String,
-    startDate :: !String,
-    nationalOperatorCode :: !String,
-    dataSource :: !String
-  }
-  deriving (Generic, Show)
-
-instance FromNamedRecord ServiceReportService where
-  parseNamedRecord r =
-    ServiceReportService
-      <$> r
-      .: "RowId"
-      <*> r
-      .: "RegionCode"
-      <*> r
-      .: "RegionOperatorCode"
-      <*> r
-      .: "ServiceCode"
-      <*> r
-      .: "LineName"
-      <*> r
-      .: "Description"
-      <*> r
-      .: "StartDate"
-      <*> r
-      .: "NationalOperatorCode"
-      <*> r
-      .: "DataSource"
-
 ingest :: Application ()
 ingest = do
   ftpAddress <- liftIO $ getEnv "TRAVELLINE_FTP_ADDRESS"
@@ -130,68 +95,50 @@ ingest = do
   logger <- asks logger
   let ftpConnectionDetails =
         FTPConnectionDetails ftpAddress ftpUsername ftpPassword
-  liftIO $ downloadFile logger ftpConnectionDetails "servicereport.csv"
-  csvData <- liftIO $ BL.readFile "servicereport.csv"
-  case decodeByName csvData of
-    Left err -> error err
-    Right (_, services) -> do
-      let servicesToIngest =
-            filter (\s -> nationalOperatorCode s `elem` ["CALM", "NLKF", "WFRL", "SHET", "OKFL"])
-              . V.toList
-              $ services
-      -- Create a list of files based on the containing zip file. e.g. [(S, [FSACM12, FSACM14]), (SW, [FSACM11, FSACM18])]
-      let groupedFiles =
-            toList $
-              fromListWith
-                (++)
-                [ (regionCode, [serviceCode])
-                  | ServiceReportService {regionCode = regionCode, serviceCode = serviceCode} <-
-                      servicesToIngest
-                ]
-      allTransxchangeData <-
-        forM groupedFiles $
-          uncurry (downloadAndParseZip ftpConnectionDetails)
-      updateTransxchangeData $ concat allTransxchangeData
+  allTransxchangeData <- downloadAndParseZip ftpConnectionDetails
+  updateTransxchangeData allTransxchangeData
   liftIO $ removeFileIfExists "servicereport.csv"
   info (msg @String "Done")
 
-downloadAndParseZip ::
-  FTPConnectionDetails ->
-  String ->
-  [String] ->
-  Application [TransXChangeData]
-downloadAndParseZip ftpConnectionDetails zip files = do
+downloadAndParseZip :: FTPConnectionDetails -> Application [TransXChangeData]
+downloadAndParseZip ftpConnectionDetails = do
   logger <- asks logger
-  let zipFileName = zip <> ".zip"
+  let zipFileName = "S.zip"
   info (msg @String $ "Downloading " <> zipFileName <> " ...")
-  liftIO $ finally (downloadAndParse logger zipFileName) (cleanup zipFileName)
+  -- liftIO $ finally (downloadAndParse logger zipFileName) (cleanup zipFileName)
+  liftIO $ downloadAndParse logger zipFileName
   where
     downloadAndParse :: Logger -> String -> IO [TransXChangeData]
     downloadAndParse logger zipFileName = do
-      liftIO $ downloadFile logger ftpConnectionDetails zipFileName
-      withArchive zipFileName (unpackInto zip)
-      result <- forM files $ \file -> do
-        let filename = "SVR" <> file <> ".xml"
-        System.Logger.log
-          logger
-          Info
-          ( msg @String $
-              "Processing "
-                <> filename
-                <> " in "
-                <> zipFileName
-                <> " ..."
-          )
-        fileContents <- tryJust (guard . isDoesNotExistError) $ readFile $ zip <> "/" <> filename
-        case fileContents of
-          Left _ -> do
-            System.Logger.log logger Error (msg @String $ filename <> " missing")
-            return Nothing
-          Right fileContents' -> return . Just . parseTransxchangeXML $ fileContents'
+      -- liftIO $ downloadFile logger ftpConnectionDetails zipFileName
+      -- withArchive zipFileName $ unpackInto "S"
+      result <- forM
+        [ -- "CM5_CALM_930_CALM_CM5_a_20241021_20241206_184628.xml",
+          "CM5_CALM_930_CALM_CM5_a_20241021_20241206_184642.xml",
+          -- "CM5_CALM_930_CALM_CM5_a_20241021_20241206_184506.xml",
+          "CM5_CALM_930_CALM_CM5_c_20241021_20241206_184541.xml"
+        ]
+        $ \filename -> do
+          System.Logger.log
+            logger
+            Info
+            ( msg @String $
+                "Processing "
+                  <> filename
+                  <> " in "
+                  <> zipFileName
+                  <> " ..."
+            )
+          fileContents <- tryJust (guard . isDoesNotExistError) $ readFile $ "S/" <> filename
+          case fileContents of
+            Left _ -> do
+              System.Logger.log logger Error (msg @String $ filename <> " missing")
+              return Nothing
+            Right fileContents' -> return . Just . parseTransxchangeXML $ fileContents'
       return $ catMaybes result
 
     cleanup :: String -> IO ()
-    cleanup zipFileName = removeFileIfExists zipFileName >> removeDirectoryRecursive zip
+    cleanup zipFileName = removeFileIfExists zipFileName >> removeDirectoryRecursive "S"
 
 downloadFile :: Logger -> FTPConnectionDetails -> String -> IO ()
 downloadFile logger (FTPConnectionDetails address username password) file = do

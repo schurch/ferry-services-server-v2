@@ -142,6 +142,7 @@ data WeekDay
   | Friday
   | Saturday
   | Sunday
+  | HolidaysOnly
   deriving (Show, Eq)
 
 instance ToField WeekDay where
