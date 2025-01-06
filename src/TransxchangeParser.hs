@@ -408,21 +408,24 @@ getVehicleJourneys serviceCode element = do
           return $ concatMap elementToDays (elChildren daysOfWeekElement)
 
     elementToDays :: Element -> [TransxchangeTypes.WeekDay]
-    elementToDays element = case qName $ elName element of
-      "Monday" -> [TransxchangeTypes.Monday]
-      "Tuesday" -> [TransxchangeTypes.Tuesday]
-      "Wednesday" -> [TransxchangeTypes.Wednesday]
-      "Thursday" -> [TransxchangeTypes.Thursday]
-      "Friday" -> [TransxchangeTypes.Friday]
-      "Saturday" -> [TransxchangeTypes.Saturday]
-      "Sunday" -> [TransxchangeTypes.Sunday]
-      "MondayToFriday" ->
-        [ TransxchangeTypes.Monday,
-          TransxchangeTypes.Tuesday,
-          TransxchangeTypes.Wednesday,
-          TransxchangeTypes.Thursday,
-          TransxchangeTypes.Friday
-        ]
+    elementToDays element =
+      let elementName = qName $ elName element
+       in case elementName of
+            "Monday" -> [TransxchangeTypes.Monday]
+            "Tuesday" -> [TransxchangeTypes.Tuesday]
+            "Wednesday" -> [TransxchangeTypes.Wednesday]
+            "Thursday" -> [TransxchangeTypes.Thursday]
+            "Friday" -> [TransxchangeTypes.Friday]
+            "Saturday" -> [TransxchangeTypes.Saturday]
+            "Sunday" -> [TransxchangeTypes.Sunday]
+            "MondayToFriday" ->
+              [ TransxchangeTypes.Monday,
+                TransxchangeTypes.Tuesday,
+                TransxchangeTypes.Wednesday,
+                TransxchangeTypes.Thursday,
+                TransxchangeTypes.Friday
+              ]
+            _ -> fail $ "Unrecognised day of week element: " <> elementName
 
 elementToDateRange :: Element -> DateRange
 elementToDateRange element =

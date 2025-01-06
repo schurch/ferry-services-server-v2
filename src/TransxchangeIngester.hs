@@ -36,9 +36,10 @@ import Data.Csv
 import Data.List
   ( intercalate,
   )
+import Data.List.Utils (contains)
 import Data.Map
-  ( fromListWith,
-    toList,
+  ( elems,
+    fromListWith,
   )
 import Data.Maybe (catMaybes)
 import qualified Data.Vector as V
@@ -68,6 +69,7 @@ import Network.Socket.ByteString
   )
 import System.Directory
   ( doesFileExist,
+    listDirectory,
     removeDirectoryRecursive,
     removeFile,
   )
@@ -105,37 +107,49 @@ downloadAndParseZip ftpConnectionDetails = do
   logger <- asks logger
   let zipFileName = "S.zip"
   info (msg @String $ "Downloading " <> zipFileName <> " ...")
-  -- liftIO $ finally (downloadAndParse logger zipFileName) (cleanup zipFileName)
-  liftIO $ downloadAndParse logger zipFileName
+  liftIO $ finally (downloadAndParse logger zipFileName) (cleanup zipFileName)
   where
     downloadAndParse :: Logger -> String -> IO [TransXChangeData]
     downloadAndParse logger zipFileName = do
-      -- liftIO $ downloadFile logger ftpConnectionDetails zipFileName
-      -- withArchive zipFileName $ unpackInto "S"
-      result <- forM
-        [ -- "CM5_CALM_930_CALM_CM5_a_20241021_20241206_184628.xml",
-          "CM5_CALM_930_CALM_CM5_a_20241021_20241206_184642.xml",
-          -- "CM5_CALM_930_CALM_CM5_a_20241021_20241206_184506.xml",
-          "CM5_CALM_930_CALM_CM5_c_20241021_20241206_184541.xml"
-        ]
-        $ \filename -> do
-          System.Logger.log
-            logger
-            Info
-            ( msg @String $
-                "Processing "
-                  <> filename
-                  <> " in "
-                  <> zipFileName
-                  <> " ..."
-            )
-          fileContents <- tryJust (guard . isDoesNotExistError) $ readFile $ "S/" <> filename
-          case fileContents of
-            Left _ -> do
-              System.Logger.log logger Error (msg @String $ filename <> " missing")
-              return Nothing
-            Right fileContents' -> return . Just . parseTransxchangeXML $ fileContents'
+      liftIO $ downloadFile logger ftpConnectionDetails zipFileName
+      withArchive zipFileName $ unpackInto "S"
+      files <- findFiles "S"
+      result <- forM files $ \filename -> do
+        System.Logger.log
+          logger
+          Info
+          ( msg @String $
+              "Processing "
+                <> filename
+                <> " in "
+                <> zipFileName
+                <> " ..."
+          )
+        fileContents <- tryJust (guard . isDoesNotExistError) $ readFile $ "S/" <> filename
+        case fileContents of
+          Left _ -> do
+            System.Logger.log logger Error (msg @String $ filename <> " missing")
+            return Nothing
+          Right fileContents' -> return . Just . parseTransxchangeXML $ fileContents'
       return $ catMaybes result
+
+    findFiles :: String -> IO [String]
+    findFiles path = do
+      files <- listDirectory path
+      let allFiles = filter filePredicate files
+      -- Can have duplicate files so create key based on file name minus the final _xxxxxx_xx
+      let createKey = intercalate "_" . take 8 . splitOn '_'
+      let buckets = fromListWith (<>) $ fmap (\f -> (createKey f, [f])) allFiles
+      let files = maximum <$> elems buckets
+      return files
+
+    filePredicate :: String -> Bool
+    filePredicate file =
+      contains "CALM" file
+        || contains "NLKF" file
+        || contains "WFRL" file
+        || contains "SHET" file
+        || contains "OKFL" file
 
     cleanup :: String -> IO ()
     cleanup zipFileName = removeFileIfExists zipFileName >> removeDirectoryRecursive "S"
