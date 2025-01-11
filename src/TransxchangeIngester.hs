@@ -130,7 +130,7 @@ downloadAndParseZip ftpConnectionDetails = do
           Left _ -> do
             System.Logger.log logger Error (msg @String $ filename <> " missing")
             return Nothing
-          Right fileContents' -> return . Just . parseTransxchangeXML $ fileContents'
+          Right fileContents' -> return $ parseTransxchangeXML fileContents'
       return $ catMaybes result
 
     findFiles :: String -> IO [String]

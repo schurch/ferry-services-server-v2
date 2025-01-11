@@ -9,6 +9,7 @@ import Data.Maybe
   ( fromJust,
     fromMaybe,
     isJust,
+    listToMaybe,
   )
 import Data.String (IsString (..))
 import Data.Time.Calendar
@@ -29,35 +30,37 @@ import Text.XML.Light
 import TransxchangeTypes
 import Utility (stringToDay)
 
-parseTransxchangeXML :: String -> TransXChangeData
-parseTransxchangeXML input =
-  TransXChangeData
-    { stopPoints = fromMaybe [] $ getStopPoints transXChangeElement,
-      servicedOrganisations =
-        fromMaybe [] $
-          getServicedOrganisations transXChangeElement,
-      routeSections =
-        fromMaybe [] $
-          getRouteSections serviceCode' transXChangeElement,
-      routes =
-        fromMaybe [] $
-          getRoutes serviceCode' transXChangeElement,
-      journeyPatternSections =
-        fromMaybe [] $
-          getJourneyPatternSections serviceCode' transXChangeElement,
-      operators =
-        fromMaybe [] $
-          getOperators transXChangeElement,
-      services = services,
-      vehicleJourneys =
-        fromMaybe [] $
-          getVehicleJourneys serviceCode' transXChangeElement
-    }
+parseTransxchangeXML :: String -> Maybe TransXChangeData
+parseTransxchangeXML input = do
+  let xml = onlyElems $ parseXML input
+  let transXChangeElement = xml !! 1
+  let service = getService transXChangeElement
+  createTransxchangeData transXChangeElement <$> service
   where
-    xml = onlyElems $ parseXML input
-    transXChangeElement = xml !! 1
-    services = fromMaybe [] $ getServices transXChangeElement
-    serviceCode' = serviceCode $ head services
+    createTransxchangeData :: Element -> Service -> TransXChangeData
+    createTransxchangeData transXChangeElement service =
+      TransXChangeData
+        { stopPoints = fromMaybe [] $ getStopPoints transXChangeElement,
+          servicedOrganisations =
+            fromMaybe [] $
+              getServicedOrganisations transXChangeElement,
+          routeSections =
+            fromMaybe [] $
+              getRouteSections (serviceCode service) transXChangeElement,
+          routes =
+            fromMaybe [] $
+              getRoutes (serviceCode service) transXChangeElement,
+          journeyPatternSections =
+            fromMaybe [] $
+              getJourneyPatternSections (serviceCode service) transXChangeElement,
+          operators =
+            fromMaybe [] $
+              getOperators transXChangeElement,
+          services = [service],
+          vehicleJourneys =
+            fromMaybe [] $
+              getVehicleJourneys (serviceCode service) transXChangeElement
+        }
 
 -- Helpers
 instance IsString QName where
@@ -253,12 +256,13 @@ getOperators element = do
         }
 
 -- Services
-getServices :: Element -> Maybe [Service]
-getServices element = do
+getService :: Element -> Maybe Service
+getService element = do
   servicesElement <- findChild "Services" element
-  let serviceElements = findChildren "Service" servicesElement
-  let serviceCode = getServiceCode $ head serviceElements
-  return $ elementToService serviceCode <$> serviceElements
+  let serviceElement = listToMaybe $ findChildren "Service" servicesElement
+  element <- serviceElement
+  let serviceCode = getServiceCode element
+  return $ elementToService serviceCode element
   where
     getServiceCode :: Element -> String
     getServiceCode element = maybe "" strContent (findChild "ServiceCode" element)
