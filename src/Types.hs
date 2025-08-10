@@ -402,6 +402,7 @@ data LocationResponse = LocationResponse
     locationResponseName :: String,
     locationResponseLatitude :: Scientific,
     locationResponseLongitude :: Scientific,
+    locationResponseScheduledDeparturesAvailable :: Bool,
     locationResponseScheduledDepartures :: Maybe [DepartureResponse],
     locationResponseNextDeparture :: Maybe DepartureResponse,
     locationResponseNextRailDeparture :: Maybe RailDepartureResponse,

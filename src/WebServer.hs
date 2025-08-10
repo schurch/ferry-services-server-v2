@@ -405,6 +405,7 @@ createDeparturesLookup serviceID departuresDate = do
                 locationResponseName = locationDepartureToLocationName,
                 locationResponseLatitude = getLatitude locationDepartureToLocationCoordinate,
                 locationResponseLongitude = getLatitude locationDepartureToLocationCoordinate,
+                locationResponseScheduledDeparturesAvailable = False,
                 locationResponseScheduledDepartures = Nothing,
                 locationResponseNextDeparture = Nothing,
                 locationResponseNextRailDeparture = Nothing,
@@ -427,6 +428,7 @@ createLocationLookup scheduledDeparturesLookup nextDepatureLookup nextRailDepart
               name
               (getLatitude coordinate)
               (getLongitude coordinate)
+              False
               (lookupDepartures locationID)
               (lookupNextDepature locationID)
               (lookupNextRailDeparture locationID)

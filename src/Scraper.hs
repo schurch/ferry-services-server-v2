@@ -328,10 +328,7 @@ fetchNorthLinkServicesAndNotify = do
 fetchNorthLinkService :: Application Service
 fetchNorthLinkService = do
   htmlTags <- parseTags <$> liftIO (fetchPage "https://www.northlinkferries.co.uk/opsnews/")
-  let statusText = last . words . fromAttrib "class" . head . dropWhile (~/= ("<div id=page>" :: String)) $ htmlTags
-  let disruptionInfo = renderTags . takeWhile (~/= ("<!-- .entry-content -->" :: String)) . dropWhile (~/= ("<div class=entry-content>" :: String)) $ htmlTags
-  let strippedNewlines = replace "\194\160" "" . replace "\t" "" . replace "\n" ""
-  let strippedStyles string = subRegex (mkRegex " style=\"[^\"]*\"") string ""
+  let statusText = drop 16 . fromAttrib "class" . (!! 4) . dropWhile (~/= ("<div class=header__action>" :: String)) $ htmlTags
   time <- liftIO getCurrentTime
   return
     Service
@@ -340,7 +337,7 @@ fetchNorthLinkService = do
         serviceArea = "Orkney & Shetland",
         serviceRoute = "Scrabster - Stromness / Aberdeen - Kirkwall - Lerwick",
         serviceStatus = textToStatus statusText,
-        serviceAdditionalInfo = Just $ strippedNewlines . strippedStyles $ disruptionInfo,
+        serviceAdditionalInfo = Nothing,
         serviceDisruptionReason = Nothing,
         serviceOrganisationID = 2,
         serviceLastUpdatedDate = Nothing
@@ -348,9 +345,8 @@ fetchNorthLinkService = do
   where
     textToStatus :: String -> ServiceStatus
     textToStatus text
-      | text == "green" = Normal
-      | text == "amber" = Disrupted
-      | text == "red" = Cancelled
+      | text == "service-running" = Normal
+      | text == "service-disruptions" = Disrupted
       | otherwise = error $ "Unknown northlink status " <> text
 
 fetchPage :: String -> IO String
