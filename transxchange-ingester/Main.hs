@@ -39,21 +39,20 @@ import Types
 main :: IO ()
 main = do
   return ()
-
--- logger <- create StdOut
--- connectionString <- getEnv "DB_CONNECTION"
--- connectionPool <-
---   createPool
---     (connectPostgreSQL $ fromString connectionString)
---     Database.PostgreSQL.Simple.close
---     2 -- stripes
---     60 -- unused connections are kept open for a minute
---     10 -- max. 10 connections open per stripe
--- let env = Env logger connectionPool
--- forever $ do
---   info logger (msg @String "Fetching transxchange data")
---   catch (runReaderT ingest env) (handleException logger)
---   threadDelay (1 * 24 * 60 * 60 * 1000 * 1000) -- 1 day
+  logger <- create StdOut
+  connectionString <- getEnv "DB_CONNECTION"
+  connectionPool <-
+    createPool
+      (connectPostgreSQL $ fromString connectionString)
+      Database.PostgreSQL.Simple.close
+      2 -- stripes
+      60 -- unused connections are kept open for a minute
+      10 -- max. 10 connections open per stripe
+  let env = Env logger connectionPool
+  forever $ do
+    -- info logger (msg @String "Fetching transxchange data")
+    -- catch (runReaderT ingest env) (handleException logger)
+    threadDelay (1 * 24 * 60 * 60 * 1000 * 1000) -- 1 day
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do
