@@ -14,7 +14,7 @@ jobs:
           ghc-version: '8.10.6' # Exact version of ghc to use
           stack-version: 'latest'
       - name: Cache stack data
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.stack
