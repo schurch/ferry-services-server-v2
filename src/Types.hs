@@ -335,6 +335,7 @@ data ServiceResponse = ServiceResponse
     serviceResponseLastUpdatedDate :: Maybe UTCTime,
     serviceResponseVessels :: [VesselResponse],
     serviceResponseOperator :: Maybe OrganisationResponse,
+    serviceResponseScheduledDeparturesAvailable :: Maybe Bool,
     serviceResponseUpdated :: UTCTime
   }
   deriving (Generic, Show)
@@ -402,7 +403,6 @@ data LocationResponse = LocationResponse
     locationResponseName :: String,
     locationResponseLatitude :: Scientific,
     locationResponseLongitude :: Scientific,
-    locationResponseScheduledDeparturesAvailable :: Bool,
     locationResponseScheduledDepartures :: Maybe [DepartureResponse],
     locationResponseNextDeparture :: Maybe DepartureResponse,
     locationResponseNextRailDeparture :: Maybe RailDepartureResponse,
