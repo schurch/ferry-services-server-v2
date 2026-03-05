@@ -47,8 +47,11 @@ jobs:
           port: 22
           script: |
             set -euo pipefail
-            cd ~/ferry-services-server
             echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-            docker compose -f docker/docker-compose-prod.yml pull
-            docker compose -f docker/docker-compose-prod.yml up -d --remove-orphans
-            docker image prune -f
+            cd /home/stefanchurch/ferry-services-server
+            if [ ! -f ./deploy-prod.sh ]; then
+              echo "deploy-prod.sh not found in /home/stefanchurch/ferry-services-server"
+              exit 1
+            fi
+            chmod +x ./deploy-prod.sh
+            ./deploy-prod.sh
