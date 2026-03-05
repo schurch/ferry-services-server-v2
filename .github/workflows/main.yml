@@ -21,3 +21,34 @@ jobs:
             ./.stack-work
           key: v1-stack-${{ github.ref }}-${{ hashFiles('stack.yaml') }}
       - run: make build-release
+
+  deploy:
+    name: Deploy To Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          source: "docker/docker-compose-prod.yml"
+          target: "~/ferry-services-server"
+      - name: Deploy containers on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          script: |
+            set -euo pipefail
+            cd ~/ferry-services-server
+            echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+            docker compose -f docker/docker-compose-prod.yml pull
+            docker compose -f docker/docker-compose-prod.yml up -d --remove-orphans
+            docker image prune -f
