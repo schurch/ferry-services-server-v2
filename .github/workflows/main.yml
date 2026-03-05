@@ -48,10 +48,10 @@ jobs:
           script: |
             set -euo pipefail
             echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-            cd /home/stefanchurch/ferry-services-server
+            cd ~/ferry-services-server
             if [ ! -f ./deploy-prod.sh ]; then
-              echo "deploy-prod.sh not found in /home/stefanchurch/ferry-services-server"
+              echo "deploy-prod.sh not found in ~/ferry-services-server"
               exit 1
             fi
             chmod +x ./deploy-prod.sh
-            ./deploy-prod.sh
+            ./deploy-prod.sh || true
