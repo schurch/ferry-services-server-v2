@@ -1,17 +1,63 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module TransxchangeV2.Ingest
   ( ingestDirectoryV2,
+    ingestLatestV2,
   )
 where
 
+import Codec.Archive.Zip
+  ( unpackInto,
+    withArchive,
+  )
+import Control.Concurrent
+  ( forkIO,
+    newQSem,
+    signalQSem,
+    waitQSem,
+  )
+import Control.Exception (finally)
+import qualified Control.Exception as E
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (asks)
+import Control.Monad.Reader (ask, asks, runReaderT)
+import qualified Data.ByteString.Char8 as C
 import Data.Pool (withResource)
 import Database.PostgreSQL.Simple (withTransaction)
+import Network.Socket
+  ( AddrInfo
+      ( addrAddress,
+        addrFamily,
+        addrProtocol,
+        addrSocketType
+      ),
+    HostName,
+    ServiceName,
+    Socket,
+    SocketType (Stream),
+    close,
+    connect,
+    defaultHints,
+    getAddrInfo,
+    socket,
+    withSocketsDo,
+  )
+import Network.Socket.ByteString
+  ( recv,
+    sendAll,
+  )
+import System.Directory
+  ( createDirectoryIfMissing,
+    doesDirectoryExist,
+    doesFileExist,
+    removeDirectoryRecursive,
+    removeFile,
+  )
+import System.Environment (getEnv)
 import System.Logger
-  ( Level (Info),
+  ( Level (Debug, Info),
     Logger,
   )
 import qualified System.Logger as Logger
@@ -29,6 +75,45 @@ import TransxchangeV2.Repository
 import TransxchangeV2.Transform (filterFerryDocuments)
 import TransxchangeV2.Types
 import Types (Application, Env (connectionPool, logger))
+import Utility (splitOn, trim)
+
+data FTPConnectionDetails = FTPConnectionDetails
+  { address :: String,
+    username :: String,
+    password :: String
+  }
+
+ingestLatestV2 :: Application Tx2IngestSummary
+ingestLatestV2 = do
+  ftpAddress <- liftIO $ getEnv "TRAVELLINE_FTP_ADDRESS"
+  ftpUsername <- liftIO $ getEnv "TRAVELLINE_FTP_USERNAME"
+  ftpPassword <- liftIO $ getEnv "TRAVELLINE_FTP_PASSWORD"
+  appLogger <- asks logger
+  env <- ask
+  let ftpConnectionDetails =
+        FTPConnectionDetails ftpAddress ftpUsername ftpPassword
+  info (msg @String "Downloading S.zip for TransXChange V2 ingest ...")
+  liftIO $
+    finally
+      (downloadAndIngest appLogger ftpConnectionDetails env)
+      cleanupDownload
+  where
+    zipFileName = "S.zip"
+    extractDirectory = "S"
+
+    downloadAndIngest :: Logger -> FTPConnectionDetails -> Env -> IO Tx2IngestSummary
+    downloadAndIngest appLogger ftpConnectionDetails env = do
+      removeFileIfExists zipFileName
+      removeDirectoryIfExists extractDirectory
+      createDirectoryIfMissing True extractDirectory
+      downloadFile appLogger ftpConnectionDetails zipFileName
+      withArchive zipFileName $ unpackInto extractDirectory
+      runReaderT (ingestDirectoryV2 extractDirectory) env
+
+    cleanupDownload :: IO ()
+    cleanupDownload = do
+      removeFileIfExists zipFileName
+      removeDirectoryIfExists extractDirectory
 
 ingestDirectoryV2 :: FilePath -> Application Tx2IngestSummary
 ingestDirectoryV2 directory = do
@@ -121,3 +206,80 @@ ingestDirectoryV2 directory = do
     shouldLogProgress :: Int -> Int -> Bool
     shouldLogProgress index totalFiles =
       index == 1 || index == totalFiles || index `mod` 50 == 0
+
+downloadFile :: Logger -> FTPConnectionDetails -> FilePath -> IO ()
+downloadFile appLogger (FTPConnectionDetails ftpAddress ftpUsername ftpPassword) filePath = do
+  removeFileIfExists filePath
+  runTCPClient ftpAddress "21" $ \socketHandle -> do
+    welcomeMessage <- recv socketHandle 1024
+    Logger.log appLogger Info (msg @String $ "FTP: " <> C.unpack (headOrEmpty $ C.split '\r' welcomeMessage))
+    sendMessage appLogger ("USER " <> C.pack ftpUsername) socketHandle
+    sendMessage appLogger ("PASS " <> C.pack ftpPassword) socketHandle
+    passiveResponse <- sendMessage appLogger "PASV" socketHandle
+    let (host, port) = extractAddressAndPort $ C.unpack passiveResponse
+    semaphore <- newQSem 0
+    _ <-
+      forkIO $ do
+        runTCPClient host port $ \transferSocket -> do
+          transferData filePath transferSocket
+          signalQSem semaphore
+    sendMessage appLogger ("RETR " <> C.pack filePath) socketHandle
+    waitQSem semaphore
+    _ <- sendMessage appLogger "QUIT" socketHandle
+    return ()
+
+removeFileIfExists :: FilePath -> IO ()
+removeFileIfExists filePath = do
+  fileExists <- doesFileExist filePath
+  if fileExists then removeFile filePath else return ()
+
+removeDirectoryIfExists :: FilePath -> IO ()
+removeDirectoryIfExists directory = do
+  directoryExists <- doesDirectoryExist directory
+  if directoryExists then removeDirectoryRecursive directory else return ()
+
+transferData :: FilePath -> Socket -> IO ()
+transferData filePath socketHandle = do
+  response <- recv socketHandle 1024
+  C.appendFile filePath response
+  if C.null response then return () else transferData filePath socketHandle
+
+sendMessage :: Logger -> C.ByteString -> Socket -> IO C.ByteString
+sendMessage appLogger message socketHandle = do
+  sendAll socketHandle $ message <> "\r\n"
+  response <- recv socketHandle 1024
+  Logger.log appLogger Debug (msg @String $ "FTP: " <> C.unpack (headOrEmpty $ C.split '\r' response))
+  return response
+
+extractAddressAndPort :: String -> (String, String)
+extractAddressAndPort response =
+  let [h1, h2, h3, h4, p1, p2] =
+        splitOn ',' . init . drop 1 . dropWhile (/= '(') . trim $ response
+      host = h1 <> "." <> h2 <> "." <> h3 <> "." <> h4
+      port1 = read p1
+      port2 = read p2
+      port = show $ (port1 * 256) + port2
+   in (host, port)
+
+runTCPClient :: HostName -> ServiceName -> (Socket -> IO a) -> IO a
+runTCPClient host port client = withSocketsDo $ do
+  addr <- resolve
+  E.bracket (open addr) close client
+  where
+    resolve :: IO AddrInfo
+    resolve = do
+      let hints = defaultHints {addrSocketType = Stream}
+      head <$> getAddrInfo (Just hints) (Just host) (Just port)
+
+    open :: AddrInfo -> IO Socket
+    open addr =
+      E.bracketOnError (openSocket addr) close $ \sock -> do
+        connect sock $ addrAddress addr
+        return sock
+
+    openSocket :: AddrInfo -> IO Socket
+    openSocket addr = socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
+
+headOrEmpty :: [C.ByteString] -> C.ByteString
+headOrEmpty [] = ""
+headOrEmpty (firstValue : _) = firstValue

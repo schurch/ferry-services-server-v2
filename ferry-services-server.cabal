@@ -177,6 +177,7 @@ executable ferry-services-transxchange-ingester-v2-exe
       base >=4.7 && <5
     , ferry-services-server
     , postgresql-simple
+    , raven-haskell
     , resource-pool
     , tinylog
     , transformers

@@ -173,6 +173,7 @@ executables:
     dependencies:
     - ferry-services-server
     - postgresql-simple
+    - raven-haskell
     - resource-pool
     - tinylog
     - transformers
