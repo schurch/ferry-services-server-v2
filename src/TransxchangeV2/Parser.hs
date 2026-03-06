@@ -85,10 +85,12 @@ parseXmlDocument filePath input = do
   let sourceFileName = fromMaybe (takeBaseName filePath) $ attrValueMaybe "FileName" root
   let sourceCreationDateTime = attrValueMaybe "CreationDateTime" root >>= parseXmlDateTime
   let sourceModificationDateTime = attrValueMaybe "ModificationDateTime" root >>= parseXmlDateTime
+  let stopPoints = parseStopPoints root
   serviceEntries <- parseServices root
   let services = fmap (\(service, _, _) -> service) serviceEntries
   let lines = concatMap (\(_, serviceLines, _) -> serviceLines) serviceEntries
   let journeyPatterns = concatMap (\(_, _, patterns) -> patterns) serviceEntries
+  let journeyPatternTimingLinks = parseJourneyPatternTimingLinks root
   vehicleJourneys <- parseVehicleJourneys root
   return $
     Tx2Document
@@ -97,9 +99,11 @@ parseXmlDocument filePath input = do
         tx2SourceVersionKey = renderVersionKey sourceFileName sourceCreationDateTime sourceModificationDateTime,
         tx2SourceCreationDateTime = sourceCreationDateTime,
         tx2SourceModificationDateTime = sourceModificationDateTime,
+        tx2StopPoints = stopPoints,
         tx2Services = services,
         tx2Lines = lines,
         tx2JourneyPatterns = journeyPatterns,
+        tx2JourneyPatternTimingLinks = journeyPatternTimingLinks,
         tx2VehicleJourneys = vehicleJourneys
       }
 
@@ -168,6 +172,59 @@ parseJourneyPatterns serviceCode standardServiceNode =
           }
     )
     (childrenNamed "JourneyPattern" standardServiceNode)
+
+parseStopPoints :: Element -> [Tx2StopPoint]
+parseStopPoints root =
+  case childNamed "StopPoints" root of
+    Nothing -> []
+    Just stopPointsNode ->
+      fmap parseStopPoint (childrenNamed "AnnotatedStopPointRef" stopPointsNode)
+  where
+    parseStopPoint :: Element -> Tx2StopPoint
+    parseStopPoint stopPointNode =
+      Tx2StopPoint
+        { tx2StopPointRef = fromMaybe "" $ childText "StopPointRef" stopPointNode,
+          tx2StopPointCommonName = fromMaybe "" $ childText "CommonName" stopPointNode
+        }
+
+parseJourneyPatternTimingLinks :: Element -> [Tx2JourneyPatternTimingLink]
+parseJourneyPatternTimingLinks root =
+  case childNamed "JourneyPatternSections" root of
+    Nothing -> []
+    Just sectionsNode ->
+      concatMap parseSection (childrenNamed "JourneyPatternSection" sectionsNode)
+  where
+    parseSection :: Element -> [Tx2JourneyPatternTimingLink]
+    parseSection sectionNode =
+      let sectionRef = attrValue "id" sectionNode
+          timingLinks = childrenNamed "JourneyPatternTimingLink" sectionNode
+       in zipWith (parseTimingLink sectionRef) [1 ..] timingLinks
+
+    parseTimingLink :: String -> Int -> Element -> Tx2JourneyPatternTimingLink
+    parseTimingLink sectionRef sortOrder timingLinkNode =
+      Tx2JourneyPatternTimingLink
+        { tx2JourneyPatternTimingLinkId = attrValue "id" timingLinkNode,
+          tx2JourneyPatternTimingLinkSectionRef = sectionRef,
+          tx2JourneyPatternTimingLinkSortOrder = sortOrder,
+          tx2JourneyPatternTimingLinkFromStopPointRef =
+            fromMaybe "" $
+              childNamed "From" timingLinkNode >>= childText "StopPointRef",
+          tx2JourneyPatternTimingLinkToStopPointRef =
+            fromMaybe "" $
+              childNamed "To" timingLinkNode >>= childText "StopPointRef",
+          tx2JourneyPatternTimingLinkRouteLinkRef =
+            fromMaybe "" $
+              childText "RouteLinkRef" timingLinkNode,
+          tx2JourneyPatternTimingLinkDirection =
+            fromMaybe "" $
+              childText "Direction" timingLinkNode,
+          tx2JourneyPatternTimingLinkRunTime =
+            fromMaybe "" $
+              childText "RunTime" timingLinkNode,
+          tx2JourneyPatternTimingLinkFromWaitTime =
+            fromMaybe "" $
+              childNamed "From" timingLinkNode >>= childText "WaitTime"
+        }
 
 parseVehicleJourneys :: Element -> Either String [Tx2VehicleJourney]
 parseVehicleJourneys root =

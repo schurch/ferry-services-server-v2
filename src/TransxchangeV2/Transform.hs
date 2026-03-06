@@ -29,9 +29,11 @@ filterFerryDocuments = foldr keepFerryOnly []
                   tx2SourceVersionKey = tx2SourceVersionKey doc,
                   tx2SourceCreationDateTime = tx2SourceCreationDateTime doc,
                   tx2SourceModificationDateTime = tx2SourceModificationDateTime doc,
+                  tx2StopPoints = tx2StopPoints doc,
                   tx2Services = ferryServices,
                   tx2Lines = ferryLines,
                   tx2JourneyPatterns = ferryPatterns,
+                  tx2JourneyPatternTimingLinks = tx2JourneyPatternTimingLinks doc,
                   tx2VehicleJourneys = ferryJourneys
                 } :
               acc

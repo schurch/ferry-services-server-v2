@@ -25,7 +25,8 @@ module Database
     saveVessel,
     getVessels,
     getServiceVessels,
-    getLocationDepartures,
+    getLocationDeparturesV2,
+    getServicesWithScheduledDeparturesV2,
     getServiceOrganisations,
     updateTransxchangeData,
   )
@@ -430,8 +431,8 @@ getServiceVessels = withConnection $ \connection ->
       WHERE v.coordinate && b.bounds AND s.organisation_id = v.organisation_id;
     |]
 
-getLocationDepartures :: Int -> Day -> Application [LocationDeparture]
-getLocationDepartures serviceID date = withConnection $ \connection ->
+getLocationDeparturesV2 :: Int -> Day -> Application [LocationDeparture]
+getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
   query
     connection
     [sql|
@@ -439,158 +440,235 @@ getLocationDepartures serviceID date = withConnection $ \connection ->
           VALUES (date ?)
       ),
       timings AS (
-          SELECT 
+          SELECT
+            document_id,
             journey_pattern_timing_link_id,
-            CASE from_wait_time WHEN '' 
+            journey_pattern_section_ref,
+            sort_order,
+            CASE from_wait_time WHEN ''
                 THEN make_interval()
                 ELSE make_interval(
-                        hours := (REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[1] :: Int,
-                        mins := (REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[2] :: Int,
-                        secs := (REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[3] :: Int
+                        hours := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[1], '') :: Int, 0),
+                        mins := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[2], '') :: Int, 0),
+                        secs := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[3], '') :: Int, 0)
                     )
             END AS wait_time,
-            CASE run_time WHEN '' 
+            CASE run_time WHEN ''
                 THEN make_interval()
                 ELSE make_interval(
-                        hours := (REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[1] :: Int,
-                        mins := (REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[2] :: Int,
-                        secs := (REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[3] :: Int
+                        hours := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[1], '') :: Int, 0),
+                        mins := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[2], '') :: Int, 0),
+                        secs := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[3], '') :: Int, 0)
                     )
             END AS run_time
           FROM
-              journey_pattern_timing_links
+              tx2_journey_pattern_timing_links
       ),
       day_of_week(derived_day_of_week) AS (
-          SELECT 
-              CASE 
-                  WHEN extract(dow from query_date) = 0 THEN 'sunday' :: day_of_week
-                  WHEN extract(dow from query_date) = 1 THEN 'monday' :: day_of_week
-                  WHEN extract(dow from query_date) = 2 THEN 'tuesday' :: day_of_week
-                  WHEN extract(dow from query_date) = 3 THEN 'wednesday' :: day_of_week
-                  WHEN extract(dow from query_date) = 4 THEN 'thursday' :: day_of_week
-                  WHEN extract(dow from query_date) = 5 THEN 'friday' :: day_of_week
-                  WHEN extract(dow from query_date) = 6 THEN 'saturday' :: day_of_week
+          SELECT
+              CASE
+                  WHEN extract(dow from query_date) = 0 THEN 'sunday'
+                  WHEN extract(dow from query_date) = 1 THEN 'monday'
+                  WHEN extract(dow from query_date) = 2 THEN 'tuesday'
+                  WHEN extract(dow from query_date) = 3 THEN 'wednesday'
+                  WHEN extract(dow from query_date) = 4 THEN 'thursday'
+                  WHEN extract(dow from query_date) = 5 THEN 'friday'
+                  WHEN extract(dow from query_date) = 6 THEN 'saturday'
               END
           FROM constants
       ),
-      operating_today AS (
-          SELECT 
-              vehicle_journey_code
-          FROM 
-              days_of_operation, constants
-          WHERE 
-              query_date >= start_date
-              AND
-              query_date <= end_date
-
+      mapped_service_codes AS (
+          SELECT DISTINCT service_code
+          FROM tx2_service_mappings
+          WHERE service_id = ?
       ),
-      not_operating_today AS (
-          SELECT 
-              vehicle_journey_code
-          FROM 
-              days_of_non_operation, constants
-          WHERE 
-              query_date >= start_date
-              AND
-              query_date <= end_date
+      service_stop_points AS (
+          SELECT l.location_id, l.name, l.coordinate, l.stop_point_id
+          FROM service_locations sl
+          JOIN locations l ON l.location_id = sl.location_id
+          WHERE sl.service_id = ?
+            AND l.stop_point_id IS NOT NULL
       ),
-      serviced_org_not_operating_today AS (
-          SELECT 
-              vehicle_journey_code
-          FROM 
-              vehicle_journeys vj
-          CROSS JOIN
-              constants
-          INNER JOIN
-              serviced_organisation_working_days sowd ON sowd.serviced_organisation_code = vj.non_operation_serviced_organisation_code
-          WHERE 
-              query_date >= start_date
-              AND
-              query_date <= end_date
+      heuristic_service_codes AS (
+          SELECT DISTINCT s.service_code
+          FROM service_stop_points sp_from
+          JOIN service_stop_points sp_to
+            ON sp_to.stop_point_id <> sp_from.stop_point_id
+          JOIN tx2_journey_pattern_timing_links jptl
+            ON jptl.from_stop_point_ref = sp_from.stop_point_id
+           AND jptl.to_stop_point_ref = sp_to.stop_point_id
+          JOIN tx2_journey_patterns jp
+            ON jp.document_id = jptl.document_id
+           AND jp.section_ref = jptl.journey_pattern_section_ref
+          JOIN tx2_services s
+            ON s.document_id = jp.document_id
+           AND s.service_code = jp.service_code
+          WHERE s.mode = 'ferry'
+      ),
+      effective_service_codes AS (
+          SELECT service_code
+          FROM mapped_service_codes
+          UNION
+          SELECT service_code
+          FROM heuristic_service_codes
+          WHERE NOT EXISTS (SELECT 1 FROM mapped_service_codes)
       ),
       multi_journey_time AS (
-          SELECT 
-              jptl.journey_pattern_timing_link_id,
+          SELECT
+              t.document_id,
+              t.journey_pattern_timing_link_id,
+              t.journey_pattern_section_ref,
+              t.sort_order,
               LAG(t.run_time) OVER (
-                  PARTITION BY jptl.journey_pattern_section_id 
-                  ORDER BY jptl.journey_pattern_timing_link_id
+                  PARTITION BY t.document_id, t.journey_pattern_section_ref
+                  ORDER BY t.sort_order
               ) + t.wait_time AS time
-          FROM
-              journey_pattern_timing_links jptl
-          INNER JOIN
-              timings t ON t.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
-      )
-      SELECT
-          fl.location_id AS from_location_id, 
-          tl.location_id AS to_location_id, 
-          tl.name AS to_location_name, 
-          tl.coordinate AS to_location_coordinate, 
-          (
+          FROM timings t
+      ),
+      candidate_departures AS (
+          SELECT
+              fl.location_id AS from_location_id,
+              tl.location_id AS to_location_id,
+              tl.name AS to_location_name,
+              tl.coordinate AS to_location_coordinate,
               (
-                  query_date +
-                  COALESCE (
-                      SUM (mjt.time) OVER (
-                          PARTITION BY jptl.journey_pattern_section_id, vj.vehicle_journey_code
-                          ORDER BY jptl.journey_pattern_timing_link_id
-                      ) + vj.departure_time,
-                      departure_time
+                  (
+                      query_date +
+                      COALESCE(
+                          SUM(mjt.time) OVER (
+                              PARTITION BY jp.document_id, jp.section_ref, vj.vehicle_journey_code
+                              ORDER BY jptl.sort_order
+                          ) + vj.departure_time,
+                          vj.departure_time
+                      )
+                  ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
+              ) :: TIMESTAMP AS departure,
+              (
+                  (
+                      query_date +
+                      COALESCE(
+                          SUM(mjt.time) OVER (
+                              PARTITION BY jp.document_id, jp.section_ref, vj.vehicle_journey_code
+                              ORDER BY jptl.sort_order
+                          ) + vj.departure_time,
+                          vj.departure_time
+                      ) + t.run_time
+                  ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
+              ) :: TIMESTAMP AS arrival,
+              NULLIF(vj.note, '') AS notes,
+              d.source_modification_datetime
+          FROM tx2_vehicle_journeys vj
+          CROSS JOIN constants
+          CROSS JOIN day_of_week
+          INNER JOIN tx2_journey_patterns jp
+              ON jp.document_id = vj.document_id
+             AND jp.journey_pattern_id = vj.journey_pattern_id
+          INNER JOIN tx2_journey_pattern_timing_links jptl
+              ON jptl.document_id = jp.document_id
+             AND jptl.journey_pattern_section_ref = jp.section_ref
+          INNER JOIN timings t
+              ON t.document_id = jptl.document_id
+             AND t.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
+          INNER JOIN multi_journey_time mjt
+              ON mjt.document_id = jptl.document_id
+             AND mjt.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
+          INNER JOIN tx2_services s
+              ON s.document_id = vj.document_id
+             AND s.service_code = vj.service_code
+          INNER JOIN effective_service_codes esc
+              ON esc.service_code = s.service_code
+          INNER JOIN tx2_documents d
+              ON d.document_id = s.document_id
+          INNER JOIN service_stop_points fl
+              ON fl.stop_point_id = jptl.from_stop_point_ref
+          INNER JOIN service_stop_points tl
+              ON tl.stop_point_id = jptl.to_stop_point_ref
+          WHERE s.mode = 'ferry'
+            AND (s.start_date IS NULL OR query_date >= s.start_date)
+            AND (s.end_date IS NULL OR query_date <= s.end_date)
+            AND EXISTS (
+                SELECT 1
+                FROM tx2_vehicle_journey_days vjd
+                WHERE vjd.document_id = vj.document_id
+                  AND vjd.vehicle_journey_code = vj.vehicle_journey_code
+                  AND (
+                      vjd.day_rule = derived_day_of_week
+                      OR (derived_day_of_week IN ('monday','tuesday','wednesday','thursday','friday') AND vjd.day_rule = 'monday_to_friday')
+                      OR (derived_day_of_week IN ('monday','tuesday','wednesday','thursday','friday','saturday') AND vjd.day_rule = 'monday_to_saturday')
+                      OR vjd.day_rule = 'monday_to_sunday'
+                      OR (derived_day_of_week IN ('saturday','sunday') AND vjd.day_rule = 'weekend')
                   )
-              ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
-          ) :: TIMESTAMP AS departure,
-          (
-              (
-                  query_date +
-                  COALESCE (
-                      SUM (mjt.time) OVER (
-                          PARTITION BY jptl.journey_pattern_section_id, vj.vehicle_journey_code
-                          ORDER BY jptl.journey_pattern_timing_link_id
-                      ) + vj.departure_time,
-                      departure_time
-                  ) + t.run_time 
-              ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
-          ) :: TIMESTAMP AS arrival,
-          NULLIF(vj.note, '') AS Notes
-      FROM 
-          vehicle_journeys vj
-      CROSS JOIN
-          constants
-      CROSS JOIN
-          day_of_week
-      INNER JOIN 
-          journey_patterns jp ON vj.journey_pattern_id = jp.journey_pattern_id
-      INNER JOIN 
-          journey_pattern_timing_links jptl ON jp.journey_pattern_section_id = jptl.journey_pattern_section_id
-      INNER JOIN
-          timings t ON t.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
-      INNER JOIN 
-          transxchange_services txcs ON txcs.service_code = vj.service_code
-      INNER JOIN
-          locations fl ON fl.stop_point_id = jptl.from_stop_point
-      INNER JOIN
-          locations tl ON tl.stop_point_id = jptl.to_stop_point
-      INNER JOIN
-          multi_journey_time mjt ON mjt.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
-      INNER JOIN
-          transxchangeservice_services txss ON txcs.service_code = txss.service_code
-      WHERE 
-          txss.service_id = ?
-          AND
-          (
-              query_date >= txcs.start_date AND query_date <= txcs.end_date
-              OR
-              vj.vehicle_journey_code IN (SELECT * FROM operating_today)
-          )
-          AND
-          derived_day_of_week = ANY (vj.days_of_week)
-          AND
-          vj.vehicle_journey_code NOT IN (SELECT * FROM not_operating_today)
-          AND
-          vj.vehicle_journey_code NOT IN (SELECT * FROM serviced_org_not_operating_today)
+            )
+      )
+      SELECT DISTINCT ON (from_location_id, to_location_id, departure, arrival, notes)
+          from_location_id,
+          to_location_id,
+          to_location_name,
+          to_location_coordinate,
+          departure,
+          arrival,
+          notes
+      FROM candidate_departures
       ORDER BY
-          fl.name,
-          departure
+          from_location_id,
+          to_location_id,
+          departure,
+          arrival,
+          notes,
+          source_modification_datetime DESC NULLS LAST
     |]
-    (date, serviceID)
+    (date, serviceID, serviceID)
+
+getServicesWithScheduledDeparturesV2 :: Application [Int]
+getServicesWithScheduledDeparturesV2 = withConnection $ \connection ->
+  fmap unwrapOnly
+    <$> query_
+      connection
+      [sql|
+        WITH mapped_services AS (
+            SELECT DISTINCT sm.service_id
+            FROM tx2_service_mappings sm
+            JOIN tx2_services s
+              ON s.service_code = sm.service_code
+            WHERE s.mode = 'ferry'
+        ),
+        service_stop_points AS (
+            SELECT sl.service_id, l.stop_point_id
+            FROM service_locations sl
+            JOIN locations l ON l.location_id = sl.location_id
+            WHERE l.stop_point_id IS NOT NULL
+        ),
+        heuristic_services AS (
+            SELECT DISTINCT sp_from.service_id
+            FROM service_stop_points sp_from
+            JOIN service_stop_points sp_to
+              ON sp_to.service_id = sp_from.service_id
+             AND sp_to.stop_point_id <> sp_from.stop_point_id
+            JOIN tx2_journey_pattern_timing_links jptl
+              ON jptl.from_stop_point_ref = sp_from.stop_point_id
+             AND jptl.to_stop_point_ref = sp_to.stop_point_id
+            JOIN tx2_journey_patterns jp
+              ON jp.document_id = jptl.document_id
+             AND jp.section_ref = jptl.journey_pattern_section_ref
+            JOIN tx2_services s
+              ON s.document_id = jp.document_id
+             AND s.service_code = jp.service_code
+            WHERE s.mode = 'ferry'
+        )
+        SELECT service_id
+        FROM mapped_services
+        UNION
+        SELECT hs.service_id
+        FROM heuristic_services hs
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM tx2_service_mappings sm
+            WHERE sm.service_id = hs.service_id
+        )
+      |]
+  where
+    unwrapOnly :: Only Int -> Int
+    unwrapOnly (Only value) = value
 
 getServiceOrganisations :: Application [ServiceOrganisation]
 getServiceOrganisations = withConnection $ \connection ->

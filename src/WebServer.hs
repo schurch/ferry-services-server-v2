@@ -27,6 +27,7 @@ import Data.Scientific
     fromFloatDigits,
     toRealFloat,
   )
+import qualified Data.Set as S
 import Data.Text.Lazy (Text, toStrict, unpack)
 import Data.Time
   ( LocalTime,
@@ -188,6 +189,8 @@ type ServiceVesselLookup = M.Map Int [VesselResponse]
 
 type ServiceOrganisationLookup = M.Map Int OrganisationResponse
 
+type ServiceScheduledDeparturesLookup = S.Set Int
+
 type LocationScheduledDeparturesLookup = M.Map Int [DepartureResponse]
 
 type LocationNextDepartureLookup = M.Map Int DepartureResponse
@@ -204,22 +207,24 @@ getService serviceID departuresDate = do
   service <- lift $ DB.getService serviceID
   time <- liftIO getCurrentTime
   locationDepartureLookup <- createDeparturesLookup serviceID departuresDate
+  scheduledDeparturesLookup <- createServiceScheduledDeparturesLookup
   nextDepatureLookup <- createNextDepartureLookup serviceID
   nextRailDepartureLookup <- createNextRailDepartureLookup
   locationLookup <- createLocationLookup (Just locationDepartureLookup) (Just nextDepatureLookup) (Just nextRailDepartureLookup)
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
-  return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup 1 time <$> service
+  return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup 1 time <$> service
 
 getServices :: Action [ServiceResponse]
 getServices = do
   services <- lift DB.getServices
   time <- liftIO getCurrentTime
+  scheduledDeparturesLookup <- createServiceScheduledDeparturesLookup
   locationLookup <- createLocationLookup Nothing Nothing Nothing
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrder time service
+    return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup sortOrder time service
 
 createInstallation ::
   UUID -> CreateInstallationRequest -> Action [ServiceResponse]
@@ -254,11 +259,12 @@ getServicesForInstallation :: UUID -> Action [ServiceResponse]
 getServicesForInstallation installationID = do
   services <- lift $ DB.getServicesForInstallation installationID
   time <- liftIO getCurrentTime
+  scheduledDeparturesLookup <- createServiceScheduledDeparturesLookup
   locationLookup <- createLocationLookup Nothing Nothing Nothing
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrder time service
+    return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup sortOrder time service
 
 getVessels :: Action [VesselResponse]
 getVessels = do
@@ -283,8 +289,8 @@ vesselToVesselResponse Vessel {..} =
     }
 
 serviceToServiceResponse ::
-  ServiceVesselLookup -> ServiceLocationLookup -> ServiceOrganisationLookup -> Int -> UTCTime -> Service -> ServiceResponse
-serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrder currentTime Service {..} =
+  ServiceScheduledDeparturesLookup -> ServiceVesselLookup -> ServiceLocationLookup -> ServiceOrganisationLookup -> Int -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup sortOrder currentTime Service {..} =
   ServiceResponse
     { serviceResponseServiceID = serviceID,
       serviceResponseSortOrder = sortOrder,
@@ -305,7 +311,7 @@ serviceToServiceResponse vesselLookup locationLookup organisationLookup sortOrde
         fromMaybe [] $
           M.lookup serviceID vesselLookup,
       serviceResponseOperator = M.lookup serviceID organisationLookup,
-      serviceResponseScheduledDeparturesAvailable = Just False,
+      serviceResponseScheduledDeparturesAvailable = Just $ S.member serviceID scheduledDeparturesLookup,
       serviceResponseUpdated = serviceUpdated
     }
   where
@@ -392,7 +398,7 @@ createDeparturesLookup :: Int -> Maybe Day -> Action LocationScheduledDepartures
 createDeparturesLookup serviceID departuresDate = do
   time <- liftIO getCurrentTime
   let date = fromMaybe (utctDay time) departuresDate
-  locationDepartures <- lift $ DB.getLocationDepartures serviceID date
+  locationDepartures <- lift $ DB.getLocationDeparturesV2 serviceID date
   return $
     M.fromListWith (++) $
       [(fromLocationID, [departureResponse locationDeparture]) | locationDeparture@(LocationDeparture fromLocationID _ _ _ _ _ _) <- reverse locationDepartures]
@@ -455,6 +461,10 @@ createServiceOrganisationLookup = do
       [ (serviceID, OrganisationResponse organisationID name website localNumber internationalNumber email x facebook)
         | (ServiceOrganisation serviceID organisationID name website localNumber internationalNumber email x facebook) <- serviceOrganisations
       ]
+
+createServiceScheduledDeparturesLookup :: Action ServiceScheduledDeparturesLookup
+createServiceScheduledDeparturesLookup =
+  S.fromList <$> lift DB.getServicesWithScheduledDeparturesV2
 
 createServiceVesselLookup :: Action ServiceVesselLookup
 createServiceVesselLookup = do

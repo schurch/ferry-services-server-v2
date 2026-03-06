@@ -12,10 +12,18 @@ data Tx2Document = Tx2Document
     tx2SourceVersionKey :: String,
     tx2SourceCreationDateTime :: Maybe LocalTime,
     tx2SourceModificationDateTime :: Maybe LocalTime,
+    tx2StopPoints :: [Tx2StopPoint],
     tx2Services :: [Tx2Service],
     tx2Lines :: [Tx2Line],
     tx2JourneyPatterns :: [Tx2JourneyPattern],
+    tx2JourneyPatternTimingLinks :: [Tx2JourneyPatternTimingLink],
     tx2VehicleJourneys :: [Tx2VehicleJourney]
+  }
+  deriving (Show, Eq)
+
+data Tx2StopPoint = Tx2StopPoint
+  { tx2StopPointRef :: String,
+    tx2StopPointCommonName :: String
   }
   deriving (Show, Eq)
 
@@ -43,6 +51,19 @@ data Tx2JourneyPattern = Tx2JourneyPattern
     tx2JourneyPatternServiceCode :: String,
     tx2JourneyPatternSectionRef :: String,
     tx2JourneyPatternDirection :: String
+  }
+  deriving (Show, Eq)
+
+data Tx2JourneyPatternTimingLink = Tx2JourneyPatternTimingLink
+  { tx2JourneyPatternTimingLinkId :: String,
+    tx2JourneyPatternTimingLinkSectionRef :: String,
+    tx2JourneyPatternTimingLinkSortOrder :: Int,
+    tx2JourneyPatternTimingLinkFromStopPointRef :: String,
+    tx2JourneyPatternTimingLinkToStopPointRef :: String,
+    tx2JourneyPatternTimingLinkRouteLinkRef :: String,
+    tx2JourneyPatternTimingLinkDirection :: String,
+    tx2JourneyPatternTimingLinkRunTime :: String,
+    tx2JourneyPatternTimingLinkFromWaitTime :: String
   }
   deriving (Show, Eq)
 

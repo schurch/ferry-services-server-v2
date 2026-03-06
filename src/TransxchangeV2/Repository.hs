@@ -36,8 +36,10 @@ clearTx2Tables connection =
         TRUNCATE TABLE
           tx2_vehicle_journey_days,
           tx2_vehicle_journeys,
+          tx2_journey_pattern_timing_links,
           tx2_journey_patterns,
           tx2_lines,
+          tx2_stop_points,
           tx2_services,
           tx2_documents
       |]
@@ -45,9 +47,11 @@ clearTx2Tables connection =
 insertTx2Document :: Connection -> Tx2Document -> IO ()
 insertTx2Document connection document = do
   documentId <- insertDocument connection document
+  insertStopPoints connection documentId (tx2StopPoints document)
   insertServices connection documentId (tx2Services document)
   insertLines connection documentId (tx2Lines document)
   insertJourneyPatterns connection documentId (tx2JourneyPatterns document)
+  insertJourneyPatternTimingLinks connection documentId (tx2JourneyPatternTimingLinks document)
   insertVehicleJourneys connection documentId vehicleJourneys
   insertVehicleJourneyDays connection documentId vehicleJourneys
   where
@@ -117,6 +121,30 @@ insertServices connection documentId services = do
               )
           )
           services
+  void $ executeMany connection statement values
+
+insertStopPoints :: Connection -> Int64 -> [Tx2StopPoint] -> IO ()
+insertStopPoints connection documentId stopPoints = do
+  let statement =
+        [sql|
+          INSERT INTO tx2_stop_points (
+            document_id,
+            stop_point_ref,
+            common_name
+          )
+          VALUES (?, ?, ?)
+          ON CONFLICT (document_id, stop_point_ref) DO UPDATE
+            SET common_name = excluded.common_name
+        |]
+  let values =
+        fmap
+          ( \stopPoint ->
+              ( documentId,
+                tx2StopPointRef stopPoint,
+                tx2StopPointCommonName stopPoint
+              )
+          )
+          stopPoints
   void $ executeMany connection statement values
 
 insertLines :: Connection -> Int64 -> [Tx2Line] -> IO ()
@@ -223,6 +251,51 @@ insertVehicleJourneyDays connection documentId vehicleJourneys = do
                 (nub $ fmap dayRuleToText (tx2VehicleJourneyDayRules journey))
           )
           vehicleJourneys
+  void $ executeMany connection statement values
+
+insertJourneyPatternTimingLinks :: Connection -> Int64 -> [Tx2JourneyPatternTimingLink] -> IO ()
+insertJourneyPatternTimingLinks connection documentId timingLinks = do
+  let statement =
+        [sql|
+          INSERT INTO tx2_journey_pattern_timing_links (
+            document_id,
+            journey_pattern_timing_link_id,
+            journey_pattern_section_ref,
+            sort_order,
+            from_stop_point_ref,
+            to_stop_point_ref,
+            route_link_ref,
+            direction,
+            run_time,
+            from_wait_time
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT (document_id, journey_pattern_timing_link_id) DO UPDATE
+            SET journey_pattern_section_ref = excluded.journey_pattern_section_ref,
+                sort_order = excluded.sort_order,
+                from_stop_point_ref = excluded.from_stop_point_ref,
+                to_stop_point_ref = excluded.to_stop_point_ref,
+                route_link_ref = excluded.route_link_ref,
+                direction = excluded.direction,
+                run_time = excluded.run_time,
+                from_wait_time = excluded.from_wait_time
+        |]
+  let values =
+        fmap
+          ( \timingLink ->
+              ( documentId,
+                tx2JourneyPatternTimingLinkId timingLink,
+                tx2JourneyPatternTimingLinkSectionRef timingLink,
+                tx2JourneyPatternTimingLinkSortOrder timingLink,
+                tx2JourneyPatternTimingLinkFromStopPointRef timingLink,
+                tx2JourneyPatternTimingLinkToStopPointRef timingLink,
+                tx2JourneyPatternTimingLinkRouteLinkRef timingLink,
+                tx2JourneyPatternTimingLinkDirection timingLink,
+                tx2JourneyPatternTimingLinkRunTime timingLink,
+                tx2JourneyPatternTimingLinkFromWaitTime timingLink
+              )
+          )
+          timingLinks
   void $ executeMany connection statement values
 
 dayRuleToText :: Tx2DayRule -> String
