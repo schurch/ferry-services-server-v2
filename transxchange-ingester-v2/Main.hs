@@ -4,6 +4,8 @@
 module Main where
 
 import Control.Exception (SomeException, catch, throwIO)
+import Control.Concurrent (threadDelay)
+import Control.Monad (forever)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Pool (createPool)
 import Data.String (fromString)
@@ -50,23 +52,32 @@ main = do
       60
       10
   let env = Env logger connectionPool
-  catch
-    (do
-        (summary, sourceLabel) <-
-          case args of
-            (directory : _) -> do
-              result <- runReaderT (ingestDirectoryV2 directory) env
-              return (result, directory)
-            [] -> do
-              result <- runReaderT ingestLatestV2 env
-              return (result, "FTP S.zip")
-        info logger (msg @String $ "TransXChange v2 ingest complete from: " <> sourceLabel)
-        info logger (msg @String $ renderSummary summary)
-    )
-    (\exception -> do
-        handleException logger exception
-        throwIO exception
-    )
+  case args of
+    (directory : _) ->
+      catch
+        (runOnce logger env directory)
+        (\exception -> do
+            handleException logger exception
+            throwIO exception
+        )
+    [] ->
+      forever $ do
+        catch
+          (runLatest logger env)
+          (handleException logger)
+        threadDelay (1 * 24 * 60 * 60 * 1000 * 1000)
+
+runOnce :: Logger -> Env -> FilePath -> IO ()
+runOnce logger env directory = do
+  summary <- runReaderT (ingestDirectoryV2 directory) env
+  info logger (msg @String $ "TransXChange v2 ingest complete from: " <> directory)
+  info logger (msg @String $ renderSummary summary)
+
+runLatest :: Logger -> Env -> IO ()
+runLatest logger env = do
+  summary <- runReaderT ingestLatestV2 env
+  info logger (msg @String "TransXChange v2 ingest complete from: FTP S.zip")
+  info logger (msg @String $ renderSummary summary)
 
 renderSummary :: Tx2IngestSummary -> String
 renderSummary summary =
