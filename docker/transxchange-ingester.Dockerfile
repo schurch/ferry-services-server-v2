@@ -12,4 +12,4 @@ RUN apt-get update && \
 
 COPY $BIN_DIR .
 
-CMD ["/opt/ferry-services/ferry-services-transxchange-ingester-exe"]
+CMD ["/opt/ferry-services/ferry-services-transxchange-ingester-v2-exe"]

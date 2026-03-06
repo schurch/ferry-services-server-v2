@@ -76,7 +76,7 @@ services:
     env_file:
       - envfile.docker-prod
     tty: true
-    command: /opt/ferry-services/ferry-services-transxchange-ingester-exe
+    command: /opt/ferry-services/ferry-services-transxchange-ingester-v2-exe
   db-prod:
     image: "mdillon/postgis"
     container_name: ferry-services-db-prod

@@ -61,7 +61,7 @@ services:
     env_file:
       - envfile.docker-test
     tty: true
-    command: /opt/ferry-services/ferry-services-transxchange-ingester-exe
+    command: /opt/ferry-services/ferry-services-transxchange-ingester-v2-exe
   db-test:
     image: "mdillon/postgis"
     container_name: ferry-services-db-test

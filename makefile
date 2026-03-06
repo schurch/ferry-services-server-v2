@@ -28,7 +28,7 @@ build-release:
 	docker build -f docker/scraper.Dockerfile -t stefanchurch/ferry-services-scraper:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-scraper-exe/ferry-services-scraper-exe" .
 	docker build -f docker/weather-fetcher.Dockerfile -t stefanchurch/ferry-services-weather-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-weather-fetcher-exe/ferry-services-weather-fetcher-exe" .
 	docker build -f docker/vessel-fetcher.Dockerfile -t stefanchurch/ferry-services-vessel-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-vessel-fetcher-exe/ferry-services-vessel-fetcher-exe" .
-	docker build -f docker/transxchange-ingester.Dockerfile -t stefanchurch/ferry-services-transxchange-ingester:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-transxchange-ingester-exe/ferry-services-transxchange-ingester-exe" .
+	docker build -f docker/transxchange-ingester.Dockerfile -t stefanchurch/ferry-services-transxchange-ingester:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-transxchange-ingester-v2-exe/ferry-services-transxchange-ingester-v2-exe" .
 	docker build -f docker/rail-departure-fetcher.Dockerfile -t stefanchurch/ferry-services-rail-departure-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-rail-departure-fetcher-exe/ferry-services-rail-departure-fetcher-exe" .
 	docker push stefanchurch/ferry-services-server:latest
 	docker push stefanchurch/ferry-services-scraper:latest
@@ -57,13 +57,12 @@ weather-fetcher: build dev-env
 vessel-fetcher: build dev-env
 	stack exec ferry-services-vessel-fetcher-exe
 
-.PHONY: transxchange-ingester
-transxchange-ingester: build dev-env
-	stack exec ferry-services-transxchange-ingester-exe
-
 .PHONY: transxchange-ingester-v2
 transxchange-ingester-v2: build dev-env
 	stack exec ferry-services-transxchange-ingester-v2-exe
+
+.PHONY: transxchange-ingester
+transxchange-ingester: transxchange-ingester-v2
 
 .PHONY: rail-departure-fetcher
 rail-departure-fetcher: build dev-env
