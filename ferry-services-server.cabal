@@ -33,6 +33,11 @@ library
       TransxchangeIngester
       TransxchangeParser
       TransxchangeTypes
+      TransxchangeV2.Ingest
+      TransxchangeV2.Parser
+      TransxchangeV2.Repository
+      TransxchangeV2.Transform
+      TransxchangeV2.Types
       Types
       Utility
       VesselFetcher
@@ -156,6 +161,22 @@ executable ferry-services-transxchange-ingester-exe
     , ferry-services-server
     , postgresql-simple
     , raven-haskell
+    , resource-pool
+    , tinylog
+    , transformers
+  default-language: Haskell2010
+
+executable ferry-services-transxchange-ingester-v2-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_ferry_services_server
+  hs-source-dirs:
+      transxchange-ingester-v2
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , ferry-services-server
+    , postgresql-simple
     , resource-pool
     , tinylog
     , transformers

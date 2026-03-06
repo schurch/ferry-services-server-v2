@@ -6,3 +6,5 @@ envfile.docker
 envfile.docker-test
 envfile.docker-prod
 .DS_Store
+S.zip
+S/

@@ -61,6 +61,10 @@ vessel-fetcher: build dev-env
 transxchange-ingester: build dev-env
 	stack exec ferry-services-transxchange-ingester-exe
 
+.PHONY: transxchange-ingester-v2
+transxchange-ingester-v2: build dev-env
+	stack exec ferry-services-transxchange-ingester-v2-exe
+
 .PHONY: rail-departure-fetcher
 rail-departure-fetcher: build dev-env
 	stack exec ferry-services-rail-departure-fetcher-exe
