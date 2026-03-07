@@ -454,8 +454,10 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
             journey_pattern_timing_link_id,
             journey_pattern_section_ref,
             sort_order,
+            from_stop_point_ref,
             from_activity,
             from_timing_status,
+            to_stop_point_ref,
             to_activity,
             to_timing_status,
             CASE from_wait_time WHEN ''
