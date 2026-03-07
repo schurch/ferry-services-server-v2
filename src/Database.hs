@@ -34,6 +34,7 @@ where
 import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (asks)
+import Data.List (nub)
 import Data.Maybe (listToMaybe)
 import Data.Pool (Pool, withResource)
 import Data.Time.Calendar
@@ -887,9 +888,17 @@ timeStringToTime string =
 
 matchedBankHolidayRulesForDate :: Day -> [String]
 matchedBankHolidayRulesForDate day =
-  ["all_bank_holidays" | isAnyScottishBankHoliday day]
-    <> ["other_public_holiday" | isAnyScottishBankHoliday day]
-    <> [ruleName | (ruleName, ruleDay) <- specificScottishBankHolidays year, day == ruleDay]
+  nub $
+    ["all_bank_holidays" | isAnyScottishBankHoliday day]
+      <> ["other_public_holiday" | isAnyScottishBankHoliday day]
+      <> [ruleName | (ruleName, ruleDay) <- specificScottishBankHolidays year, day == ruleDay]
+      <> ["displacement_holidays" | isDisplacementHoliday day]
+      <> ["holiday_mondays" | isMonday day && isAnyScottishBankHoliday day]
+      <> ["all_holidays_except_christmas" | isAnyScottishBankHoliday day && not (isChristmasRelatedHoliday day)]
+      <> ["no_holidays" | not (isAnyScottishBankHoliday day)]
+      <> ["christmas_eve" | isChristmasEve day]
+      <> ["new_years_eve" | isNewYearsEve day]
+      <> ["early_run_off_days" | isEarlyRunOffDay day]
   where
     (year, _, _) = toGregorian day
 
@@ -940,6 +949,49 @@ isAnyScottishBankHoliday day =
   day `elem` fmap snd (specificScottishBankHolidays year)
   where
     (year, _, _) = toGregorian day
+
+isDisplacementHoliday :: Day -> Bool
+isDisplacementHoliday day =
+  day
+    `elem` filter (/= baseHoliday) observedHolidays
+  where
+    (year, _, _) = toGregorian day
+    observedHolidays =
+      [ observedNewYearsDay year,
+        observedJan2ndScotland year,
+        observedStAndrewsDay year,
+        observedChristmasDay year,
+        observedBoxingDay year
+      ]
+    baseHoliday =
+      case day of
+        candidate
+          | candidate == observedNewYearsDay year -> fromGregorian year 1 1
+          | candidate == observedJan2ndScotland year -> fromGregorian year 1 2
+          | candidate == observedStAndrewsDay year -> fromGregorian year 11 30
+          | candidate == observedChristmasDay year -> fromGregorian year 12 25
+          | candidate == observedBoxingDay year -> fromGregorian year 12 26
+          | otherwise -> candidate
+
+isChristmasRelatedHoliday :: Day -> Bool
+isChristmasRelatedHoliday day =
+  let (year, _, _) = toGregorian day
+   in day == fromGregorian year 12 25
+        || day == observedChristmasDay year
+
+isChristmasEve :: Day -> Bool
+isChristmasEve day =
+  let (_, month, dayOfMonth) = toGregorian day
+   in month == 12 && dayOfMonth == 24
+
+isNewYearsEve :: Day -> Bool
+isNewYearsEve day =
+  let (_, month, dayOfMonth) = toGregorian day
+   in month == 12 && dayOfMonth == 31
+
+isEarlyRunOffDay :: Day -> Bool
+isEarlyRunOffDay day =
+  isChristmasEve day || isNewYearsEve day
 
 firstMondayOfMonth :: Integer -> Int -> Day
 firstMondayOfMonth year month =
