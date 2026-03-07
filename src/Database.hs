@@ -640,20 +640,15 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               tl.location_id AS to_location_id,
               tl.name AS to_location_name,
               tl.coordinate AS to_location_coordinate,
-              origin_leg.departure,
-              destination_leg.arrival,
-              origin_leg.notes,
-              origin_leg.source_modification_datetime
-          FROM journey_legs origin_leg
-          INNER JOIN journey_legs destination_leg
-              ON destination_leg.document_id = origin_leg.document_id
-             AND destination_leg.journey_pattern_id = origin_leg.journey_pattern_id
-             AND destination_leg.vehicle_journey_code = origin_leg.vehicle_journey_code
-             AND destination_leg.global_sort_order >= origin_leg.global_sort_order
+              jl.departure,
+              jl.arrival,
+              jl.notes,
+              jl.source_modification_datetime
+          FROM journey_legs jl
           INNER JOIN service_stop_points fl
-              ON fl.stop_point_id = origin_leg.from_stop_point_ref
+              ON fl.stop_point_id = jl.from_stop_point_ref
           INNER JOIN service_stop_points tl
-              ON tl.stop_point_id = destination_leg.to_stop_point_ref
+              ON tl.stop_point_id = jl.to_stop_point_ref
           WHERE fl.location_id <> tl.location_id
       )
       SELECT DISTINCT ON (from_location_id, to_location_id, departure, arrival, notes)
