@@ -16,6 +16,7 @@ data Tx2Document = Tx2Document
     tx2Services :: [Tx2Service],
     tx2Lines :: [Tx2Line],
     tx2JourneyPatterns :: [Tx2JourneyPattern],
+    tx2JourneyPatternSections :: [Tx2JourneyPatternSection],
     tx2JourneyPatternTimingLinks :: [Tx2JourneyPatternTimingLink],
     tx2VehicleJourneys :: [Tx2VehicleJourney]
   }
@@ -49,8 +50,14 @@ data Tx2Line = Tx2Line
 data Tx2JourneyPattern = Tx2JourneyPattern
   { tx2JourneyPatternId :: String,
     tx2JourneyPatternServiceCode :: String,
-    tx2JourneyPatternSectionRef :: String,
     tx2JourneyPatternDirection :: String
+  }
+  deriving (Show, Eq)
+
+data Tx2JourneyPatternSection = Tx2JourneyPatternSection
+  { tx2JourneyPatternSectionPatternId :: String,
+    tx2JourneyPatternSectionRef :: String,
+    tx2JourneyPatternSectionOrder :: Int
   }
   deriving (Show, Eq)
 
@@ -89,6 +96,12 @@ data Tx2DayRule
   | Tx2HolidaysOnly
   deriving (Show, Eq, Ord)
 
+data Tx2DateRange = Tx2DateRange
+  { tx2DateRangeStart :: Day,
+    tx2DateRangeEnd :: Day
+  }
+  deriving (Show, Eq, Ord)
+
 data Tx2VehicleJourney = Tx2VehicleJourney
   { tx2VehicleJourneyCode :: String,
     tx2VehicleJourneyServiceCode :: String,
@@ -97,6 +110,8 @@ data Tx2VehicleJourney = Tx2VehicleJourney
     tx2VehicleJourneyOperatorRef :: String,
     tx2VehicleJourneyDepartureTime :: TimeOfDay,
     tx2VehicleJourneyDayRules :: [Tx2DayRule],
+    tx2VehicleJourneyDaysOfOperation :: [Tx2DateRange],
+    tx2VehicleJourneyDaysOfNonOperation :: [Tx2DateRange],
     tx2VehicleJourneyNote :: String,
     tx2VehicleJourneyNoteCode :: String
   }

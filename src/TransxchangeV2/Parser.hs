@@ -87,9 +87,10 @@ parseXmlDocument filePath input = do
   let sourceModificationDateTime = attrValueMaybe "ModificationDateTime" root >>= parseXmlDateTime
   let stopPoints = parseStopPoints root
   serviceEntries <- parseServices root
-  let services = fmap (\(service, _, _) -> service) serviceEntries
-  let lines = concatMap (\(_, serviceLines, _) -> serviceLines) serviceEntries
-  let journeyPatterns = concatMap (\(_, _, patterns) -> patterns) serviceEntries
+  let services = fmap (\(service, _, _, _) -> service) serviceEntries
+  let lines = concatMap (\(_, serviceLines, _, _) -> serviceLines) serviceEntries
+  let journeyPatterns = concatMap (\(_, _, patterns, _) -> patterns) serviceEntries
+  let journeyPatternSections = concatMap (\(_, _, _, sections) -> sections) serviceEntries
   let journeyPatternTimingLinks = parseJourneyPatternTimingLinks root
   vehicleJourneys <- parseVehicleJourneys root
   return $
@@ -103,6 +104,7 @@ parseXmlDocument filePath input = do
         tx2Services = services,
         tx2Lines = lines,
         tx2JourneyPatterns = journeyPatterns,
+        tx2JourneyPatternSections = journeyPatternSections,
         tx2JourneyPatternTimingLinks = journeyPatternTimingLinks,
         tx2VehicleJourneys = vehicleJourneys
       }
@@ -112,13 +114,13 @@ getTransxchangeRoot input =
   let xml = onlyElems $ parseXML input
    in find (\element -> qName (elName element) == "TransXChange") xml
 
-parseServices :: Element -> Either String [(Tx2Service, [Tx2Line], [Tx2JourneyPattern])]
+parseServices :: Element -> Either String [(Tx2Service, [Tx2Line], [Tx2JourneyPattern], [Tx2JourneyPatternSection])]
 parseServices root = do
   servicesNode <- requiredChild "Services" root
   let serviceNodes = childrenNamed "Service" servicesNode
   mapM parseSingleService serviceNodes
 
-parseSingleService :: Element -> Either String (Tx2Service, [Tx2Line], [Tx2JourneyPattern])
+parseSingleService :: Element -> Either String (Tx2Service, [Tx2Line], [Tx2JourneyPattern], [Tx2JourneyPatternSection])
 parseSingleService serviceNode = do
   serviceCode <- requiredChildText "ServiceCode" serviceNode
   let operatingPeriod = childNamed "OperatingPeriod" serviceNode
@@ -131,7 +133,7 @@ parseSingleService serviceNode = do
   let origin = maybe "" (fromMaybe "" . childText "Origin") standardServiceNode
   let destination = maybe "" (fromMaybe "" . childText "Destination") standardServiceNode
   let lines = parseLines serviceCode serviceNode
-  let journeyPatterns = maybe [] (parseJourneyPatterns serviceCode) standardServiceNode
+  let (journeyPatterns, journeyPatternSections) = maybe ([], []) (parseJourneyPatterns serviceCode) standardServiceNode
   let service =
         Tx2Service
           { tx2ServiceCode = serviceCode,
@@ -143,7 +145,7 @@ parseSingleService serviceNode = do
             tx2StartDate = startDate,
             tx2EndDate = endDate
           }
-  return (service, lines, journeyPatterns)
+  return (service, lines, journeyPatterns, journeyPatternSections)
 
 parseLines :: String -> Element -> [Tx2Line]
 parseLines serviceCode serviceNode =
@@ -160,18 +162,29 @@ parseLines serviceCode serviceNode =
         )
         (childrenNamed "Line" linesNode)
 
-parseJourneyPatterns :: String -> Element -> [Tx2JourneyPattern]
+parseJourneyPatterns :: String -> Element -> ([Tx2JourneyPattern], [Tx2JourneyPatternSection])
 parseJourneyPatterns serviceCode standardServiceNode =
-  fmap
-    ( \patternNode ->
-        Tx2JourneyPattern
-          { tx2JourneyPatternId = attrValue "id" patternNode,
-            tx2JourneyPatternServiceCode = serviceCode,
-            tx2JourneyPatternSectionRef = fromMaybe "" (childText "JourneyPatternSectionRefs" patternNode),
-            tx2JourneyPatternDirection = fromMaybe "" $ childText "Direction" patternNode
-          }
-    )
-    (childrenNamed "JourneyPattern" standardServiceNode)
+  unzipJourneyPatterns (childrenNamed "JourneyPattern" standardServiceNode)
+  where
+    unzipJourneyPatterns patternNodes =
+      let parsed = fmap parseJourneyPattern patternNodes
+       in (fmap fst parsed, concatMap snd parsed)
+
+    parseJourneyPattern patternNode =
+      let patternId = attrValue "id" patternNode
+          sectionRefs = fmap strContent (childrenNamed "JourneyPatternSectionRefs" patternNode)
+          pattern =
+            Tx2JourneyPattern
+              { tx2JourneyPatternId = patternId,
+                tx2JourneyPatternServiceCode = serviceCode,
+                tx2JourneyPatternDirection = fromMaybe "" $ childText "Direction" patternNode
+              }
+          patternSections =
+            zipWith
+              (\sectionOrder sectionRef -> Tx2JourneyPatternSection patternId sectionRef sectionOrder)
+              [1 ..]
+              sectionRefs
+       in (pattern, patternSections)
 
 parseStopPoints :: Element -> [Tx2StopPoint]
 parseStopPoints root =
@@ -244,6 +257,8 @@ data RawTx2VehicleJourney = RawTx2VehicleJourney
     rawOperatorRef :: Maybe String,
     rawDepartureTime :: Maybe TimeOfDay,
     rawDayRules :: Maybe [Tx2DayRule],
+    rawDaysOfOperation :: Maybe [Tx2DateRange],
+    rawDaysOfNonOperation :: Maybe [Tx2DateRange],
     rawNote :: Maybe String,
     rawNoteCode :: Maybe String
   }
@@ -261,6 +276,8 @@ parseVehicleJourneyRaw journeyNode = do
   let note = childNamed "Note" journeyNode >>= childText "NoteText"
   let noteCode = childNamed "Note" journeyNode >>= childText "NoteCode"
   let dayRules = parseDayRules journeyNode
+  let daysOfOperation = parseSpecialDays "SpecialDaysOperation" journeyNode
+  let daysOfNonOperation = parseSpecialDays "SpecialDaysNonOperation" journeyNode
   return $
     RawTx2VehicleJourney
       { rawVehicleJourneyCode = vehicleJourneyCode,
@@ -271,6 +288,8 @@ parseVehicleJourneyRaw journeyNode = do
         rawOperatorRef = operatorRef,
         rawDepartureTime = departureTime,
         rawDayRules = dayRules,
+        rawDaysOfOperation = daysOfOperation,
+        rawDaysOfNonOperation = daysOfNonOperation,
         rawNote = note,
         rawNoteCode = noteCode
       }
@@ -318,6 +337,8 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
           rawOperatorRef = rawOperatorRef child <|> rawOperatorRef base,
           rawDepartureTime = rawDepartureTime child <|> rawDepartureTime base,
           rawDayRules = rawDayRules child <|> rawDayRules base,
+          rawDaysOfOperation = rawDaysOfOperation child <|> rawDaysOfOperation base,
+          rawDaysOfNonOperation = rawDaysOfNonOperation child <|> rawDaysOfNonOperation base,
           rawNote = rawNote child <|> rawNote base,
           rawNoteCode = rawNoteCode child <|> rawNoteCode base
         }
@@ -332,6 +353,8 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
       let note = fromMaybe "" (rawNote rawJourney)
       let noteCode = fromMaybe "" (rawNoteCode rawJourney)
       let dayRules = fromMaybe [] (rawDayRules rawJourney)
+      let daysOfOperation = fromMaybe [] (rawDaysOfOperation rawJourney)
+      let daysOfNonOperation = fromMaybe [] (rawDaysOfNonOperation rawJourney)
       return $
         Tx2VehicleJourney
           { tx2VehicleJourneyCode = rawVehicleJourneyCode rawJourney,
@@ -341,6 +364,8 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
             tx2VehicleJourneyOperatorRef = operatorRef,
             tx2VehicleJourneyDepartureTime = departureTime,
             tx2VehicleJourneyDayRules = dayRules,
+            tx2VehicleJourneyDaysOfOperation = daysOfOperation,
+            tx2VehicleJourneyDaysOfNonOperation = daysOfNonOperation,
             tx2VehicleJourneyNote = note,
             tx2VehicleJourneyNoteCode = noteCode
           }
@@ -356,6 +381,19 @@ parseDayRules journeyNode =
           case childNamed "DaysOfWeek" regularDayType of
             Nothing -> Just []
             Just daysOfWeekNode -> Just (concatMap dayElementToDays (elChildren daysOfWeekNode))
+
+parseSpecialDays :: String -> Element -> Maybe [Tx2DateRange]
+parseSpecialDays nodeName journeyNode =
+  case childNamed nodeName journeyNode of
+    Nothing -> Nothing
+    Just specialDaysNode ->
+      let ranges =
+            [ Tx2DateRange startDate endDate
+            | dateRangeNode <- childrenNamed "DateRange" specialDaysNode,
+              Just startDate <- [childText "StartDate" dateRangeNode >>= stringToDay],
+              Just endDate <- [childText "EndDate" dateRangeNode >>= stringToDay]
+            ]
+       in Just ranges
 
 dayElementToDays :: Element -> [Tx2DayRule]
 dayElementToDays element =

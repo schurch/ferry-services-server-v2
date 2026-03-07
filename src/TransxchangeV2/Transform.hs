@@ -16,6 +16,11 @@ filterFerryDocuments = foldr keepFerryOnly []
           ferryServiceCodes = fmap tx2ServiceCode ferryServices
           ferryLines = filter (\line -> tx2LineServiceCode line `elem` ferryServiceCodes) (tx2Lines doc)
           ferryPatterns = filter (\pattern -> tx2JourneyPatternServiceCode pattern `elem` ferryServiceCodes) (tx2JourneyPatterns doc)
+          ferryPatternIds = fmap tx2JourneyPatternId ferryPatterns
+          ferryPatternSections =
+            filter
+              (\section -> tx2JourneyPatternSectionPatternId section `elem` ferryPatternIds)
+              (tx2JourneyPatternSections doc)
           ferryJourneys =
             filter
               (\journey -> tx2VehicleJourneyServiceCode journey `elem` ferryServiceCodes)
@@ -33,6 +38,7 @@ filterFerryDocuments = foldr keepFerryOnly []
                   tx2Services = ferryServices,
                   tx2Lines = ferryLines,
                   tx2JourneyPatterns = ferryPatterns,
+                  tx2JourneyPatternSections = ferryPatternSections,
                   tx2JourneyPatternTimingLinks = tx2JourneyPatternTimingLinks doc,
                   tx2VehicleJourneys = ferryJourneys
                 } :

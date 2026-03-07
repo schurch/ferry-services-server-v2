@@ -1,0 +1,5 @@
+DROP INDEX IF EXISTS tx2_vehicle_journey_days_of_non_operation_date_idx;
+DROP INDEX IF EXISTS tx2_vehicle_journey_days_of_operation_date_idx;
+
+DROP TABLE IF EXISTS tx2_vehicle_journey_days_of_non_operation;
+DROP TABLE IF EXISTS tx2_vehicle_journey_days_of_operation;

@@ -38,6 +38,26 @@ jobs:
           port: 22
           source: "docker/docker-compose-prod.yml"
           target: "~/ferry-services-server"
+          strip_components: 1
+      - name: Copy deploy script to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          source: "scripts/deploy-prod.sh"
+          target: "~/ferry-services-server"
+          strip_components: 1
+      - name: Copy migrations to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          source: "migrations/*"
+          target: "~/ferry-services-server/migrations"
       - name: Deploy containers on server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -54,4 +74,4 @@ jobs:
               exit 1
             fi
             chmod +x ./deploy-prod.sh
-            ./deploy-prod.sh || true
+            ./deploy-prod.sh
