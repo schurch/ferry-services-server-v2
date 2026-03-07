@@ -313,11 +313,11 @@ parseVehicleJourneyRaw servicedOrganisationCalendars journeyNode = do
   let servicedOrganisationDaysOfNonOperation = parseServicedOrganisationDayRanges servicedOrganisationCalendars "DaysOfNonOperation" journeyNode
   let daysOfOperation =
         combineDateRanges
-          (parseSpecialDays "SpecialDaysOperation" journeyNode)
+          (parseSpecialDays "DaysOfOperation" journeyNode)
           (parseOtherPublicHolidayDates "DaysOfOperation" journeyNode)
   let daysOfNonOperation =
         combineDateRanges
-          (parseSpecialDays "SpecialDaysNonOperation" journeyNode)
+          (parseSpecialDays "DaysOfNonOperation" journeyNode)
           (parseOtherPublicHolidayDates "DaysOfNonOperation" journeyNode)
   let bankHolidayOperationRules = parseBankHolidayRules "DaysOfOperation" journeyNode
   let bankHolidayNonOperationRules = parseBankHolidayRules "DaysOfNonOperation" journeyNode
@@ -591,7 +591,7 @@ dropPrefix prefix value =
 
 parseSpecialDays :: String -> Element -> Maybe [Tx2DateRange]
 parseSpecialDays nodeName journeyNode =
-  case childNamed nodeName journeyNode of
+  case childNamed "OperatingProfile" journeyNode >>= childNamed "SpecialDaysOperation" >>= childNamed nodeName of
     Nothing -> Nothing
     Just specialDaysNode ->
       let ranges =
