@@ -90,7 +90,7 @@ parseXmlDocument filePath input = do
   let sourceFileName = fromMaybe (takeBaseName filePath) $ attrValueMaybe "FileName" root
   let sourceCreationDateTime = attrValueMaybe "CreationDateTime" root >>= parseXmlDateTime
   let sourceModificationDateTime = attrValueMaybe "ModificationDateTime" root >>= parseXmlDateTime
-  let servicedOrganisationWorkingDays = parseServicedOrganisationWorkingDays root
+  let servicedOrganisationCalendars = parseServicedOrganisationCalendars root
   let stopPoints = parseStopPoints root
   serviceEntries <- parseServices root
   let services = fmap (\(service, _, _, _) -> service) serviceEntries
@@ -98,7 +98,7 @@ parseXmlDocument filePath input = do
   let journeyPatterns = concatMap (\(_, _, patterns, _) -> patterns) serviceEntries
   let journeyPatternSections = concatMap (\(_, _, _, sections) -> sections) serviceEntries
   let journeyPatternTimingLinks = parseJourneyPatternTimingLinks root
-  vehicleJourneys <- parseVehicleJourneys servicedOrganisationWorkingDays root
+  vehicleJourneys <- parseVehicleJourneys servicedOrganisationCalendars root
   return $
     Tx2Document
       { tx2SourcePath = filePath,
@@ -257,13 +257,18 @@ parseJourneyPatternTimingLinks root =
               childNamed "From" timingLinkNode >>= childText "WaitTime"
         }
 
-parseVehicleJourneys :: M.Map String [Tx2DateRange] -> Element -> Either String [Tx2VehicleJourney]
-parseVehicleJourneys servicedOrganisationWorkingDays root =
+data ServicedOrganisationCalendars = ServicedOrganisationCalendars
+  { servicedOrganisationWorkingDays :: M.Map String [Tx2DateRange],
+    servicedOrganisationHolidays :: M.Map String [Tx2DateRange]
+  }
+
+parseVehicleJourneys :: ServicedOrganisationCalendars -> Element -> Either String [Tx2VehicleJourney]
+parseVehicleJourneys servicedOrganisationCalendars root =
   case childNamed "VehicleJourneys" root of
     Nothing -> Right []
     Just journeysNode -> do
       let journeyNodes = childrenNamed "VehicleJourney" journeysNode
-      rawJourneys <- mapM (parseVehicleJourneyRaw servicedOrganisationWorkingDays) journeyNodes
+      rawJourneys <- mapM (parseVehicleJourneyRaw servicedOrganisationCalendars) journeyNodes
       resolveVehicleJourneys rawJourneys
 
 data RawTx2VehicleJourney = RawTx2VehicleJourney
@@ -288,8 +293,8 @@ data RawTx2VehicleJourney = RawTx2VehicleJourney
   }
   deriving (Show, Eq)
 
-parseVehicleJourneyRaw :: M.Map String [Tx2DateRange] -> Element -> Either String RawTx2VehicleJourney
-parseVehicleJourneyRaw servicedOrganisationWorkingDays journeyNode = do
+parseVehicleJourneyRaw :: ServicedOrganisationCalendars -> Element -> Either String RawTx2VehicleJourney
+parseVehicleJourneyRaw servicedOrganisationCalendars journeyNode = do
   vehicleJourneyCode <- requiredChildText "VehicleJourneyCode" journeyNode
   departureTime <- parseOptionalDepartureTime journeyNode
   let serviceRef = childText "ServiceRef" journeyNode
@@ -301,8 +306,8 @@ parseVehicleJourneyRaw servicedOrganisationWorkingDays journeyNode = do
   let (note, noteCode) = parseJourneyNotes journeyNode
   let dayRules = parseDayRules journeyNode
   let weekOfMonthRules = parsePeriodicDayType journeyNode
-  let servicedOrganisationDaysOfOperation = parseServicedOrganisationDayRanges servicedOrganisationWorkingDays "DaysOfOperation" journeyNode
-  let servicedOrganisationDaysOfNonOperation = parseServicedOrganisationDayRanges servicedOrganisationWorkingDays "DaysOfNonOperation" journeyNode
+  let servicedOrganisationDaysOfOperation = parseServicedOrganisationDayRanges servicedOrganisationCalendars "DaysOfOperation" journeyNode
+  let servicedOrganisationDaysOfNonOperation = parseServicedOrganisationDayRanges servicedOrganisationCalendars "DaysOfNonOperation" journeyNode
   let daysOfOperation =
         combineDateRanges
           (parseSpecialDays "SpecialDaysOperation" journeyNode)
@@ -511,21 +516,32 @@ parseVehicleJourneyTimingLinkRefs journeyNode =
       let refs = mapMaybe (childText "JourneyPatternTimingLinkRef") timingLinkNodes
        in if null refs then Nothing else Just refs
 
-parseServicedOrganisationWorkingDays :: Element -> M.Map String [Tx2DateRange]
-parseServicedOrganisationWorkingDays root =
+parseServicedOrganisationCalendars :: Element -> ServicedOrganisationCalendars
+parseServicedOrganisationCalendars root =
   case childNamed "ServicedOrganisations" root of
-    Nothing -> M.empty
+    Nothing -> ServicedOrganisationCalendars M.empty M.empty
     Just servicedOrganisationsNode ->
-      M.fromList
-        [ (organisationCode, workingDays)
-        | servicedOrganisationNode <- childrenNamed "ServicedOrganisation" servicedOrganisationsNode,
-          let organisationCode = fromMaybe "" (childText "OrganisationCode" servicedOrganisationNode),
-          not (null organisationCode),
-          let workingDays = fromMaybe [] (parseDateRangesNode <$> childNamed "WorkingDays" servicedOrganisationNode)
-        ]
+      ServicedOrganisationCalendars
+        { servicedOrganisationWorkingDays =
+            M.fromList
+              [ (organisationCode, workingDays)
+              | servicedOrganisationNode <- childrenNamed "ServicedOrganisation" servicedOrganisationsNode,
+                let organisationCode = fromMaybe "" (childText "OrganisationCode" servicedOrganisationNode),
+                not (null organisationCode),
+                let workingDays = fromMaybe [] (parseDateRangesNode <$> childNamed "WorkingDays" servicedOrganisationNode)
+              ],
+          servicedOrganisationHolidays =
+            M.fromList
+              [ (organisationCode, holidays)
+              | servicedOrganisationNode <- childrenNamed "ServicedOrganisation" servicedOrganisationsNode,
+                let organisationCode = fromMaybe "" (childText "OrganisationCode" servicedOrganisationNode),
+                not (null organisationCode),
+                let holidays = fromMaybe [] (parseDateRangesNode <$> childNamed "Holidays" servicedOrganisationNode)
+              ]
+        }
 
-parseServicedOrganisationDayRanges :: M.Map String [Tx2DateRange] -> String -> Element -> Maybe [Tx2DateRange]
-parseServicedOrganisationDayRanges servicedOrganisationWorkingDays nodeName journeyNode =
+parseServicedOrganisationDayRanges :: ServicedOrganisationCalendars -> String -> Element -> Maybe [Tx2DateRange]
+parseServicedOrganisationDayRanges servicedOrganisationCalendars nodeName journeyNode =
   case childNamed "OperatingProfile" journeyNode >>= childNamed "ServicedOrganisationDayType" >>= childNamed nodeName of
     Nothing -> Nothing
     Just servicedOrganisationNode ->
@@ -534,8 +550,14 @@ parseServicedOrganisationDayRanges servicedOrganisationWorkingDays nodeName jour
             | workingDaysNode <- childrenNamed "WorkingDays" servicedOrganisationNode,
               ref <- maybeToList (childText "ServicedOrganisationRef" workingDaysNode)
             ]
+          holidayRefs =
+            [ ref
+            | holidaysNode <- childrenNamed "Holidays" servicedOrganisationNode,
+              ref <- maybeToList (childText "ServicedOrganisationRef" holidaysNode)
+            ]
           resolvedRanges =
-            concatMap (\ref -> M.findWithDefault [] ref servicedOrganisationWorkingDays) workingDayRefs
+            concatMap (\ref -> M.findWithDefault [] ref (servicedOrganisationWorkingDays servicedOrganisationCalendars)) workingDayRefs
+              <> concatMap (\ref -> M.findWithDefault [] ref (servicedOrganisationHolidays servicedOrganisationCalendars)) holidayRefs
        in if null resolvedRanges then Nothing else Just resolvedRanges
 
 parseDateRangesNode :: Element -> [Tx2DateRange]
