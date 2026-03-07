@@ -353,22 +353,8 @@ fetchNorthLinkService = do
 extractNorthLinkOpsNewsHtml :: [Tag String] -> String
 extractNorthLinkOpsNewsHtml htmlTags =
   let contentTags = takeWhile (not . isSupportHeading) . dropWhile (not . isNorthLinkOpsNewsStart) $ htmlTags
-      visibleLines =
-        [ cleaned
-        | TagText raw <- contentTags,
-          let cleaned = trim (replace "\160" " " raw),
-          not (null cleaned)
-        ]
-   in renderTags (linesToHtml visibleLines)
+   in renderTags (sanitizeNorthLinkTags contentTags)
   where
-    sectionHeadings =
-      [ "Pentland Firth Arrivals and Departures",
-        "Aberdeen Arrivals and Departures",
-        "Kirkwall (Hatston Pier) Arrivals and Departures",
-        "Lerwick Arrivals and Departures",
-        "Freight Vessel Services"
-      ]
-
     isNorthLinkOpsNewsStart :: Tag String -> Bool
     isNorthLinkOpsNewsStart (TagText text) =
       let cleaned = trim (replace "\160" " " text)
@@ -380,12 +366,39 @@ extractNorthLinkOpsNewsHtml htmlTags =
     isSupportHeading (TagText text) = trim text == "Support"
     isSupportHeading _ = False
 
-    linesToHtml :: [String] -> [Tag String]
-    linesToHtml =
-      concatMap $ \line ->
-        if line `elem` sectionHeadings
-          then [TagOpen "h4" [], TagText line, TagClose "h4"]
-          else [TagOpen "p" [], TagText line, TagClose "p"]
+    sanitizeNorthLinkTags :: [Tag String] -> [Tag String]
+    sanitizeNorthLinkTags = snd . foldl step ([], [])
+
+    step :: ([String], [Tag String]) -> Tag String -> ([String], [Tag String])
+    step (openTags, acc) tag =
+      case tag of
+        TagOpen name attrs
+          | name `elem` allowedTags -> (name : openTags, acc <> [TagOpen name (filterAllowedAttrs attrs)])
+          | otherwise -> (openTags, acc)
+        TagClose name
+          | name `elem` openTags -> (removeFirst name openTags, acc <> [TagClose name])
+          | otherwise -> (openTags, acc)
+        TagText raw ->
+          let cleaned = trim (replace "\160" " " raw)
+           in if null cleaned
+                then (openTags, acc)
+                else
+                  if any (`elem` openTags) ["p", "li", "h2", "h3", "h4", "strong", "em", "a"]
+                    then (openTags, acc <> [TagText cleaned])
+                    else (openTags, acc <> [TagOpen "p" [], TagText cleaned, TagClose "p"])
+        _ -> (openTags, acc)
+
+    allowedTags :: [String]
+    allowedTags = ["h2", "h3", "h4", "p", "ul", "ol", "li", "strong", "em", "br", "a"]
+
+    filterAllowedAttrs :: [(String, String)] -> [(String, String)]
+    filterAllowedAttrs attrs = filter (\(name, _) -> name == "href") attrs
+
+    removeFirst :: Eq a => a -> [a] -> [a]
+    removeFirst _ [] = []
+    removeFirst value (x : xs)
+      | value == x = xs
+      | otherwise = x : removeFirst value xs
 
 fetchPage :: String -> IO String
 fetchPage location = do
