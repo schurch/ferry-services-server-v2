@@ -34,6 +34,8 @@ clearTx2Tables connection =
       connection
       [sql|
         TRUNCATE TABLE
+          tx2_vehicle_journey_serviced_organisation_days_of_non_operation,
+          tx2_vehicle_journey_serviced_organisation_days_of_operation,
           tx2_vehicle_journey_bank_holiday_non_operation_rules,
           tx2_vehicle_journey_bank_holiday_operation_rules,
           tx2_vehicle_journey_days_of_non_operation,
@@ -60,6 +62,8 @@ insertTx2Document connection document = do
   insertJourneyPatternTimingLinks connection documentId (tx2JourneyPatternTimingLinks document)
   insertVehicleJourneys connection documentId vehicleJourneys
   insertVehicleJourneyDays connection documentId vehicleJourneys
+  insertVehicleJourneyServicedOrganisationDaysOfOperation connection documentId vehicleJourneys
+  insertVehicleJourneyServicedOrganisationDaysOfNonOperation connection documentId vehicleJourneys
   insertVehicleJourneyDaysOfOperation connection documentId vehicleJourneys
   insertVehicleJourneyDaysOfNonOperation connection documentId vehicleJourneys
   insertVehicleJourneyBankHolidayOperationRules connection documentId vehicleJourneys
@@ -311,6 +315,64 @@ insertVehicleJourneyDaysOfOperation connection documentId vehicleJourneys = do
                     )
                 )
                 (nub $ tx2VehicleJourneyDaysOfOperation journey)
+          )
+          vehicleJourneys
+  void $ executeMany connection statement values
+
+insertVehicleJourneyServicedOrganisationDaysOfOperation :: Connection -> Int64 -> [Tx2VehicleJourney] -> IO ()
+insertVehicleJourneyServicedOrganisationDaysOfOperation connection documentId vehicleJourneys = do
+  let statement =
+        [sql|
+          INSERT INTO tx2_vehicle_journey_serviced_organisation_days_of_operation (
+            document_id,
+            vehicle_journey_code,
+            start_date,
+            end_date
+          )
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT (document_id, vehicle_journey_code, start_date, end_date) DO NOTHING
+        |]
+  let values =
+        concatMap
+          ( \journey ->
+              fmap
+                ( \dateRange ->
+                    ( documentId,
+                      tx2VehicleJourneyCode journey,
+                      tx2DateRangeStart dateRange,
+                      tx2DateRangeEnd dateRange
+                    )
+                )
+                (nub $ tx2VehicleJourneyServicedOrganisationDaysOfOperation journey)
+          )
+          vehicleJourneys
+  void $ executeMany connection statement values
+
+insertVehicleJourneyServicedOrganisationDaysOfNonOperation :: Connection -> Int64 -> [Tx2VehicleJourney] -> IO ()
+insertVehicleJourneyServicedOrganisationDaysOfNonOperation connection documentId vehicleJourneys = do
+  let statement =
+        [sql|
+          INSERT INTO tx2_vehicle_journey_serviced_organisation_days_of_non_operation (
+            document_id,
+            vehicle_journey_code,
+            start_date,
+            end_date
+          )
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT (document_id, vehicle_journey_code, start_date, end_date) DO NOTHING
+        |]
+  let values =
+        concatMap
+          ( \journey ->
+              fmap
+                ( \dateRange ->
+                    ( documentId,
+                      tx2VehicleJourneyCode journey,
+                      tx2DateRangeStart dateRange,
+                      tx2DateRangeEnd dateRange
+                    )
+                )
+                (nub $ tx2VehicleJourneyServicedOrganisationDaysOfNonOperation journey)
           )
           vehicleJourneys
   void $ executeMany connection statement values

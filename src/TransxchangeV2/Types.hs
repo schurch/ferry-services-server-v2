@@ -110,6 +110,8 @@ data Tx2VehicleJourney = Tx2VehicleJourney
     tx2VehicleJourneyOperatorRef :: String,
     tx2VehicleJourneyDepartureTime :: TimeOfDay,
     tx2VehicleJourneyDayRules :: [Tx2DayRule],
+    tx2VehicleJourneyServicedOrganisationDaysOfOperation :: [Tx2DateRange],
+    tx2VehicleJourneyServicedOrganisationDaysOfNonOperation :: [Tx2DateRange],
     tx2VehicleJourneyDaysOfOperation :: [Tx2DateRange],
     tx2VehicleJourneyDaysOfNonOperation :: [Tx2DateRange],
     tx2VehicleJourneyBankHolidayOperationRules :: [String],

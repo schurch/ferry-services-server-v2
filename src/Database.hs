@@ -614,6 +614,21 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
             AND (s.start_date IS NULL OR query_date >= s.start_date)
             AND (s.end_date IS NULL OR query_date <= s.end_date)
             AND (
+                NOT EXISTS (
+                    SELECT 1
+                    FROM tx2_vehicle_journey_serviced_organisation_days_of_operation vjsodo
+                    WHERE vjsodo.document_id = vj.document_id
+                      AND vjsodo.vehicle_journey_code = vj.vehicle_journey_code
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM tx2_vehicle_journey_serviced_organisation_days_of_operation vjsodo
+                    WHERE vjsodo.document_id = vj.document_id
+                      AND vjsodo.vehicle_journey_code = vj.vehicle_journey_code
+                      AND query_date BETWEEN vjsodo.start_date AND vjsodo.end_date
+                )
+            )
+            AND (
                 EXISTS (
                     SELECT 1
                     FROM tx2_vehicle_journey_days_of_operation vjdo
@@ -646,6 +661,13 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
                       AND vjbhor.vehicle_journey_code = vj.vehicle_journey_code
                       AND vjbhor.bank_holiday_rule IN ?
                 )
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM tx2_vehicle_journey_serviced_organisation_days_of_non_operation vjsodno
+                WHERE vjsodno.document_id = vj.document_id
+                  AND vjsodno.vehicle_journey_code = vj.vehicle_journey_code
+                  AND query_date BETWEEN vjsodno.start_date AND vjsodno.end_date
             )
             AND NOT EXISTS (
                 SELECT 1
