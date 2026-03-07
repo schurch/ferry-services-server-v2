@@ -111,6 +111,7 @@ data Tx2VehicleJourney = Tx2VehicleJourney
     tx2VehicleJourneyServiceCode :: String,
     tx2VehicleJourneyLineId :: String,
     tx2VehicleJourneyPatternId :: String,
+    tx2VehicleJourneyTimingLinkRefs :: [String],
     tx2VehicleJourneyOperatorRef :: String,
     tx2VehicleJourneyDepartureTime :: TimeOfDay,
     tx2VehicleJourneyDayRules :: [Tx2DayRule],

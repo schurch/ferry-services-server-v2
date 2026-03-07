@@ -271,6 +271,7 @@ data RawTx2VehicleJourney = RawTx2VehicleJourney
     rawServiceRef :: Maybe String,
     rawLineRef :: Maybe String,
     rawJourneyPatternRef :: Maybe String,
+    rawTimingLinkRefs :: Maybe [String],
     rawOperatorRef :: Maybe String,
     rawDepartureTime :: Maybe TimeOfDay,
     rawDayRules :: Maybe [Tx2DayRule],
@@ -292,6 +293,7 @@ parseVehicleJourneyRaw servicedOrganisationWorkingDays journeyNode = do
   let serviceRef = childText "ServiceRef" journeyNode
   let lineRef = childText "LineRef" journeyNode
   let journeyPatternRef = childText "JourneyPatternRef" journeyNode
+  let timingLinkRefs = parseVehicleJourneyTimingLinkRefs journeyNode
   let operatorRef = childText "OperatorRef" journeyNode
   let journeyRef = childText "VehicleJourneyRef" journeyNode
   let (note, noteCode) = parseJourneyNotes journeyNode
@@ -309,6 +311,7 @@ parseVehicleJourneyRaw servicedOrganisationWorkingDays journeyNode = do
         rawServiceRef = serviceRef,
         rawLineRef = lineRef,
         rawJourneyPatternRef = journeyPatternRef,
+        rawTimingLinkRefs = timingLinkRefs,
         rawOperatorRef = operatorRef,
         rawDepartureTime = departureTime,
         rawDayRules = dayRules,
@@ -362,6 +365,7 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
           rawServiceRef = rawServiceRef child <|> rawServiceRef base,
           rawLineRef = rawLineRef child <|> rawLineRef base,
           rawJourneyPatternRef = rawJourneyPatternRef child <|> rawJourneyPatternRef base,
+          rawTimingLinkRefs = rawTimingLinkRefs child <|> rawTimingLinkRefs base,
           rawOperatorRef = rawOperatorRef child <|> rawOperatorRef base,
           rawDepartureTime = rawDepartureTime child <|> rawDepartureTime base,
           rawDayRules = rawDayRules child <|> rawDayRules base,
@@ -381,6 +385,7 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
       lineRef <- maybeToEither "missing LineRef on resolved vehicle journey" (rawLineRef rawJourney)
       journeyPatternRef <- maybeToEither "missing JourneyPatternRef on resolved vehicle journey" (rawJourneyPatternRef rawJourney)
       departureTime <- maybeToEither "missing DepartureTime on resolved vehicle journey" (rawDepartureTime rawJourney)
+      let timingLinkRefs = fromMaybe [] (rawTimingLinkRefs rawJourney)
       let operatorRef = fromMaybe "" (rawOperatorRef rawJourney)
       let note = fromMaybe "" (rawNote rawJourney)
       let noteCode = fromMaybe "" (rawNoteCode rawJourney)
@@ -397,6 +402,7 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
             tx2VehicleJourneyServiceCode = serviceRef,
             tx2VehicleJourneyLineId = lineRef,
             tx2VehicleJourneyPatternId = journeyPatternRef,
+            tx2VehicleJourneyTimingLinkRefs = timingLinkRefs,
             tx2VehicleJourneyOperatorRef = operatorRef,
             tx2VehicleJourneyDepartureTime = departureTime,
             tx2VehicleJourneyDayRules = dayRules,
@@ -444,6 +450,14 @@ parseJourneyNotes journeyNode =
     noteNodes = childrenNamed "Note" journeyNode
     joinValues [] = Nothing
     joinValues values = Just (intercalate " | " values)
+
+parseVehicleJourneyTimingLinkRefs :: Element -> Maybe [String]
+parseVehicleJourneyTimingLinkRefs journeyNode =
+  case childrenNamed "VehicleJourneyTimingLink" journeyNode of
+    [] -> Nothing
+    timingLinkNodes ->
+      let refs = mapMaybe (childText "JourneyPatternTimingLinkRef") timingLinkNodes
+       in if null refs then Nothing else Just refs
 
 parseServicedOrganisationWorkingDays :: Element -> M.Map String [Tx2DateRange]
 parseServicedOrganisationWorkingDays root =

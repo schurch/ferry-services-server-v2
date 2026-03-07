@@ -34,6 +34,7 @@ clearTx2Tables connection =
       connection
       [sql|
         TRUNCATE TABLE
+          tx2_vehicle_journey_timing_links,
           tx2_vehicle_journey_serviced_organisation_days_of_non_operation,
           tx2_vehicle_journey_serviced_organisation_days_of_operation,
           tx2_vehicle_journey_bank_holiday_non_operation_rules,
@@ -61,6 +62,7 @@ insertTx2Document connection document = do
   insertJourneyPatternSections connection documentId (tx2JourneyPatternSections document)
   insertJourneyPatternTimingLinks connection documentId (tx2JourneyPatternTimingLinks document)
   insertVehicleJourneys connection documentId vehicleJourneys
+  insertVehicleJourneyTimingLinks connection documentId vehicleJourneys
   insertVehicleJourneyDays connection documentId vehicleJourneys
   insertVehicleJourneyServicedOrganisationDaysOfOperation connection documentId vehicleJourneys
   insertVehicleJourneyServicedOrganisationDaysOfNonOperation connection documentId vehicleJourneys
@@ -268,6 +270,31 @@ insertVehicleJourneys connection documentId vehicleJourneys = do
                 tx2VehicleJourneyNote journey,
                 tx2VehicleJourneyNoteCode journey
               )
+          )
+          vehicleJourneys
+  void $ executeMany connection statement values
+
+insertVehicleJourneyTimingLinks :: Connection -> Int64 -> [Tx2VehicleJourney] -> IO ()
+insertVehicleJourneyTimingLinks connection documentId vehicleJourneys = do
+  let statement =
+        [sql|
+          INSERT INTO tx2_vehicle_journey_timing_links (
+            document_id,
+            vehicle_journey_code,
+            sort_order,
+            journey_pattern_timing_link_id
+          )
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT (document_id, vehicle_journey_code, sort_order) DO UPDATE
+            SET journey_pattern_timing_link_id = excluded.journey_pattern_timing_link_id
+        |]
+  let values =
+        concatMap
+          ( \journey ->
+              zipWith
+                (\sortOrder timingLinkRef -> (documentId, tx2VehicleJourneyCode journey, sortOrder :: Int, timingLinkRef))
+                [1 ..]
+                (tx2VehicleJourneyTimingLinkRefs journey)
           )
           vehicleJourneys
   void $ executeMany connection statement values

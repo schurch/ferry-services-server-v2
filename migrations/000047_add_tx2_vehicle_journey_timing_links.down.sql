@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS tx2_vehicle_journey_timing_links_lookup_idx;
+DROP TABLE IF EXISTS tx2_vehicle_journey_timing_links;

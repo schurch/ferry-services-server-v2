@@ -556,34 +556,96 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
             ON t.document_id = jptl.document_id
            AND t.journey_pattern_timing_link_id = jptl.journey_pattern_timing_link_id
       ),
-      multi_journey_time AS (
+      vehicle_journey_links AS (
           SELECT
-              pl.document_id,
+              vjtl.document_id,
+              vjtl.vehicle_journey_code,
+              vj.journey_pattern_id,
+              vjtl.sort_order AS global_sort_order,
+              t.from_stop_point_ref,
+              t.from_activity,
+              t.from_timing_status,
+              t.to_stop_point_ref,
+              t.to_activity,
+              t.to_timing_status,
+              t.wait_time,
+              t.run_time
+          FROM tx2_vehicle_journey_timing_links vjtl
+          JOIN tx2_vehicle_journeys vj
+            ON vj.document_id = vjtl.document_id
+           AND vj.vehicle_journey_code = vjtl.vehicle_journey_code
+          JOIN timings t
+            ON t.document_id = vjtl.document_id
+           AND t.journey_pattern_timing_link_id = vjtl.journey_pattern_timing_link_id
+      ),
+      effective_journey_links AS (
+          SELECT
+              vjl.document_id,
+              vjl.vehicle_journey_code,
+              vjl.journey_pattern_id,
+              vjl.global_sort_order,
+              vjl.from_stop_point_ref,
+              vjl.from_activity,
+              vjl.from_timing_status,
+              vjl.to_stop_point_ref,
+              vjl.to_activity,
+              vjl.to_timing_status,
+              vjl.wait_time,
+              vjl.run_time
+          FROM vehicle_journey_links vjl
+          UNION ALL
+          SELECT
+              vj.document_id,
+              vj.vehicle_journey_code,
               pl.journey_pattern_id,
               pl.global_sort_order,
-              LAG(pl.run_time) OVER (
-                  PARTITION BY pl.document_id, pl.journey_pattern_id
-                  ORDER BY pl.global_sort_order
-              ) + pl.wait_time AS time
-          FROM pattern_links pl
+              pl.from_stop_point_ref,
+              pl.from_activity,
+              pl.from_timing_status,
+              pl.to_stop_point_ref,
+              pl.to_activity,
+              pl.to_timing_status,
+              pl.wait_time,
+              pl.run_time
+          FROM tx2_vehicle_journeys vj
+          JOIN pattern_links pl
+            ON pl.document_id = vj.document_id
+           AND pl.journey_pattern_id = vj.journey_pattern_id
+          WHERE NOT EXISTS (
+              SELECT 1
+              FROM tx2_vehicle_journey_timing_links vjtl
+              WHERE vjtl.document_id = vj.document_id
+                AND vjtl.vehicle_journey_code = vj.vehicle_journey_code
+          )
+      ),
+      multi_journey_time AS (
+          SELECT
+              ejl.document_id,
+              ejl.vehicle_journey_code,
+              ejl.global_sort_order,
+              LAG(ejl.run_time) OVER (
+                  PARTITION BY ejl.document_id, ejl.vehicle_journey_code
+                  ORDER BY ejl.global_sort_order
+              ) + ejl.wait_time AS time
+          FROM effective_journey_links ejl
       ),
       journey_legs AS (
           SELECT
               vj.document_id,
               vj.journey_pattern_id,
               vj.vehicle_journey_code,
-              pl.global_sort_order,
-              pl.from_stop_point_ref,
-              pl.from_activity,
-              pl.to_stop_point_ref,
-              pl.to_activity,
+              ejl.global_sort_order,
+              ejl.from_stop_point_ref,
+              ejl.from_activity,
+              ejl.to_stop_point_ref,
+              ejl.to_activity,
               (
                   (
                       query_date +
                       COALESCE(
                           SUM(mjt.time) OVER (
-                              PARTITION BY vj.document_id, vj.journey_pattern_id, vj.vehicle_journey_code
-                              ORDER BY pl.global_sort_order
+                              PARTITION BY vj.document_id, vj.vehicle_journey_code
+                              ORDER BY ejl.global_sort_order
                           ) + vj.departure_time,
                           vj.departure_time
                       )
@@ -594,11 +656,11 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
                       query_date +
                       COALESCE(
                           SUM(mjt.time) OVER (
-                              PARTITION BY vj.document_id, vj.journey_pattern_id, vj.vehicle_journey_code
-                              ORDER BY pl.global_sort_order
+                              PARTITION BY vj.document_id, vj.vehicle_journey_code
+                              ORDER BY ejl.global_sort_order
                           ) + vj.departure_time,
                           vj.departure_time
-                      ) + pl.run_time
+                      ) + ejl.run_time
                   ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
               ) :: TIMESTAMP AS arrival,
               NULLIF(vj.note, '') AS notes,
@@ -606,13 +668,13 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           FROM tx2_vehicle_journeys vj
           CROSS JOIN constants
           CROSS JOIN day_of_week
-          INNER JOIN pattern_links pl
-              ON pl.document_id = vj.document_id
-             AND pl.journey_pattern_id = vj.journey_pattern_id
+          INNER JOIN effective_journey_links ejl
+              ON ejl.document_id = vj.document_id
+             AND ejl.vehicle_journey_code = vj.vehicle_journey_code
           INNER JOIN multi_journey_time mjt
-              ON mjt.document_id = pl.document_id
-             AND mjt.journey_pattern_id = pl.journey_pattern_id
-             AND mjt.global_sort_order = pl.global_sort_order
+              ON mjt.document_id = ejl.document_id
+             AND mjt.vehicle_journey_code = ejl.vehicle_journey_code
+             AND mjt.global_sort_order = ejl.global_sort_order
           INNER JOIN tx2_services s
               ON s.document_id = vj.document_id
              AND s.service_code = vj.service_code
@@ -623,8 +685,8 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           WHERE s.mode = 'ferry'
             AND (s.start_date IS NULL OR query_date >= s.start_date)
             AND (s.end_date IS NULL OR query_date <= s.end_date)
-            AND pl.from_activity IN ('', 'pickUp', 'pickUpAndSetDown')
-            AND pl.to_activity IN ('', 'setDown', 'pickUpAndSetDown')
+            AND ejl.from_activity IN ('', 'pickUp', 'pickUpAndSetDown')
+            AND ejl.to_activity IN ('', 'setDown', 'pickUpAndSetDown')
             AND (
                 NOT EXISTS (
                     SELECT 1
