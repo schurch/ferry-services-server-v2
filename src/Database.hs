@@ -890,6 +890,11 @@ weekday day =
 isMonday :: Day -> Bool
 isMonday day = weekday day == 1
 
+-- Calculates Easter Sunday using the anonymous Gregorian computus.
+-- The arithmetic comes from the standard Meeus/Jones/Butcher-style algorithm:
+-- it derives the Paschal full moon and then the following Sunday from the year
+-- number alone, which is why the intermediate values look opaque but are all
+-- calendar terms rather than business-specific logic.
 gregorianEasterSunday :: Integer -> Day
 gregorianEasterSunday year = fromGregorian year month day
   where
