@@ -329,6 +329,7 @@ fetchNorthLinkService :: Application Service
 fetchNorthLinkService = do
   htmlTags <- parseTags <$> liftIO (fetchPage "https://www.northlinkferries.co.uk/opsnews/")
   let statusText = drop 16 . fromAttrib "class" . (!! 4) . dropWhile (~/= ("<div class=header__action>" :: String)) $ htmlTags
+  let additionalInfo = extractNorthLinkOpsNewsHtml htmlTags
   time <- liftIO getCurrentTime
   return
     Service
@@ -337,7 +338,7 @@ fetchNorthLinkService = do
         serviceArea = "Orkney & Shetland",
         serviceRoute = "Scrabster - Stromness / Aberdeen - Kirkwall - Lerwick",
         serviceStatus = textToStatus statusText,
-        serviceAdditionalInfo = Nothing,
+        serviceAdditionalInfo = if null additionalInfo then Nothing else Just additionalInfo,
         serviceDisruptionReason = Nothing,
         serviceOrganisationID = 2,
         serviceLastUpdatedDate = Nothing
@@ -348,6 +349,43 @@ fetchNorthLinkService = do
       | text == "service-running" = Normal
       | text == "service-disruptions" = Disrupted
       | otherwise = error $ "Unknown northlink status " <> text
+
+extractNorthLinkOpsNewsHtml :: [Tag String] -> String
+extractNorthLinkOpsNewsHtml htmlTags =
+  let contentTags = takeWhile (not . isSupportHeading) . dropWhile (not . isNorthLinkOpsNewsStart) $ htmlTags
+      visibleLines =
+        [ cleaned
+        | TagText raw <- contentTags,
+          let cleaned = trim (replace "\160" " " raw),
+          not (null cleaned)
+        ]
+   in renderTags (linesToHtml visibleLines)
+  where
+    sectionHeadings =
+      [ "Pentland Firth Arrivals and Departures",
+        "Aberdeen Arrivals and Departures",
+        "Kirkwall (Hatston Pier) Arrivals and Departures",
+        "Lerwick Arrivals and Departures",
+        "Freight Vessel Services"
+      ]
+
+    isNorthLinkOpsNewsStart :: Tag String -> Bool
+    isNorthLinkOpsNewsStart (TagText text) =
+      let cleaned = trim (replace "\160" " " text)
+       in "Please be aware of traffic delays" `isInfixOf` cleaned
+            || cleaned == "Pentland Firth Arrivals and Departures"
+    isNorthLinkOpsNewsStart _ = False
+
+    isSupportHeading :: Tag String -> Bool
+    isSupportHeading (TagText text) = trim text == "Support"
+    isSupportHeading _ = False
+
+    linesToHtml :: [String] -> [Tag String]
+    linesToHtml =
+      concatMap $ \line ->
+        if line `elem` sectionHeadings
+          then [TagOpen "h4" [], TagText line, TagClose "h4"]
+          else [TagOpen "p" [], TagText line, TagClose "p"]
 
 fetchPage :: String -> IO String
 fetchPage location = do
