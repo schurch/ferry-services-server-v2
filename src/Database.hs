@@ -451,6 +451,10 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
             journey_pattern_timing_link_id,
             journey_pattern_section_ref,
             sort_order,
+            from_activity,
+            from_timing_status,
+            to_activity,
+            to_timing_status,
             CASE from_wait_time WHEN ''
                 THEN make_interval()
                 ELSE make_interval(
@@ -537,7 +541,11 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               t.sort_order,
               ((jps.section_order - 1) * 1000) + t.sort_order AS global_sort_order,
               jptl.from_stop_point_ref,
+              t.from_activity,
+              t.from_timing_status,
               jptl.to_stop_point_ref,
+              t.to_activity,
+              t.to_timing_status,
               t.wait_time,
               t.run_time
           FROM tx2_journey_pattern_sections jps
@@ -566,7 +574,9 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               vj.vehicle_journey_code,
               pl.global_sort_order,
               pl.from_stop_point_ref,
+              pl.from_activity,
               pl.to_stop_point_ref,
+              pl.to_activity,
               (
                   (
                       query_date +
@@ -613,6 +623,8 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           WHERE s.mode = 'ferry'
             AND (s.start_date IS NULL OR query_date >= s.start_date)
             AND (s.end_date IS NULL OR query_date <= s.end_date)
+            AND pl.from_activity IN ('', 'pickUp', 'pickUpAndSetDown')
+            AND pl.to_activity IN ('', 'setDown', 'pickUpAndSetDown')
             AND (
                 NOT EXISTS (
                     SELECT 1

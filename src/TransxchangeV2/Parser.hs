@@ -227,9 +227,21 @@ parseJourneyPatternTimingLinks root =
           tx2JourneyPatternTimingLinkFromStopPointRef =
             fromMaybe "" $
               childNamed "From" timingLinkNode >>= childText "StopPointRef",
+          tx2JourneyPatternTimingLinkFromActivity =
+            fromMaybe "" $
+              childNamed "From" timingLinkNode >>= childText "Activity",
+          tx2JourneyPatternTimingLinkFromTimingStatus =
+            fromMaybe "" $
+              childNamed "From" timingLinkNode >>= childText "TimingStatus",
           tx2JourneyPatternTimingLinkToStopPointRef =
             fromMaybe "" $
               childNamed "To" timingLinkNode >>= childText "StopPointRef",
+          tx2JourneyPatternTimingLinkToActivity =
+            fromMaybe "" $
+              childNamed "To" timingLinkNode >>= childText "Activity",
+          tx2JourneyPatternTimingLinkToTimingStatus =
+            fromMaybe "" $
+              childNamed "To" timingLinkNode >>= childText "TimingStatus",
           tx2JourneyPatternTimingLinkRouteLinkRef =
             fromMaybe "" $
               childText "RouteLinkRef" timingLinkNode,
