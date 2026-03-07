@@ -57,7 +57,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
           source: "migrations/*"
-          target: "~/ferry-services-server"
+          target: "~/ferry-services-server/migrations"
           strip_components: 1
       - name: Deploy containers on server
         uses: appleboy/ssh-action@v1.0.3
