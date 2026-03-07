@@ -436,8 +436,10 @@ getServiceVessels = withConnection $ \connection ->
 
 getLocationDeparturesV2 :: Int -> Day -> Application [LocationDeparture]
 getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
-  let matchedBankHolidayRules = matchedBankHolidayRulesForDate date
+  let matchedWeekOfMonthRules = matchedWeekOfMonthRulesForDate date
+      matchedBankHolidayRules = matchedBankHolidayRulesForDate date
       isBankHoliday = not (null matchedBankHolidayRules)
+      matchedWeekOfMonthRulesParam = if null matchedWeekOfMonthRules then ["__no_matching_week_of_month__"] else matchedWeekOfMonthRules
       matchedBankHolidayRulesParam = if null matchedBankHolidayRules then ["__no_matching_bank_holiday__"] else matchedBankHolidayRules
    in query
     connection
@@ -690,6 +692,21 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
             AND (
                 NOT EXISTS (
                     SELECT 1
+                    FROM tx2_vehicle_journey_week_of_month_rules vjwmr
+                    WHERE vjwmr.document_id = vj.document_id
+                      AND vjwmr.vehicle_journey_code = vj.vehicle_journey_code
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM tx2_vehicle_journey_week_of_month_rules vjwmr
+                    WHERE vjwmr.document_id = vj.document_id
+                      AND vjwmr.vehicle_journey_code = vj.vehicle_journey_code
+                      AND vjwmr.week_of_month_rule IN ?
+                )
+            )
+            AND (
+                NOT EXISTS (
+                    SELECT 1
                     FROM tx2_vehicle_journey_serviced_organisation_days_of_operation vjsodo
                     WHERE vjsodo.document_id = vj.document_id
                       AND vjsodo.vehicle_journey_code = vj.vehicle_journey_code
@@ -792,7 +809,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           notes,
           source_modification_datetime DESC NULLS LAST
     |]
-    (date, serviceID, serviceID, serviceID, isBankHoliday, In matchedBankHolidayRulesParam, In matchedBankHolidayRulesParam)
+    (date, serviceID, serviceID, serviceID, In matchedWeekOfMonthRulesParam, isBankHoliday, In matchedBankHolidayRulesParam, In matchedBankHolidayRulesParam)
 
 getServicesWithScheduledDeparturesV2 :: Application [Int]
 getServicesWithScheduledDeparturesV2 = withConnection $ \connection ->
@@ -875,6 +892,28 @@ matchedBankHolidayRulesForDate day =
     <> [ruleName | (ruleName, ruleDay) <- specificScottishBankHolidays year, day == ruleDay]
   where
     (year, _, _) = toGregorian day
+
+matchedWeekOfMonthRulesForDate :: Day -> [String]
+matchedWeekOfMonthRulesForDate day =
+  ["every_week", ordinalWeekOfMonthRule day]
+    <> ["last" | isLastWeekdayOfMonth day]
+
+ordinalWeekOfMonthRule :: Day -> String
+ordinalWeekOfMonthRule day =
+  case ((dayOfMonth - 1) `div` 7) + 1 of
+    1 -> "first"
+    2 -> "second"
+    3 -> "third"
+    4 -> "fourth"
+    _ -> "fifth"
+  where
+    (_, _, dayOfMonth) = toGregorian day
+
+isLastWeekdayOfMonth :: Day -> Bool
+isLastWeekdayOfMonth day =
+  let (year, month, _) = toGregorian day
+      (nextYear, nextMonth, _) = toGregorian (addDays 7 day)
+   in year /= nextYear || month /= nextMonth
 
 specificScottishBankHolidays :: Integer -> [(String, Day)]
 specificScottishBankHolidays year =

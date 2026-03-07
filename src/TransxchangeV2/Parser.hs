@@ -15,6 +15,7 @@ import Data.List
   ( find,
     intercalate,
     isSuffixOf,
+    nub,
     sort,
   )
 import qualified Data.Map.Strict as M
@@ -275,6 +276,7 @@ data RawTx2VehicleJourney = RawTx2VehicleJourney
     rawOperatorRef :: Maybe String,
     rawDepartureTime :: Maybe TimeOfDay,
     rawDayRules :: Maybe [Tx2DayRule],
+    rawWeekOfMonthRules :: Maybe [String],
     rawServicedOrganisationDaysOfOperation :: Maybe [Tx2DateRange],
     rawServicedOrganisationDaysOfNonOperation :: Maybe [Tx2DateRange],
     rawDaysOfOperation :: Maybe [Tx2DateRange],
@@ -298,6 +300,7 @@ parseVehicleJourneyRaw servicedOrganisationWorkingDays journeyNode = do
   let journeyRef = childText "VehicleJourneyRef" journeyNode
   let (note, noteCode) = parseJourneyNotes journeyNode
   let dayRules = parseDayRules journeyNode
+  let weekOfMonthRules = parsePeriodicDayType journeyNode
   let servicedOrganisationDaysOfOperation = parseServicedOrganisationDayRanges servicedOrganisationWorkingDays "DaysOfOperation" journeyNode
   let servicedOrganisationDaysOfNonOperation = parseServicedOrganisationDayRanges servicedOrganisationWorkingDays "DaysOfNonOperation" journeyNode
   let daysOfOperation =
@@ -321,6 +324,7 @@ parseVehicleJourneyRaw servicedOrganisationWorkingDays journeyNode = do
         rawOperatorRef = operatorRef,
         rawDepartureTime = departureTime,
         rawDayRules = dayRules,
+        rawWeekOfMonthRules = weekOfMonthRules,
         rawServicedOrganisationDaysOfOperation = servicedOrganisationDaysOfOperation,
         rawServicedOrganisationDaysOfNonOperation = servicedOrganisationDaysOfNonOperation,
         rawDaysOfOperation = daysOfOperation,
@@ -375,6 +379,7 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
           rawOperatorRef = rawOperatorRef child <|> rawOperatorRef base,
           rawDepartureTime = rawDepartureTime child <|> rawDepartureTime base,
           rawDayRules = rawDayRules child <|> rawDayRules base,
+          rawWeekOfMonthRules = rawWeekOfMonthRules child <|> rawWeekOfMonthRules base,
           rawServicedOrganisationDaysOfOperation = rawServicedOrganisationDaysOfOperation child <|> rawServicedOrganisationDaysOfOperation base,
           rawServicedOrganisationDaysOfNonOperation = rawServicedOrganisationDaysOfNonOperation child <|> rawServicedOrganisationDaysOfNonOperation base,
           rawDaysOfOperation = rawDaysOfOperation child <|> rawDaysOfOperation base,
@@ -396,6 +401,7 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
       let note = fromMaybe "" (rawNote rawJourney)
       let noteCode = fromMaybe "" (rawNoteCode rawJourney)
       let dayRules = fromMaybe [] (rawDayRules rawJourney)
+      let weekOfMonthRules = fromMaybe [] (rawWeekOfMonthRules rawJourney)
       let servicedOrganisationDaysOfOperation = fromMaybe [] (rawServicedOrganisationDaysOfOperation rawJourney)
       let servicedOrganisationDaysOfNonOperation = fromMaybe [] (rawServicedOrganisationDaysOfNonOperation rawJourney)
       let daysOfOperation = fromMaybe [] (rawDaysOfOperation rawJourney)
@@ -412,6 +418,7 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
             tx2VehicleJourneyOperatorRef = operatorRef,
             tx2VehicleJourneyDepartureTime = departureTime,
             tx2VehicleJourneyDayRules = dayRules,
+            tx2VehicleJourneyWeekOfMonthRules = weekOfMonthRules,
             tx2VehicleJourneyServicedOrganisationDaysOfOperation = servicedOrganisationDaysOfOperation,
             tx2VehicleJourneyServicedOrganisationDaysOfNonOperation = servicedOrganisationDaysOfNonOperation,
             tx2VehicleJourneyDaysOfOperation = daysOfOperation,
@@ -433,6 +440,39 @@ parseDayRules journeyNode =
           case childNamed "DaysOfWeek" regularDayType of
             Nothing -> Just []
             Just daysOfWeekNode -> Just (concatMap dayElementToDays (elChildren daysOfWeekNode))
+
+parsePeriodicDayType :: Element -> Maybe [String]
+parsePeriodicDayType journeyNode =
+  case childNamed "OperatingProfile" journeyNode >>= childNamed "PeriodicDayType" >>= childNamed "WeekOfMonth" of
+    Nothing -> Nothing
+    Just weekOfMonthNode ->
+      case nub . mapMaybe normalizeWeekOfMonthRule $
+        mapMaybe extractWeekOfMonthText (elChildren weekOfMonthNode) of
+        [] -> Nothing
+        rules -> Just rules
+
+extractWeekOfMonthText :: Element -> Maybe String
+extractWeekOfMonthText node =
+  case qName (elName node) of
+    "WeekNumber" -> Just (strContent node)
+    _ -> childText "WeekNumber" node <|> Just (qName (elName node))
+
+normalizeWeekOfMonthRule :: String -> Maybe String
+normalizeWeekOfMonthRule rawValue =
+  case camelToSnake rawValue of
+    "1" -> Just "first"
+    "2" -> Just "second"
+    "3" -> Just "third"
+    "4" -> Just "fourth"
+    "5" -> Just "fifth"
+    "first" -> Just "first"
+    "second" -> Just "second"
+    "third" -> Just "third"
+    "fourth" -> Just "fourth"
+    "fifth" -> Just "fifth"
+    "last" -> Just "last"
+    "every_week" -> Just "every_week"
+    _ -> Nothing
 
 parseSpecialDays :: String -> Element -> Maybe [Tx2DateRange]
 parseSpecialDays nodeName journeyNode =

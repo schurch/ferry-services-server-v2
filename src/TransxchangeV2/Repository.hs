@@ -35,6 +35,7 @@ clearTx2Tables connection =
       [sql|
         TRUNCATE TABLE
           tx2_vehicle_journey_timing_links,
+          tx2_vehicle_journey_week_of_month_rules,
           tx2_vehicle_journey_serviced_organisation_days_of_non_operation,
           tx2_vehicle_journey_serviced_organisation_days_of_operation,
           tx2_vehicle_journey_bank_holiday_non_operation_rules,
@@ -64,6 +65,7 @@ insertTx2Document connection document = do
   insertVehicleJourneys connection documentId vehicleJourneys
   insertVehicleJourneyTimingLinks connection documentId vehicleJourneys
   insertVehicleJourneyDays connection documentId vehicleJourneys
+  insertVehicleJourneyWeekOfMonthRules connection documentId vehicleJourneys
   insertVehicleJourneyServicedOrganisationDaysOfOperation connection documentId vehicleJourneys
   insertVehicleJourneyServicedOrganisationDaysOfNonOperation connection documentId vehicleJourneys
   insertVehicleJourneyDaysOfOperation connection documentId vehicleJourneys
@@ -313,6 +315,28 @@ insertVehicleJourneyDays connection documentId vehicleJourneys = do
               fmap
                 (\dayRule -> (documentId, tx2VehicleJourneyCode journey, dayRule))
                 (nub $ fmap dayRuleToText (tx2VehicleJourneyDayRules journey))
+          )
+          vehicleJourneys
+  void $ executeMany connection statement values
+
+insertVehicleJourneyWeekOfMonthRules :: Connection -> Int64 -> [Tx2VehicleJourney] -> IO ()
+insertVehicleJourneyWeekOfMonthRules connection documentId vehicleJourneys = do
+  let statement =
+        [sql|
+          INSERT INTO tx2_vehicle_journey_week_of_month_rules (
+            document_id,
+            vehicle_journey_code,
+            week_of_month_rule
+          )
+          VALUES (?, ?, ?)
+          ON CONFLICT (document_id, vehicle_journey_code, week_of_month_rule) DO NOTHING
+        |]
+  let values =
+        concatMap
+          ( \journey ->
+              fmap
+                (\rule -> (documentId, tx2VehicleJourneyCode journey, rule))
+                (nub $ tx2VehicleJourneyWeekOfMonthRules journey)
           )
           vehicleJourneys
   void $ executeMany connection statement values
