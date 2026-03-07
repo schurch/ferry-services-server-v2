@@ -300,8 +300,14 @@ parseVehicleJourneyRaw servicedOrganisationWorkingDays journeyNode = do
   let dayRules = parseDayRules journeyNode
   let servicedOrganisationDaysOfOperation = parseServicedOrganisationDayRanges servicedOrganisationWorkingDays "DaysOfOperation" journeyNode
   let servicedOrganisationDaysOfNonOperation = parseServicedOrganisationDayRanges servicedOrganisationWorkingDays "DaysOfNonOperation" journeyNode
-  let daysOfOperation = parseSpecialDays "SpecialDaysOperation" journeyNode
-  let daysOfNonOperation = parseSpecialDays "SpecialDaysNonOperation" journeyNode
+  let daysOfOperation =
+        combineDateRanges
+          (parseSpecialDays "SpecialDaysOperation" journeyNode)
+          (parseOtherPublicHolidayDates "DaysOfOperation" journeyNode)
+  let daysOfNonOperation =
+        combineDateRanges
+          (parseSpecialDays "SpecialDaysNonOperation" journeyNode)
+          (parseOtherPublicHolidayDates "DaysOfNonOperation" journeyNode)
   let bankHolidayOperationRules = parseBankHolidayRules "DaysOfOperation" journeyNode
   let bankHolidayNonOperationRules = parseBankHolidayRules "DaysOfNonOperation" journeyNode
   return $
@@ -441,6 +447,12 @@ parseSpecialDays nodeName journeyNode =
             ]
        in Just ranges
 
+combineDateRanges :: Maybe [Tx2DateRange] -> Maybe [Tx2DateRange] -> Maybe [Tx2DateRange]
+combineDateRanges left right =
+  case fromMaybe [] left <> fromMaybe [] right of
+    [] -> Nothing
+    ranges -> Just ranges
+
 parseJourneyNotes :: Element -> (Maybe String, Maybe String)
 parseJourneyNotes journeyNode =
   ( joinValues (mapMaybe (childText "NoteText") noteNodes),
@@ -494,19 +506,40 @@ parseDateRangesNode node =
     Just endDate <- [childText "EndDate" dateRangeNode >>= stringToDay]
   ]
 
+parseOtherPublicHolidayDates :: String -> Element -> Maybe [Tx2DateRange]
+parseOtherPublicHolidayDates nodeName journeyNode =
+  case childNamed "OperatingProfile" journeyNode >>= childNamed "BankHolidayOperation" >>= childNamed nodeName of
+    Nothing -> Nothing
+    Just bankHolidayNode ->
+      case mapMaybe parseOtherPublicHolidayDate (childrenNamed "OtherPublicHoliday" bankHolidayNode) of
+        [] -> Nothing
+        dates -> Just dates
+
+parseOtherPublicHolidayDate :: Element -> Maybe Tx2DateRange
+parseOtherPublicHolidayDate node = do
+  holidayDate <- childText "Date" node >>= stringToDay
+  return (Tx2DateRange holidayDate holidayDate)
+
 parseBankHolidayRules :: String -> Element -> Maybe [String]
 parseBankHolidayRules nodeName journeyNode =
   case childNamed "OperatingProfile" journeyNode >>= childNamed "BankHolidayOperation" >>= childNamed nodeName of
     Nothing -> Nothing
-    Just bankHolidayNode -> Just (fmap parseBankHolidayRuleElement (elChildren bankHolidayNode))
+    Just bankHolidayNode ->
+      case mapMaybe parseBankHolidayRuleElement (elChildren bankHolidayNode) of
+        [] -> Nothing
+        rules -> Just rules
 
-parseBankHolidayRuleElement :: Element -> String
+parseBankHolidayRuleElement :: Element -> Maybe String
 parseBankHolidayRuleElement element =
   case qName (elName element) of
     "OtherPublicHoliday" ->
-      fromMaybe "other_public_holiday" $
-        normalizeBankHolidayDescription <$> childText "Description" element
-    tagName -> camelToSnake tagName
+      case childText "Date" element of
+        Just _ -> Nothing
+        Nothing ->
+          Just $
+            fromMaybe "other_public_holiday" $
+              normalizeBankHolidayDescription <$> childText "Description" element
+    tagName -> Just (camelToSnake tagName)
 
 normalizeBankHolidayDescription :: String -> String
 normalizeBankHolidayDescription description =
