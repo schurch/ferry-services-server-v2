@@ -1,0 +1,2 @@
+-- Intentionally left blank.
+-- Version 43 previously contained a data migration that was reverted.

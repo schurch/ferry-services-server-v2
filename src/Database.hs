@@ -36,7 +36,13 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (asks)
 import Data.Maybe (listToMaybe)
 import Data.Pool (Pool, withResource)
-import Data.Time.Calendar (Day)
+import Data.Time.Calendar
+  ( Day,
+    addDays,
+    fromGregorian,
+    toGregorian,
+  )
+import Data.Time.Calendar.WeekDate (toWeekDate)
 import Data.Time.Clock (UTCTime)
 import Data.Time.LocalTime (TimeOfDay (..))
 import Data.UUID (UUID)
@@ -430,7 +436,10 @@ getServiceVessels = withConnection $ \connection ->
 
 getLocationDeparturesV2 :: Int -> Day -> Application [LocationDeparture]
 getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
-  query
+  let matchedBankHolidayRules = matchedBankHolidayRulesForDate date
+      isBankHoliday = not (null matchedBankHolidayRules)
+      matchedBankHolidayRulesParam = if null matchedBankHolidayRules then ["__no_matching_bank_holiday__"] else matchedBankHolidayRules
+   in query
     connection
     [sql|
       WITH constants(query_date) AS (
@@ -618,12 +627,24 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
                     WHERE vjd.document_id = vj.document_id
                       AND vjd.vehicle_journey_code = vj.vehicle_journey_code
                       AND (
+                          (vjd.day_rule = 'holidays_only' AND EXISTS (
+                              SELECT 1
+                              WHERE ?
+                          ))
+                          OR
                           vjd.day_rule = derived_day_of_week
                           OR (derived_day_of_week IN ('monday','tuesday','wednesday','thursday','friday') AND vjd.day_rule = 'monday_to_friday')
                           OR (derived_day_of_week IN ('monday','tuesday','wednesday','thursday','friday','saturday') AND vjd.day_rule = 'monday_to_saturday')
                           OR vjd.day_rule = 'monday_to_sunday'
                           OR (derived_day_of_week IN ('saturday','sunday') AND vjd.day_rule = 'weekend')
                       )
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM tx2_vehicle_journey_bank_holiday_operation_rules vjbhor
+                    WHERE vjbhor.document_id = vj.document_id
+                      AND vjbhor.vehicle_journey_code = vj.vehicle_journey_code
+                      AND vjbhor.bank_holiday_rule IN ?
                 )
             )
             AND NOT EXISTS (
@@ -632,6 +653,13 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
                 WHERE vjdno.document_id = vj.document_id
                   AND vjdno.vehicle_journey_code = vj.vehicle_journey_code
                   AND query_date BETWEEN vjdno.start_date AND vjdno.end_date
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM tx2_vehicle_journey_bank_holiday_non_operation_rules vjbhnor
+                WHERE vjbhnor.document_id = vj.document_id
+                  AND vjbhnor.vehicle_journey_code = vj.vehicle_journey_code
+                  AND vjbhnor.bank_holiday_rule IN ?
             )
       ),
       candidate_departures AS (
@@ -668,7 +696,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           notes,
           source_modification_datetime DESC NULLS LAST
     |]
-    (date, serviceID, serviceID, serviceID)
+    (date, serviceID, serviceID, serviceID, isBankHoliday, In matchedBankHolidayRulesParam, In matchedBankHolidayRulesParam)
 
 getServicesWithScheduledDeparturesV2 :: Application [Int]
 getServicesWithScheduledDeparturesV2 = withConnection $ \connection ->
@@ -743,3 +771,117 @@ timeStringToTime string =
         [h, m, s] -> TimeOfDay (read h) (read m) (read s)
         [h, m] -> TimeOfDay (read h) (read m) 0
         _ -> error $ "Unable to convert '" <> string <> "' to TimeOfDay"
+
+matchedBankHolidayRulesForDate :: Day -> [String]
+matchedBankHolidayRulesForDate day =
+  ["all_bank_holidays" | isAnyScottishBankHoliday day]
+    <> ["other_public_holiday" | isAnyScottishBankHoliday day]
+    <> [ruleName | (ruleName, ruleDay) <- specificScottishBankHolidays year, day == ruleDay]
+  where
+    (year, _, _) = toGregorian day
+
+specificScottishBankHolidays :: Integer -> [(String, Day)]
+specificScottishBankHolidays year =
+  [ ("new_years_day", fromGregorian year 1 1),
+    ("new_years_day_holiday", observedNewYearsDay year),
+    ("jan2nd_scotland", observedJan2ndScotland year),
+    ("good_friday", addDays (-2) easterSunday),
+    ("easter_monday", addDays 1 easterSunday),
+    ("may_day", firstMondayOfMonth year 5),
+    ("spring_bank", lastMondayOfMonth year 5),
+    ("august_bank_holiday_scotland", firstMondayOfMonth year 8),
+    ("late_summer_bank_holiday_not_scotland", lastMondayOfMonth year 8),
+    ("st_andrews_day", observedStAndrewsDay year),
+    ("christmas_day", fromGregorian year 12 25),
+    ("christmas_day_holiday", observedChristmasDay year),
+    ("boxing_day", fromGregorian year 12 26),
+    ("boxing_day_holiday", observedBoxingDay year)
+  ]
+  where
+    easterSunday = gregorianEasterSunday year
+
+isAnyScottishBankHoliday :: Day -> Bool
+isAnyScottishBankHoliday day =
+  day `elem` fmap snd (specificScottishBankHolidays year)
+  where
+    (year, _, _) = toGregorian day
+
+firstMondayOfMonth :: Integer -> Int -> Day
+firstMondayOfMonth year month =
+  head [candidate | dayOfMonth <- [1 .. 7], let candidate = fromGregorian year month dayOfMonth, isMonday candidate]
+
+lastMondayOfMonth :: Integer -> Int -> Day
+lastMondayOfMonth year month =
+  head [candidate | offset <- [0 .. 6], let candidate = addDays (negate offset) monthEnd, isMonday candidate]
+  where
+    monthEnd =
+      addDays
+        (-1)
+        ( if month == 12
+            then fromGregorian (year + 1) 1 1
+            else fromGregorian year (month + 1) 1
+        )
+
+observedNewYearsDay :: Integer -> Day
+observedNewYearsDay year =
+  case weekday (fromGregorian year 1 1) of
+    6 -> fromGregorian year 1 3
+    7 -> fromGregorian year 1 2
+    _ -> fromGregorian year 1 1
+
+observedJan2ndScotland :: Integer -> Day
+observedJan2ndScotland year =
+  case weekday (fromGregorian year 1 2) of
+    6 -> fromGregorian year 1 4
+    7 -> fromGregorian year 1 3
+    _ -> fromGregorian year 1 2
+
+observedChristmasDay :: Integer -> Day
+observedChristmasDay year =
+  case weekday (fromGregorian year 12 25) of
+    6 -> fromGregorian year 12 27
+    7 -> fromGregorian year 12 27
+    _ -> fromGregorian year 12 25
+
+observedBoxingDay :: Integer -> Day
+observedBoxingDay year =
+  case weekday (fromGregorian year 12 26) of
+    6 -> fromGregorian year 12 28
+    7 -> fromGregorian year 12 28
+    _ ->
+      if observedChristmasDay year == fromGregorian year 12 26
+        then fromGregorian year 12 27
+        else fromGregorian year 12 26
+
+observedStAndrewsDay :: Integer -> Day
+observedStAndrewsDay year =
+  case weekday (fromGregorian year 11 30) of
+    6 -> fromGregorian year 12 2
+    7 -> fromGregorian year 12 1
+    _ -> fromGregorian year 11 30
+
+weekday :: Day -> Int
+weekday day =
+  let (_, _, weekDay) = toWeekDate day
+   in weekDay
+
+isMonday :: Day -> Bool
+isMonday day = weekday day == 1
+
+gregorianEasterSunday :: Integer -> Day
+gregorianEasterSunday year = fromGregorian year month day
+  where
+    a = year `mod` 19
+    b = year `div` 100
+    c = year `mod` 100
+    d = b `div` 4
+    e = b `mod` 4
+    f = (b + 8) `div` 25
+    g = (b - f + 1) `div` 3
+    h = (19 * a + b - d - g + 15) `mod` 30
+    i = c `div` 4
+    k = c `mod` 4
+    l = (32 + 2 * e + 2 * i - h - k) `mod` 7
+    m = (a + 11 * h + 22 * l) `div` 451
+    month = fromInteger ((h + l - 7 * m + 114) `div` 31)
+    day = fromInteger (((h + l - 7 * m + 114) `mod` 31) + 1)

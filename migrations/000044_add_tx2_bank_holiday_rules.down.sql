@@ -1,0 +1,5 @@
+DROP INDEX IF EXISTS tx2_vehicle_journey_bank_holiday_non_operation_rules_rule_idx;
+DROP INDEX IF EXISTS tx2_vehicle_journey_bank_holiday_operation_rules_rule_idx;
+
+DROP TABLE IF EXISTS tx2_vehicle_journey_bank_holiday_non_operation_rules;
+DROP TABLE IF EXISTS tx2_vehicle_journey_bank_holiday_operation_rules;

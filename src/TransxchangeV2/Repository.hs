@@ -34,6 +34,8 @@ clearTx2Tables connection =
       connection
       [sql|
         TRUNCATE TABLE
+          tx2_vehicle_journey_bank_holiday_non_operation_rules,
+          tx2_vehicle_journey_bank_holiday_operation_rules,
           tx2_vehicle_journey_days_of_non_operation,
           tx2_vehicle_journey_days_of_operation,
           tx2_vehicle_journey_days,
@@ -60,6 +62,8 @@ insertTx2Document connection document = do
   insertVehicleJourneyDays connection documentId vehicleJourneys
   insertVehicleJourneyDaysOfOperation connection documentId vehicleJourneys
   insertVehicleJourneyDaysOfNonOperation connection documentId vehicleJourneys
+  insertVehicleJourneyBankHolidayOperationRules connection documentId vehicleJourneys
+  insertVehicleJourneyBankHolidayNonOperationRules connection documentId vehicleJourneys
   where
     vehicleJourneys = tx2VehicleJourneys document
 
@@ -336,6 +340,50 @@ insertVehicleJourneyDaysOfNonOperation connection documentId vehicleJourneys = d
                     )
                 )
                 (nub $ tx2VehicleJourneyDaysOfNonOperation journey)
+          )
+          vehicleJourneys
+  void $ executeMany connection statement values
+
+insertVehicleJourneyBankHolidayOperationRules :: Connection -> Int64 -> [Tx2VehicleJourney] -> IO ()
+insertVehicleJourneyBankHolidayOperationRules connection documentId vehicleJourneys = do
+  let statement =
+        [sql|
+          INSERT INTO tx2_vehicle_journey_bank_holiday_operation_rules (
+            document_id,
+            vehicle_journey_code,
+            bank_holiday_rule
+          )
+          VALUES (?, ?, ?)
+          ON CONFLICT (document_id, vehicle_journey_code, bank_holiday_rule) DO NOTHING
+        |]
+  let values =
+        concatMap
+          ( \journey ->
+              fmap
+                (\rule -> (documentId, tx2VehicleJourneyCode journey, rule))
+                (nub $ tx2VehicleJourneyBankHolidayOperationRules journey)
+          )
+          vehicleJourneys
+  void $ executeMany connection statement values
+
+insertVehicleJourneyBankHolidayNonOperationRules :: Connection -> Int64 -> [Tx2VehicleJourney] -> IO ()
+insertVehicleJourneyBankHolidayNonOperationRules connection documentId vehicleJourneys = do
+  let statement =
+        [sql|
+          INSERT INTO tx2_vehicle_journey_bank_holiday_non_operation_rules (
+            document_id,
+            vehicle_journey_code,
+            bank_holiday_rule
+          )
+          VALUES (?, ?, ?)
+          ON CONFLICT (document_id, vehicle_journey_code, bank_holiday_rule) DO NOTHING
+        |]
+  let values =
+        concatMap
+          ( \journey ->
+              fmap
+                (\rule -> (documentId, tx2VehicleJourneyCode journey, rule))
+                (nub $ tx2VehicleJourneyBankHolidayNonOperationRules journey)
           )
           vehicleJourneys
   void $ executeMany connection statement values

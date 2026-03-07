@@ -10,6 +10,7 @@ where
 import Control.Applicative ((<|>))
 import Control.Exception (IOException, try)
 import qualified Data.ByteString.Char8 as BS
+import Data.Char (isUpper, toLower)
 import Data.List
   ( find,
     isSuffixOf,
@@ -259,6 +260,8 @@ data RawTx2VehicleJourney = RawTx2VehicleJourney
     rawDayRules :: Maybe [Tx2DayRule],
     rawDaysOfOperation :: Maybe [Tx2DateRange],
     rawDaysOfNonOperation :: Maybe [Tx2DateRange],
+    rawBankHolidayOperationRules :: Maybe [String],
+    rawBankHolidayNonOperationRules :: Maybe [String],
     rawNote :: Maybe String,
     rawNoteCode :: Maybe String
   }
@@ -278,6 +281,8 @@ parseVehicleJourneyRaw journeyNode = do
   let dayRules = parseDayRules journeyNode
   let daysOfOperation = parseSpecialDays "SpecialDaysOperation" journeyNode
   let daysOfNonOperation = parseSpecialDays "SpecialDaysNonOperation" journeyNode
+  let bankHolidayOperationRules = parseBankHolidayRules "DaysOfOperation" journeyNode
+  let bankHolidayNonOperationRules = parseBankHolidayRules "DaysOfNonOperation" journeyNode
   return $
     RawTx2VehicleJourney
       { rawVehicleJourneyCode = vehicleJourneyCode,
@@ -290,6 +295,8 @@ parseVehicleJourneyRaw journeyNode = do
         rawDayRules = dayRules,
         rawDaysOfOperation = daysOfOperation,
         rawDaysOfNonOperation = daysOfNonOperation,
+        rawBankHolidayOperationRules = bankHolidayOperationRules,
+        rawBankHolidayNonOperationRules = bankHolidayNonOperationRules,
         rawNote = note,
         rawNoteCode = noteCode
       }
@@ -339,6 +346,8 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
           rawDayRules = rawDayRules child <|> rawDayRules base,
           rawDaysOfOperation = rawDaysOfOperation child <|> rawDaysOfOperation base,
           rawDaysOfNonOperation = rawDaysOfNonOperation child <|> rawDaysOfNonOperation base,
+          rawBankHolidayOperationRules = rawBankHolidayOperationRules child <|> rawBankHolidayOperationRules base,
+          rawBankHolidayNonOperationRules = rawBankHolidayNonOperationRules child <|> rawBankHolidayNonOperationRules base,
           rawNote = rawNote child <|> rawNote base,
           rawNoteCode = rawNoteCode child <|> rawNoteCode base
         }
@@ -355,6 +364,8 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
       let dayRules = fromMaybe [] (rawDayRules rawJourney)
       let daysOfOperation = fromMaybe [] (rawDaysOfOperation rawJourney)
       let daysOfNonOperation = fromMaybe [] (rawDaysOfNonOperation rawJourney)
+      let bankHolidayOperationRules = fromMaybe [] (rawBankHolidayOperationRules rawJourney)
+      let bankHolidayNonOperationRules = fromMaybe [] (rawBankHolidayNonOperationRules rawJourney)
       return $
         Tx2VehicleJourney
           { tx2VehicleJourneyCode = rawVehicleJourneyCode rawJourney,
@@ -366,6 +377,8 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
             tx2VehicleJourneyDayRules = dayRules,
             tx2VehicleJourneyDaysOfOperation = daysOfOperation,
             tx2VehicleJourneyDaysOfNonOperation = daysOfNonOperation,
+            tx2VehicleJourneyBankHolidayOperationRules = bankHolidayOperationRules,
+            tx2VehicleJourneyBankHolidayNonOperationRules = bankHolidayNonOperationRules,
             tx2VehicleJourneyNote = note,
             tx2VehicleJourneyNoteCode = noteCode
           }
@@ -395,6 +408,12 @@ parseSpecialDays nodeName journeyNode =
             ]
        in Just ranges
 
+parseBankHolidayRules :: String -> Element -> Maybe [String]
+parseBankHolidayRules nodeName journeyNode =
+  case childNamed "OperatingProfile" journeyNode >>= childNamed "BankHolidayOperation" >>= childNamed nodeName of
+    Nothing -> Nothing
+    Just bankHolidayNode -> Just (fmap (camelToSnake . qName . elName) (elChildren bankHolidayNode))
+
 dayElementToDays :: Element -> [Tx2DayRule]
 dayElementToDays element =
   case qName (elName element) of
@@ -419,6 +438,16 @@ dayElementToDays element =
     _ -> []
 
 parseTimeOfDay :: String -> Maybe TimeOfDay
+camelToSnake :: String -> String
+camelToSnake =
+  dropWhile (== '_')
+    . concatMap
+      ( \char ->
+          if isUpper char
+            then ['_', toLower char]
+            else [char]
+      )
+
 parseTimeOfDay value =
   parseTimeM True defaultTimeLocale "%H:%M:%S" value
     <|> parseTimeM True defaultTimeLocale "%H:%M" value
