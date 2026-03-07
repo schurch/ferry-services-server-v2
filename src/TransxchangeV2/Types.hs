@@ -106,6 +106,11 @@ data Tx2DateRange = Tx2DateRange
   }
   deriving (Show, Eq, Ord)
 
+data Tx2FrequencySpec
+  = Tx2FrequencyInterval Int TimeOfDay
+  | Tx2FrequencyMinutesPastHour [Int] TimeOfDay
+  deriving (Show, Eq)
+
 data Tx2VehicleJourney = Tx2VehicleJourney
   { tx2VehicleJourneyCode :: String,
     tx2VehicleJourneyServiceCode :: String,

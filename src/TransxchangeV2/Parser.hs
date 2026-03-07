@@ -14,6 +14,7 @@ import Data.Char (isUpper, toLower)
 import Data.List
   ( find,
     intercalate,
+    isPrefixOf,
     isSuffixOf,
     nub,
     sort,
@@ -27,7 +28,7 @@ import Data.Maybe
 import qualified Data.Set as S
 import Data.Time.LocalTime
   ( LocalTime,
-    TimeOfDay
+    TimeOfDay (TimeOfDay)
   )
 import Data.Time.Format
   ( defaultTimeLocale,
@@ -280,6 +281,7 @@ data RawTx2VehicleJourney = RawTx2VehicleJourney
     rawTimingLinkRefs :: Maybe [String],
     rawOperatorRef :: Maybe String,
     rawDepartureTime :: Maybe TimeOfDay,
+    rawFrequencySpec :: Maybe Tx2FrequencySpec,
     rawDayRules :: Maybe [Tx2DayRule],
     rawWeekOfMonthRules :: Maybe [String],
     rawServicedOrganisationDaysOfOperation :: Maybe [Tx2DateRange],
@@ -304,6 +306,7 @@ parseVehicleJourneyRaw servicedOrganisationCalendars journeyNode = do
   let operatorRef = childText "OperatorRef" journeyNode
   let journeyRef = childText "VehicleJourneyRef" journeyNode
   let (note, noteCode) = parseJourneyNotes journeyNode
+  let frequencySpec = parseFrequencySpec journeyNode
   let dayRules = parseDayRules journeyNode
   let weekOfMonthRules = parsePeriodicDayType journeyNode
   let servicedOrganisationDaysOfOperation = parseServicedOrganisationDayRanges servicedOrganisationCalendars "DaysOfOperation" journeyNode
@@ -328,6 +331,7 @@ parseVehicleJourneyRaw servicedOrganisationCalendars journeyNode = do
         rawTimingLinkRefs = timingLinkRefs,
         rawOperatorRef = operatorRef,
         rawDepartureTime = departureTime,
+        rawFrequencySpec = frequencySpec,
         rawDayRules = dayRules,
         rawWeekOfMonthRules = weekOfMonthRules,
         rawServicedOrganisationDaysOfOperation = servicedOrganisationDaysOfOperation,
@@ -350,11 +354,11 @@ parseOptionalDepartureTime journeyNode =
         Just value -> Right (Just value)
 
 resolveVehicleJourneys :: [RawTx2VehicleJourney] -> Either String [Tx2VehicleJourney]
-resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJourneyCode) rawJourneys
+resolveVehicleJourneys rawJourneys = concat <$> mapM (resolveByCode S.empty . rawVehicleJourneyCode) rawJourneys
   where
     journeyMap = M.fromList [(rawVehicleJourneyCode journey, journey) | journey <- rawJourneys]
 
-    resolveByCode :: S.Set String -> String -> Either String Tx2VehicleJourney
+    resolveByCode :: S.Set String -> String -> Either String [Tx2VehicleJourney]
     resolveByCode visited code = do
       rawJourney <- maybeToEither ("vehicle journey not found: " <> code) (M.lookup code journeyMap)
       resolvedRaw <- resolveRaw visited rawJourney
@@ -383,6 +387,7 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
           rawTimingLinkRefs = rawTimingLinkRefs child <|> rawTimingLinkRefs base,
           rawOperatorRef = rawOperatorRef child <|> rawOperatorRef base,
           rawDepartureTime = rawDepartureTime child <|> rawDepartureTime base,
+          rawFrequencySpec = rawFrequencySpec child <|> rawFrequencySpec base,
           rawDayRules = rawDayRules child <|> rawDayRules base,
           rawWeekOfMonthRules = rawWeekOfMonthRules child <|> rawWeekOfMonthRules base,
           rawServicedOrganisationDaysOfOperation = rawServicedOrganisationDaysOfOperation child <|> rawServicedOrganisationDaysOfOperation base,
@@ -395,7 +400,7 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
           rawNoteCode = rawNoteCode child <|> rawNoteCode base
         }
 
-    materialize :: RawTx2VehicleJourney -> Either String Tx2VehicleJourney
+    materialize :: RawTx2VehicleJourney -> Either String [Tx2VehicleJourney]
     materialize rawJourney = do
       serviceRef <- maybeToEither "missing ServiceRef on resolved vehicle journey" (rawServiceRef rawJourney)
       lineRef <- maybeToEither "missing LineRef on resolved vehicle journey" (rawLineRef rawJourney)
@@ -413,26 +418,75 @@ resolveVehicleJourneys rawJourneys = mapM (resolveByCode S.empty . rawVehicleJou
       let daysOfNonOperation = fromMaybe [] (rawDaysOfNonOperation rawJourney)
       let bankHolidayOperationRules = fromMaybe [] (rawBankHolidayOperationRules rawJourney)
       let bankHolidayNonOperationRules = fromMaybe [] (rawBankHolidayNonOperationRules rawJourney)
-      return $
-        Tx2VehicleJourney
-          { tx2VehicleJourneyCode = rawVehicleJourneyCode rawJourney,
-            tx2VehicleJourneyServiceCode = serviceRef,
-            tx2VehicleJourneyLineId = lineRef,
-            tx2VehicleJourneyPatternId = journeyPatternRef,
-            tx2VehicleJourneyTimingLinkRefs = timingLinkRefs,
-            tx2VehicleJourneyOperatorRef = operatorRef,
-            tx2VehicleJourneyDepartureTime = departureTime,
-            tx2VehicleJourneyDayRules = dayRules,
-            tx2VehicleJourneyWeekOfMonthRules = weekOfMonthRules,
-            tx2VehicleJourneyServicedOrganisationDaysOfOperation = servicedOrganisationDaysOfOperation,
-            tx2VehicleJourneyServicedOrganisationDaysOfNonOperation = servicedOrganisationDaysOfNonOperation,
-            tx2VehicleJourneyDaysOfOperation = daysOfOperation,
-            tx2VehicleJourneyDaysOfNonOperation = daysOfNonOperation,
-            tx2VehicleJourneyBankHolidayOperationRules = bankHolidayOperationRules,
-            tx2VehicleJourneyBankHolidayNonOperationRules = bankHolidayNonOperationRules,
-            tx2VehicleJourneyNote = note,
-            tx2VehicleJourneyNoteCode = noteCode
-          }
+      let baseJourney =
+            Tx2VehicleJourney
+              { tx2VehicleJourneyCode = rawVehicleJourneyCode rawJourney,
+                tx2VehicleJourneyServiceCode = serviceRef,
+                tx2VehicleJourneyLineId = lineRef,
+                tx2VehicleJourneyPatternId = journeyPatternRef,
+                tx2VehicleJourneyTimingLinkRefs = timingLinkRefs,
+                tx2VehicleJourneyOperatorRef = operatorRef,
+                tx2VehicleJourneyDepartureTime = departureTime,
+                tx2VehicleJourneyDayRules = dayRules,
+                tx2VehicleJourneyWeekOfMonthRules = weekOfMonthRules,
+                tx2VehicleJourneyServicedOrganisationDaysOfOperation = servicedOrganisationDaysOfOperation,
+                tx2VehicleJourneyServicedOrganisationDaysOfNonOperation = servicedOrganisationDaysOfNonOperation,
+                tx2VehicleJourneyDaysOfOperation = daysOfOperation,
+                tx2VehicleJourneyDaysOfNonOperation = daysOfNonOperation,
+                tx2VehicleJourneyBankHolidayOperationRules = bankHolidayOperationRules,
+                tx2VehicleJourneyBankHolidayNonOperationRules = bankHolidayNonOperationRules,
+                tx2VehicleJourneyNote = note,
+                tx2VehicleJourneyNoteCode = noteCode
+              }
+      return (expandFrequencyJourneys (rawFrequencySpec rawJourney) baseJourney)
+
+expandFrequencyJourneys :: Maybe Tx2FrequencySpec -> Tx2VehicleJourney -> [Tx2VehicleJourney]
+expandFrequencyJourneys Nothing journey = [journey]
+expandFrequencyJourneys (Just frequencySpec) journey =
+  journey : zipWith makeFrequencyJourney [1 :: Int ..] additionalDepartureTimes
+  where
+    baseDepartureTime = tx2VehicleJourneyDepartureTime journey
+    additionalDepartureTimes = generateFrequencyDepartureTimes baseDepartureTime frequencySpec
+    makeFrequencyJourney index departureTime =
+      journey
+        { tx2VehicleJourneyCode = tx2VehicleJourneyCode journey <> "#freq#" <> show index,
+          tx2VehicleJourneyDepartureTime = departureTime
+        }
+
+generateFrequencyDepartureTimes :: TimeOfDay -> Tx2FrequencySpec -> [TimeOfDay]
+generateFrequencyDepartureTimes baseDepartureTime frequencySpec =
+  case frequencySpec of
+    Tx2FrequencyInterval intervalMinutes endTime ->
+      takeWhile (<= endTime) $
+        tail $
+          iterate (addMinutesToTimeOfDay intervalMinutes) baseDepartureTime
+    Tx2FrequencyMinutesPastHour minutesPastHour endTime ->
+      [ candidate
+      | candidate <- minutesPastHourCandidates baseDepartureTime endTime minutesPastHour,
+        candidate > baseDepartureTime,
+        candidate <= endTime
+      ]
+
+minutesPastHourCandidates :: TimeOfDay -> TimeOfDay -> [Int] -> [TimeOfDay]
+minutesPastHourCandidates startTime endTime minutesPastHour =
+  [ TimeOfDay hour minute 0
+  | hour <- [startHour .. endHour],
+    minute <- minutesPastHour
+  ]
+  where
+    startHour = timeOfDayToMinutes startTime `div` 60
+    endHour = timeOfDayToMinutes endTime `div` 60
+
+addMinutesToTimeOfDay :: Int -> TimeOfDay -> TimeOfDay
+addMinutesToTimeOfDay minutesToAdd timeOfDay =
+  minutesToTimeOfDay (timeOfDayToMinutes timeOfDay + minutesToAdd)
+
+timeOfDayToMinutes :: TimeOfDay -> Int
+timeOfDayToMinutes (TimeOfDay hour minute _) = (hour * 60) + minute
+
+minutesToTimeOfDay :: Int -> TimeOfDay
+minutesToTimeOfDay totalMinutes =
+  TimeOfDay (totalMinutes `div` 60) (totalMinutes `mod` 60) 0
 
 parseDayRules :: Element -> Maybe [Tx2DayRule]
 parseDayRules journeyNode =
@@ -478,6 +532,62 @@ normalizeWeekOfMonthRule rawValue =
     "last" -> Just "last"
     "every_week" -> Just "every_week"
     _ -> Nothing
+
+parseFrequencySpec :: Element -> Maybe Tx2FrequencySpec
+parseFrequencySpec journeyNode = do
+  frequencyNode <- childNamed "Frequency" journeyNode
+  endTime <- childText "EndTime" frequencyNode >>= parseTimeOfDay
+  scheduledFrequencyNode <- childNamed "ScheduledFrequency" frequencyNode
+  parseFrequencyPattern scheduledFrequencyNode endTime
+
+parseFrequencyPattern :: Element -> TimeOfDay -> Maybe Tx2FrequencySpec
+parseFrequencyPattern scheduledFrequencyNode endTime =
+  case childText "HeadwayInterval" scheduledFrequencyNode <|> childText "Interval" scheduledFrequencyNode of
+    Just intervalText ->
+      Tx2FrequencyInterval <$> parseFrequencyInterval intervalText <*> pure endTime
+    Nothing ->
+      case nub . mapMaybe parseMinutesPastHourValue $
+        childrenTextNamed "MinutesPastTheHour" scheduledFrequencyNode of
+        [] -> Nothing
+        minutesPastHour -> Just (Tx2FrequencyMinutesPastHour minutesPastHour endTime)
+
+parseFrequencyInterval :: String -> Maybe Int
+parseFrequencyInterval intervalText =
+  case parseXmlDurationMinutes intervalText of
+    Just minutes -> Just minutes
+    Nothing -> readMaybeInt intervalText
+
+parseXmlDurationMinutes :: String -> Maybe Int
+parseXmlDurationMinutes durationText =
+  case dropPrefix "PT" durationText of
+    Nothing -> Nothing
+    Just durationWithoutPrefix ->
+      let chunks = words [if c `elem` ['H', 'M'] then ' ' else c | c <- durationWithoutPrefix, c /= 'S']
+       in case chunks of
+            [hoursText, minutesText] | 'H' `elem` durationWithoutPrefix && 'M' `elem` durationWithoutPrefix ->
+              (\hours minutes -> (hours * 60) + minutes) <$> readMaybeInt hoursText <*> readMaybeInt minutesText
+            [hoursText] | 'H' `elem` durationWithoutPrefix ->
+              (* 60) <$> readMaybeInt hoursText
+            [minutesText] | 'M' `elem` durationWithoutPrefix ->
+              readMaybeInt minutesText
+            _ -> Nothing
+
+parseMinutesPastHourValue :: String -> Maybe Int
+parseMinutesPastHourValue value = do
+  parsed <- readMaybeInt value
+  if parsed >= 0 && parsed <= 59 then Just parsed else Nothing
+
+readMaybeInt :: String -> Maybe Int
+readMaybeInt value =
+  case reads value of
+    [(parsed, "")] -> Just parsed
+    _ -> Nothing
+
+dropPrefix :: String -> String -> Maybe String
+dropPrefix prefix value =
+  if prefix `isPrefixOf` value
+    then Just (drop (length prefix) value)
+    else Nothing
 
 parseSpecialDays :: String -> Element -> Maybe [Tx2DateRange]
 parseSpecialDays nodeName journeyNode =
@@ -666,6 +776,9 @@ childrenNamed name element = filter (\child -> qName (elName child) == name) (el
 
 childText :: String -> Element -> Maybe String
 childText name element = strContent <$> childNamed name element
+
+childrenTextNamed :: String -> Element -> [String]
+childrenTextNamed name element = strContent <$> childrenNamed name element
 
 attrValue :: String -> Element -> String
 attrValue name element = fromMaybe "" $ findAttr (QName name Nothing Nothing) element
