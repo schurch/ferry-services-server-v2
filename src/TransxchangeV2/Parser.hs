@@ -13,12 +13,14 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Char (isUpper, toLower)
 import Data.List
   ( find,
+    intercalate,
     isSuffixOf,
     sort,
   )
 import qualified Data.Map.Strict as M
 import Data.Maybe
   ( fromMaybe,
+    mapMaybe,
     maybeToList,
   )
 import qualified Data.Set as S
@@ -280,8 +282,7 @@ parseVehicleJourneyRaw servicedOrganisationWorkingDays journeyNode = do
   let journeyPatternRef = childText "JourneyPatternRef" journeyNode
   let operatorRef = childText "OperatorRef" journeyNode
   let journeyRef = childText "VehicleJourneyRef" journeyNode
-  let note = childNamed "Note" journeyNode >>= childText "NoteText"
-  let noteCode = childNamed "Note" journeyNode >>= childText "NoteCode"
+  let (note, noteCode) = parseJourneyNotes journeyNode
   let dayRules = parseDayRules journeyNode
   let servicedOrganisationDaysOfOperation = parseServicedOrganisationDayRanges servicedOrganisationWorkingDays "DaysOfOperation" journeyNode
   let servicedOrganisationDaysOfNonOperation = parseServicedOrganisationDayRanges servicedOrganisationWorkingDays "DaysOfNonOperation" journeyNode
@@ -421,6 +422,16 @@ parseSpecialDays nodeName journeyNode =
               Just endDate <- [childText "EndDate" dateRangeNode >>= stringToDay]
             ]
        in Just ranges
+
+parseJourneyNotes :: Element -> (Maybe String, Maybe String)
+parseJourneyNotes journeyNode =
+  ( joinValues (mapMaybe (childText "NoteText") noteNodes),
+    joinValues (mapMaybe (childText "NoteCode") noteNodes)
+  )
+  where
+    noteNodes = childrenNamed "Note" journeyNode
+    joinValues [] = Nothing
+    joinValues values = Just (intercalate " | " values)
 
 parseServicedOrganisationWorkingDays :: Element -> M.Map String [Tx2DateRange]
 parseServicedOrganisationWorkingDays root =
