@@ -479,6 +479,11 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           FROM tx2_service_mappings
           WHERE service_id = ?
       ),
+      selected_service AS (
+          SELECT route
+          FROM services
+          WHERE service_id = ?
+      ),
       service_stop_points AS (
           SELECT l.location_id, l.name, l.coordinate, l.stop_point_id
           FROM service_locations sl
@@ -488,7 +493,8 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
       ),
       heuristic_service_codes AS (
           SELECT DISTINCT s.service_code
-          FROM service_stop_points sp_from
+          FROM selected_service ss
+          JOIN service_stop_points sp_from ON TRUE
           JOIN service_stop_points sp_to
             ON sp_to.stop_point_id <> sp_from.stop_point_id
           JOIN tx2_journey_pattern_timing_links jptl
@@ -504,6 +510,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
             ON s.document_id = jp.document_id
            AND s.service_code = jp.service_code
           WHERE s.mode = 'ferry'
+            AND lower(ss.route) NOT LIKE '%freight%'
       ),
       effective_service_codes AS (
           SELECT service_code
@@ -666,7 +673,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           notes,
           source_modification_datetime DESC NULLS LAST
     |]
-    (date, serviceID, serviceID)
+    (date, serviceID, serviceID, serviceID)
 
 getServicesWithScheduledDeparturesV2 :: Application [Int]
 getServicesWithScheduledDeparturesV2 = withConnection $ \connection ->
@@ -682,8 +689,9 @@ getServicesWithScheduledDeparturesV2 = withConnection $ \connection ->
             WHERE s.mode = 'ferry'
         ),
         service_stop_points AS (
-            SELECT sl.service_id, l.stop_point_id
+            SELECT sl.service_id, s.route, l.stop_point_id
             FROM service_locations sl
+            JOIN services s ON s.service_id = sl.service_id
             JOIN locations l ON l.location_id = sl.location_id
             WHERE l.stop_point_id IS NOT NULL
         ),
@@ -706,6 +714,7 @@ getServicesWithScheduledDeparturesV2 = withConnection $ \connection ->
               ON s.document_id = jp.document_id
              AND s.service_code = jp.service_code
             WHERE s.mode = 'ferry'
+              AND lower(sp_from.route) NOT LIKE '%freight%'
         )
         SELECT service_id
         FROM mapped_services
