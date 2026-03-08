@@ -207,12 +207,16 @@ getService serviceID departuresDate = do
   service <- lift $ DB.getService serviceID
   time <- liftIO getCurrentTime
   locationDepartureLookup <- createDeparturesLookup serviceID departuresDate
-  scheduledDeparturesLookup <- createServiceScheduledDeparturesLookup
+  hasScheduledDepartures <- lift $ DB.getServiceHasScheduledDeparturesV2 serviceID
   nextDepatureLookup <- createNextDepartureLookup serviceID
   nextRailDepartureLookup <- createNextRailDepartureLookup
   locationLookup <- createLocationLookup (Just locationDepartureLookup) (Just nextDepatureLookup) (Just nextRailDepartureLookup)
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
+  let scheduledDeparturesLookup =
+        if hasScheduledDepartures
+          then S.singleton serviceID
+          else S.empty
   return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup 1 time <$> service
 
 getServices :: Action [ServiceResponse]

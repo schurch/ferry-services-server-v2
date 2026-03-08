@@ -26,6 +26,7 @@ module Database
     getVessels,
     getServiceVessels,
     getLocationDeparturesV2,
+    getServiceHasScheduledDeparturesV2,
     getServicesWithScheduledDeparturesV2,
     getServiceOrganisations,
   )
@@ -448,37 +449,6 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
       WITH constants(query_date) AS (
           VALUES (date ?)
       ),
-      timings AS (
-          SELECT
-            document_id,
-            journey_pattern_timing_link_id,
-            journey_pattern_section_ref,
-            sort_order,
-            from_stop_point_ref,
-            from_activity,
-            from_timing_status,
-            to_stop_point_ref,
-            to_activity,
-            to_timing_status,
-            CASE from_wait_time WHEN ''
-                THEN make_interval()
-                ELSE make_interval(
-                        hours := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[1], '') :: Int, 0),
-                        mins := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[2], '') :: Int, 0),
-                        secs := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[3], '') :: Int, 0)
-                    )
-            END AS wait_time,
-            CASE run_time WHEN ''
-                THEN make_interval()
-                ELSE make_interval(
-                        hours := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[1], '') :: Int, 0),
-                        mins := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[2], '') :: Int, 0),
-                        secs := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[3], '') :: Int, 0)
-                    )
-            END AS run_time
-          FROM
-              tx2_journey_pattern_timing_links
-      ),
       day_of_week(derived_day_of_week) AS (
           SELECT
               CASE
@@ -538,6 +508,66 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           FROM heuristic_service_codes
           WHERE NOT EXISTS (SELECT 1 FROM mapped_service_codes)
       ),
+      effective_services AS (
+          SELECT
+              s.document_id,
+              s.service_code
+          FROM tx2_services s
+          JOIN effective_service_codes esc
+            ON esc.service_code = s.service_code
+          CROSS JOIN constants
+          WHERE s.mode = 'ferry'
+            AND (s.start_date IS NULL OR query_date >= s.start_date)
+            AND (s.end_date IS NULL OR query_date <= s.end_date)
+      ),
+      relevant_vehicle_journeys AS (
+          SELECT vj.*
+          FROM tx2_vehicle_journeys vj
+          JOIN effective_services es
+            ON es.document_id = vj.document_id
+           AND es.service_code = vj.service_code
+      ),
+      relevant_journey_patterns AS (
+          SELECT DISTINCT
+              vj.document_id,
+              vj.journey_pattern_id
+          FROM relevant_vehicle_journeys vj
+      ),
+      timings AS (
+          SELECT
+            document_id,
+            journey_pattern_timing_link_id,
+            journey_pattern_section_ref,
+            sort_order,
+            from_stop_point_ref,
+            from_activity,
+            from_timing_status,
+            to_stop_point_ref,
+            to_activity,
+            to_timing_status,
+            CASE from_wait_time WHEN ''
+                THEN make_interval()
+                ELSE make_interval(
+                        hours := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[1], '') :: Int, 0),
+                        mins := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[2], '') :: Int, 0),
+                        secs := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[3], '') :: Int, 0)
+                    )
+            END AS wait_time,
+            CASE run_time WHEN ''
+                THEN make_interval()
+                ELSE make_interval(
+                        hours := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[1], '') :: Int, 0),
+                        mins := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[2], '') :: Int, 0),
+                        secs := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[3], '') :: Int, 0)
+                    )
+            END AS run_time
+          FROM
+              tx2_journey_pattern_timing_links
+          WHERE document_id IN (
+              SELECT DISTINCT document_id
+              FROM effective_services
+          )
+      ),
       pattern_links AS (
           SELECT
               jps.document_id,
@@ -554,6 +584,9 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               t.wait_time,
               t.run_time
           FROM tx2_journey_pattern_sections jps
+          JOIN relevant_journey_patterns rjp
+            ON rjp.document_id = jps.document_id
+           AND rjp.journey_pattern_id = jps.journey_pattern_id
           JOIN tx2_journey_pattern_timing_links jptl
             ON jptl.document_id = jps.document_id
            AND jptl.journey_pattern_section_ref = jps.section_ref
@@ -576,7 +609,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               t.wait_time,
               t.run_time
           FROM tx2_vehicle_journey_timing_links vjtl
-          JOIN tx2_vehicle_journeys vj
+          JOIN relevant_vehicle_journeys vj
             ON vj.document_id = vjtl.document_id
            AND vj.vehicle_journey_code = vjtl.vehicle_journey_code
           JOIN timings t
@@ -612,7 +645,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               pl.to_timing_status,
               pl.wait_time,
               pl.run_time
-          FROM tx2_vehicle_journeys vj
+          FROM relevant_vehicle_journeys vj
           JOIN pattern_links pl
             ON pl.document_id = vj.document_id
            AND pl.journey_pattern_id = vj.journey_pattern_id
@@ -670,7 +703,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               ) :: TIMESTAMP AS arrival,
               NULLIF(vj.note, '') AS notes,
               d.source_modification_datetime
-          FROM tx2_vehicle_journeys vj
+          FROM relevant_vehicle_journeys vj
           CROSS JOIN constants
           CROSS JOIN day_of_week
           INNER JOIN effective_journey_links ejl
@@ -680,17 +713,9 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               ON mjt.document_id = ejl.document_id
              AND mjt.vehicle_journey_code = ejl.vehicle_journey_code
              AND mjt.global_sort_order = ejl.global_sort_order
-          INNER JOIN tx2_services s
-              ON s.document_id = vj.document_id
-             AND s.service_code = vj.service_code
-          INNER JOIN effective_service_codes esc
-              ON esc.service_code = s.service_code
           INNER JOIN tx2_documents d
-              ON d.document_id = s.document_id
-          WHERE s.mode = 'ferry'
-            AND (s.start_date IS NULL OR query_date >= s.start_date)
-            AND (s.end_date IS NULL OR query_date <= s.end_date)
-            AND ejl.from_activity IN ('', 'pickUp', 'pickUpAndSetDown')
+              ON d.document_id = vj.document_id
+          WHERE ejl.from_activity IN ('', 'pickUp', 'pickUpAndSetDown')
             AND ejl.to_activity IN ('', 'setDown', 'pickUpAndSetDown')
             AND (
                 NOT EXISTS (
@@ -813,6 +838,69 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           source_modification_datetime DESC NULLS LAST
     |]
     (date, serviceID, serviceID, serviceID, In matchedWeekOfMonthRulesParam, isBankHoliday, In matchedBankHolidayRulesParam, In matchedBankHolidayRulesParam)
+
+getServiceHasScheduledDeparturesV2 :: Int -> Application Bool
+getServiceHasScheduledDeparturesV2 serviceID = withConnection $ \connection -> do
+  results <-
+    query
+      connection
+      [sql|
+        WITH selected_service AS (
+            SELECT route
+            FROM services
+            WHERE service_id = ?
+        ),
+        service_stop_points AS (
+            SELECT l.stop_point_id
+            FROM service_locations sl
+            JOIN locations l ON l.location_id = sl.location_id
+            WHERE sl.service_id = ?
+              AND l.stop_point_id IS NOT NULL
+        ),
+        mapped_service_codes AS (
+            SELECT 1
+            FROM tx2_service_mappings sm
+            JOIN tx2_services s
+              ON s.service_code = sm.service_code
+            WHERE sm.service_id = ?
+              AND s.mode = 'ferry'
+            LIMIT 1
+        ),
+        heuristic_service_codes AS (
+            SELECT 1
+            FROM selected_service ss
+            JOIN service_stop_points sp_from ON TRUE
+            JOIN service_stop_points sp_to
+              ON sp_to.stop_point_id <> sp_from.stop_point_id
+            JOIN tx2_journey_pattern_timing_links jptl
+              ON jptl.from_stop_point_ref = sp_from.stop_point_id
+             AND jptl.to_stop_point_ref = sp_to.stop_point_id
+            JOIN tx2_journey_pattern_sections jps
+              ON jps.document_id = jptl.document_id
+             AND jps.section_ref = jptl.journey_pattern_section_ref
+            JOIN tx2_journey_patterns jp
+              ON jp.document_id = jps.document_id
+             AND jp.journey_pattern_id = jps.journey_pattern_id
+            JOIN tx2_services s
+              ON s.document_id = jp.document_id
+             AND s.service_code = jp.service_code
+            WHERE s.mode = 'ferry'
+              AND lower(ss.route) NOT LIKE '%freight%'
+            LIMIT 1
+        )
+        SELECT
+          EXISTS (SELECT 1 FROM mapped_service_codes)
+          OR (
+            NOT EXISTS (
+              SELECT 1
+              FROM tx2_service_mappings sm
+              WHERE sm.service_id = ?
+            )
+            AND EXISTS (SELECT 1 FROM heuristic_service_codes)
+          )
+      |]
+      (serviceID, serviceID, serviceID, serviceID)
+  pure $ maybe False (\(Only value) -> value) (listToMaybe results)
 
 getServicesWithScheduledDeparturesV2 :: Application [Int]
 getServicesWithScheduledDeparturesV2 = withConnection $ \connection ->
