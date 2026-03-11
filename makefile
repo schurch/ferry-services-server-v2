@@ -3,7 +3,15 @@
 define setup_env
 	$(eval include $(1))
 	$(eval export)
+	$(if $(strip $(LOG_LEVEL)),,$(eval export LOG_LEVEL=Info))
 endef
+
+SDK_PATH := $(shell command -v xcrun >/dev/null 2>&1 && xcrun --show-sdk-path 2>/dev/null)
+STACK_ENV_PREFIX :=
+
+ifneq ($(SDK_PATH),)
+STACK_ENV_PREFIX = C_INCLUDE_PATH="$(SDK_PATH)/usr/include/ffi"
+endif
 
 default: server
 
@@ -17,7 +25,7 @@ test-env:
 
 .PHONY:
 build:
-	C_INCLUDE_PATH="`xcrun --show-sdk-path`/usr/include/ffi" stack build
+	$(STACK_ENV_PREFIX) stack build
 
 .PHONY:
 build-release:
@@ -39,7 +47,7 @@ build-release:
 
 .PHONY: watch
 watch:
-	stack build --file-watch
+	$(STACK_ENV_PREFIX) stack build --file-watch
 
 .PHONY: server
 server: build dev-env
@@ -70,6 +78,22 @@ rail-departure-fetcher: build dev-env
 
 .PHONY: tests
 tests: test-env
-	psql -d ferry-services-test -U stefanchurch -c 'DROP TABLE IF EXISTS vessels; DROP TABLE IF EXISTS service_locations; DROP TABLE IF EXISTS installation_services; DROP TABLE IF EXISTS installations; DROP TABLE IF EXISTS location_weather; DROP TABLE IF EXISTS rail_departures; DROP TABLE IF EXISTS locations; DROP TABLE IF EXISTS schema_migrations; DROP TABLE IF EXISTS days_of_non_operation; DROP TABLE IF EXISTS days_of_operation; DROP TABLE IF EXISTS vehicle_journeys; DROP TABLE IF EXISTS journey_patterns CASCADE; DROP TABLE IF EXISTS lines; DROP TABLE IF EXISTS transxchangeservice_services; DROP TABLE IF EXISTS transxchange_services; DROP TABLE IF EXISTS operators; DROP TABLE IF EXISTS journey_pattern_timing_links; DROP TABLE IF EXISTS journey_pattern_sections; DROP TABLE IF EXISTS routes; DROP TABLE IF EXISTS route_links; DROP TABLE IF EXISTS route_sections; DROP TABLE IF EXISTS stop_points; DROP TYPE IF EXISTS day_of_week; DROP TABLE IF EXISTS serviced_organisation_working_days; DROP TABLE IF EXISTS serviced_organisations; DROP TABLE IF EXISTS services; DROP TABLE IF EXISTS organisations;'
-	migrate -source file://migrations -database "postgres://stefanchurch@localhost:5432/ferry-services-test?sslmode=disable" up
-	C_INCLUDE_PATH="`xcrun --show-sdk-path`/usr/include/ffi" stack test
+	psql "$(DB_CONNECTION)" -c 'DROP TABLE IF EXISTS vessels; DROP TABLE IF EXISTS service_locations; DROP TABLE IF EXISTS installation_services; DROP TABLE IF EXISTS installations; DROP TABLE IF EXISTS location_weather; DROP TABLE IF EXISTS rail_departures; DROP TABLE IF EXISTS locations; DROP TABLE IF EXISTS schema_migrations; DROP TABLE IF EXISTS days_of_non_operation; DROP TABLE IF EXISTS days_of_operation; DROP TABLE IF EXISTS vehicle_journeys; DROP TABLE IF EXISTS journey_patterns CASCADE; DROP TABLE IF EXISTS lines; DROP TABLE IF EXISTS transxchangeservice_services; DROP TABLE IF EXISTS transxchange_services; DROP TABLE IF EXISTS operators; DROP TABLE IF EXISTS journey_pattern_timing_links; DROP TABLE IF EXISTS journey_pattern_sections; DROP TABLE IF EXISTS routes; DROP TABLE IF EXISTS route_links; DROP TABLE IF EXISTS route_sections; DROP TABLE IF EXISTS stop_points; DROP TYPE IF EXISTS day_of_week; DROP TABLE IF EXISTS serviced_organisation_working_days; DROP TABLE IF EXISTS serviced_organisations; DROP TABLE IF EXISTS services; DROP TABLE IF EXISTS organisations;'
+	migrate -source file://migrations -database "$(DB_CONNECTION)" up
+	$(STACK_ENV_PREFIX) stack test
+
+.PHONY: tests-json
+tests-json:
+	$(STACK_ENV_PREFIX) stack test --test-arguments '--match "JSON Tests"'
+
+.PHONY: bootstrap-dev
+bootstrap-dev:
+	./scripts/bootstrap-dev.sh
+
+.PHONY: install-migrate
+install-migrate:
+	./scripts/install-migrate.sh
+
+.PHONY: install-system-deps
+install-system-deps:
+	./scripts/install-system-deps.sh
