@@ -2,12 +2,6 @@
 
 Backend services for the Ferry Services App.
 
-Run all `make` commands in this README from the repo root:
-
-```bash
-cd /home/stefan/ferry-services-server-v2
-```
-
 ## Prerequisites
 
 - Haskell Stack via `ghcup` or the Stack installer
