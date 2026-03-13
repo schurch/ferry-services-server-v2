@@ -201,5 +201,10 @@ defaultMmsis =
     ( 6, -- Pentland Ferries
       [ 235061705
       ]
+    ),
+    ( 7, -- Highland Council / Corran Ferry
+      [ 235001223,
+        235002334
+      ]
     )
   ]

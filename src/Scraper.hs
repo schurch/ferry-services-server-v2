@@ -3,7 +3,9 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Scraper
-  ( fetchOrkneyFerriesAndNotify,
+  ( corranStatusFromPageHtml,
+    fetchCorranFerryAndNotify,
+    fetchOrkneyFerriesAndNotify,
     fetchPentlandFerriesAndNotify,
     fetchShetlandFerriesAndNotify,
     fetchCalMacStatusesAndNotify,
@@ -15,6 +17,7 @@ where
 import AWS
 import Amazonka (AWSRequest (response))
 import CMark (commonmarkToHtml)
+import Control.Applicative ((<|>))
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, catch)
 import Control.Monad (forM_, forever, void, when)
@@ -24,10 +27,10 @@ import Data.Aeson (Value (String), eitherDecode, encode)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char (toLower)
-import Data.List (find, isInfixOf, nub, sortOn, (\\))
+import Data.List (find, isInfixOf, isPrefixOf, nub, sortOn, (\\))
 import Data.List.Utils (replace)
 import Data.Map (Map, findWithDefault, fromList)
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust, fromMaybe, listToMaybe, mapMaybe)
 import Data.Pool (Pool, withResource)
 import Data.Text (pack, unpack)
 import qualified Data.Text.Encoding as TE
@@ -60,6 +63,181 @@ import Utility (trim)
 newtype ScrapedServices = ScrapedServices {unScrapedServices :: [Service]}
 
 newtype DatabaseServices = DatabaseServices {unDatabaseServices :: [Service]}
+
+data CorranNewsItem = CorranNewsItem
+  { corranNewsItemTitle :: String,
+    corranNewsItemSummary :: String,
+    corranNewsItemURL :: String
+  }
+
+fetchCorranFerryAndNotify :: Application ()
+fetchCorranFerryAndNotify = do
+  info (msg @String "Fetching Corran Ferry service")
+  scrapedService <- liftIO fetchCorranFerry
+  let scrapedServices = ScrapedServices [scrapedService]
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 7
+  DB.saveServices $ unScrapedServices scrapedServices
+  notifyForServices scrapedServices databaseServices
+
+fetchCorranFerry :: IO Service
+fetchCorranFerry = do
+  page <- fetchPage "https://www.highland.gov.uk/corran-ferry"
+  let (resolvedStatus, selectedNews) = corranStatusAndNewsItemFromPageHtml page
+  additionalInfo <- traverse fetchCorranAdditionalInfo selectedNews
+  time <- getCurrentTime
+  return
+    Service
+      { serviceID = 6000,
+        serviceUpdated = time,
+        serviceArea = "Corran",
+        serviceRoute = "Nether Lochaber Ferry Terminal - Ardgour Ferry Terminal",
+        serviceStatus = resolvedStatus,
+        serviceAdditionalInfo = additionalInfo,
+        serviceDisruptionReason = Nothing,
+        serviceOrganisationID = 7,
+        serviceLastUpdatedDate = Nothing
+      }
+
+corranStatusFromPageHtml :: String -> ServiceStatus
+corranStatusFromPageHtml = fst . corranStatusAndNewsItemFromPageHtml
+
+corranStatusAndNewsItemFromPageHtml :: String -> (ServiceStatus, Maybe CorranNewsItem)
+corranStatusAndNewsItemFromPageHtml page =
+  (maybe Unknown corranNewsItemToStatus selectedNews, selectedNews)
+  where
+    newsItems = extractCorranNewsItems (parseTags page)
+    selectedNews = find isRelevantCorranNewsItem newsItems <|> listToMaybe newsItems
+
+isRelevantCorranNewsItem :: CorranNewsItem -> Bool
+isRelevantCorranNewsItem CorranNewsItem {..} =
+  let lowerTitle = map toLower corranNewsItemTitle
+   in "corran" `isInfixOf` lowerTitle
+        && any
+          (`isInfixOf` lowerTitle)
+          [ "service resumed",
+            "service update",
+            "passenger service update",
+            "repairs update",
+            "refit update",
+            "outage",
+            "withdrawn"
+          ]
+
+corranNewsItemToStatus :: CorranNewsItem -> ServiceStatus
+corranNewsItemToStatus CorranNewsItem {..} =
+  corranTextToStatus (corranNewsItemTitle <> " " <> corranNewsItemSummary)
+
+corranTextToStatus :: String -> ServiceStatus
+corranTextToStatus text
+  | any (`isInfixOf` lowerText) ["service resumed", "returned to service", "back in operation", "usual seven day-a-week timetable"] = Normal
+  | any (`isInfixOf` lowerText) ["withdrawn from service", "service suspended", "no service", "cancelled", "outage"] = Cancelled
+  | any (`isInfixOf` lowerText) ["service update", "passenger service update", "repairs update", "refit update", "disruption", "reduced service"] = Disrupted
+  | otherwise = Unknown
+  where
+    lowerText = map toLower text
+
+fetchCorranAdditionalInfo :: CorranNewsItem -> IO String
+fetchCorranAdditionalInfo CorranNewsItem {..} = do
+  htmlTags <- parseTags <$> fetchPage corranNewsItemURL
+  let bodyParagraphs = extractCorranArticleParagraphs htmlTags
+      titleHtml = "<p><a href='" <> corranNewsItemURL <> "'>" <> corranNewsItemTitle <> "</a></p>"
+      bodyHtml = unwords $ (\paragraph -> "<p>" <> paragraph <> "</p>") <$> bodyParagraphs
+  return $ titleHtml <> bodyHtml
+
+extractCorranNewsItems :: [Tag String] -> [CorranNewsItem]
+extractCorranNewsItems htmlTags =
+  mapMaybe articleToNewsItem (extractCorranListingArticles htmlTags)
+  where
+    articleToNewsItem :: [Tag String] -> Maybe CorranNewsItem
+    articleToNewsItem articleTags = do
+      ((href, title), _) <- listToMaybe $ extractTagContent "a" (\tag -> "listing__link" `isInfixOf` fromAttrib "class" tag) articleTags
+      let summary = maybe "" snd . listToMaybe $ extractTagContent "p" (\tag -> "listing__summary" `isInfixOf` fromAttrib "class" tag) articleTags
+      pure
+        CorranNewsItem
+          { corranNewsItemTitle = title,
+            corranNewsItemSummary = summary,
+            corranNewsItemURL =
+              if "http" `isInfixOf` href
+                then href
+                else "https://www.highland.gov.uk" <> href
+          }
+
+extractCorranListingArticles :: [Tag String] -> [[Tag String]]
+extractCorranListingArticles = go
+  where
+    go [] = []
+    go (tag : rest)
+      | isListingArticle tag =
+          let (articleTags, remaining) = collectArticle 1 [] rest
+           in articleTags : go remaining
+      | otherwise = go rest
+
+    isListingArticle :: Tag String -> Bool
+    isListingArticle tag =
+      isTagOpenName "article" tag && "listing" `isInfixOf` fromAttrib "class" tag
+
+    collectArticle :: Int -> [Tag String] -> [Tag String] -> ([Tag String], [Tag String])
+    collectArticle _ acc [] = (reverse acc, [])
+    collectArticle depth acc (tag : rest) =
+      case tag of
+        TagOpen "article" _
+          -> collectArticle (depth + 1) (tag : acc) rest
+        TagClose "article"
+          | depth == 1 -> (reverse acc, rest)
+          | otherwise -> collectArticle (depth - 1) (tag : acc) rest
+        _ -> collectArticle depth (tag : acc) rest
+
+extractCorranArticleParagraphs :: [Tag String] -> [String]
+extractCorranArticleParagraphs htmlTags =
+  filter (not . null)
+    . map (trim . replace "\160" " ")
+    . map snd
+    . extractTagContent "p" (const True)
+    $ case dropWhile (not . isEditorDiv) htmlTags of
+      [] -> []
+      TagOpen _ _ : rest -> collectDiv 1 [] rest
+      _ -> []
+  where
+    isEditorDiv :: Tag String -> Bool
+    isEditorDiv tag =
+      isTagOpenName "div" tag && fromAttrib "class" tag == "editor"
+
+    collectDiv :: Int -> [Tag String] -> [Tag String] -> [Tag String]
+    collectDiv _ acc [] = reverse acc
+    collectDiv depth acc (tag : rest) =
+      case tag of
+        TagOpen "div" _ -> collectDiv (depth + 1) (tag : acc) rest
+        TagClose "div"
+          | depth == 1 -> reverse acc
+          | otherwise -> collectDiv (depth - 1) (tag : acc) rest
+        _ -> collectDiv depth (tag : acc) rest
+
+extractTagContent :: String -> (Tag String -> Bool) -> [Tag String] -> [((String, String), String)]
+extractTagContent tagName predicate = go
+  where
+    go [] = []
+    go (tag : rest)
+      | isTagOpenName tagName tag && predicate tag =
+          let (content, remaining) = collectTag 1 [] rest
+              text = trim $ renderText content
+           in ((fromAttrib "href" tag, text), text) : go remaining
+      | otherwise = go rest
+
+    collectTag :: Int -> [Tag String] -> [Tag String] -> ([Tag String], [Tag String])
+    collectTag _ acc [] = (reverse acc, [])
+    collectTag depth acc (tag : rest) =
+      case tag of
+        TagOpen name _
+          | name == tagName -> collectTag (depth + 1) (tag : acc) rest
+        TagClose name
+          | name == tagName ->
+              if depth == 1
+                then (reverse acc, rest)
+                else collectTag (depth - 1) (tag : acc) rest
+        _ -> collectTag depth (tag : acc) rest
+
+    renderText :: [Tag String] -> String
+    renderText = concatMap (\t -> case t of TagText text -> text; _ -> "")
 
 fetchOrkneyFerriesAndNotify :: Application ()
 fetchOrkneyFerriesAndNotify = do
@@ -470,7 +648,15 @@ extractNorthLinkOpsNewsHtml htmlTags =
 
 fetchPage :: String -> IO String
 fetchPage location = do
-  request <- parseRequest location
+  request <-
+    setRequestHeaders
+      [ (hUserAgent, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"),
+        (hAccept, "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"),
+        (hAcceptLanguage, "en-GB,en;q=0.9"),
+        (hAcceptEncoding, "identity"),
+        (hConnection, "keep-alive")
+      ]
+      <$> parseRequest location
   response <- timeout (1000000 * 20) (unpack . TE.decodeUtf8With lenientDecode . getResponseBody <$> httpBS request) -- 20 second timeout
   case response of
     Nothing -> error $ "Error fetching " <> location

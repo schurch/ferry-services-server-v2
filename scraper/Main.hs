@@ -56,6 +56,7 @@ main = do
   forever $ do
     info logger (msg @String "Fetching statuses")
     catch (runReaderT fetchCalMacStatusesAndNotify env) (handleException logger)
+    catch (runReaderT fetchCorranFerryAndNotify env) (handleException logger)
     catch (runReaderT fetchNorthLinkServicesAndNotify env) (handleException logger)
     catch (runReaderT fetchPentlandFerriesAndNotify env) (handleException logger)
     catch (runReaderT fetchWesternFerriesAndNotify env) (handleException logger)
