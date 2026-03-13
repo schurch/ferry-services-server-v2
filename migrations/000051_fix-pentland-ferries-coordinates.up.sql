@@ -1,0 +1,11 @@
+BEGIN;
+
+UPDATE locations
+SET coordinate = ST_SetSRID(ST_Point(58.63917534851306, -3.1614340648459605), 4326)
+WHERE location_id = 98;
+
+UPDATE locations
+SET coordinate = ST_SetSRID(ST_Point(58.832021233320255, -2.9622400477352535), 4326)
+WHERE location_id = 99;
+
+COMMIT;

@@ -197,5 +197,9 @@ defaultMmsis =
         232029607,
         235021681
       ]
+    ),
+    ( 6, -- Pentland Ferries
+      [ 235061705
+      ]
     )
   ]

@@ -4,6 +4,7 @@
 
 module Scraper
   ( fetchOrkneyFerriesAndNotify,
+    fetchPentlandFerriesAndNotify,
     fetchShetlandFerriesAndNotify,
     fetchCalMacStatusesAndNotify,
     fetchNorthLinkServicesAndNotify,
@@ -22,12 +23,15 @@ import Control.Monad.Reader (asks)
 import Data.Aeson (Value (String), eitherDecode, encode)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as C
+import Data.Char (toLower)
 import Data.List (find, isInfixOf, nub, sortOn, (\\))
 import Data.List.Utils (replace)
 import Data.Map (Map, findWithDefault, fromList)
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Pool (Pool, withResource)
 import Data.Text (pack, unpack)
+import qualified Data.Text.Encoding as TE
+import Data.Text.Encoding.Error (lenientDecode)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.UUID (UUID)
@@ -64,6 +68,70 @@ fetchOrkneyFerriesAndNotify = do
   databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 5
   DB.saveServices $ unScrapedServices scrapedServices
   notifyForServices scrapedServices databaseServices
+
+fetchPentlandFerriesAndNotify :: Application ()
+fetchPentlandFerriesAndNotify = do
+  info (msg @String "Fetching Pentland Ferries service")
+  scrapedServices <- ScrapedServices . (: []) <$> liftIO fetchPentlandFerries
+  databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 6
+  DB.saveServices $ unScrapedServices scrapedServices
+  notifyForServices scrapedServices databaseServices
+
+fetchPentlandFerries :: IO Service
+fetchPentlandFerries = do
+  htmlTags <- parseTags <$> fetchPage "https://pentlandferries.co.uk/"
+  let announcementLines = extractPentlandAnnouncementLines htmlTags
+  time <- getCurrentTime
+  return
+    Service
+      { serviceID = 5000,
+        serviceUpdated = time,
+        serviceArea = "Pentland Firth",
+        serviceRoute = "Gills Bay - St Margaret's Hope",
+        serviceStatus = announcementTextToStatus (unwords announcementLines),
+        serviceAdditionalInfo = announcementLinesToHtml announcementLines,
+        serviceDisruptionReason = Nothing,
+        serviceOrganisationID = 6,
+        serviceLastUpdatedDate = Nothing
+      }
+  where
+    announcementTextToStatus :: String -> ServiceStatus
+    announcementTextToStatus text
+      | "cancelled" `isInfixOf` lowerText = Cancelled
+      | any (`isInfixOf` lowerText) ["disruption", "delayed", "delay", "amended", "adverse weather", "weather conditions"] = Disrupted
+      | otherwise = Normal
+      where
+        lowerText = map toLower text
+
+    announcementLinesToHtml :: [String] -> Maybe String
+    announcementLinesToHtml [] = Nothing
+    announcementLinesToHtml lines' = Just $ unwords $ (\line -> "<p>" <> line <> "</p>") <$> lines'
+
+extractPentlandAnnouncementLines :: [Tag String] -> [String]
+extractPentlandAnnouncementLines tags =
+  case dropWhile (not . isAnnouncementContainer) tags of
+    [] -> []
+    TagOpen _ _ : rest -> go 1 [] rest
+    _ -> []
+  where
+    isAnnouncementContainer :: Tag String -> Bool
+    isAnnouncementContainer tag =
+      isTagOpenName "div" tag && "vc_acf announce" `isInfixOf` fromAttrib "class" tag
+
+    go :: Int -> [String] -> [Tag String] -> [String]
+    go _ acc [] = reverse acc
+    go depth acc (tag : rest) =
+      case tag of
+        TagOpen "div" _ -> go (depth + 1) acc rest
+        TagClose "div"
+          | depth == 1 -> reverse acc
+          | otherwise -> go (depth - 1) acc rest
+        TagText raw ->
+          let cleaned = trim (replace "\160" " " raw)
+           in if null cleaned
+                then go depth acc rest
+                else go depth (cleaned : acc) rest
+        _ -> go depth acc rest
 
 fetchOrkneyFerries :: IO ScrapedServices
 fetchOrkneyFerries = do
@@ -403,7 +471,7 @@ extractNorthLinkOpsNewsHtml htmlTags =
 fetchPage :: String -> IO String
 fetchPage location = do
   request <- parseRequest location
-  response <- timeout (1000000 * 20) (B8.unpack . getResponseBody <$> httpBS request) -- 20 second timeout
+  response <- timeout (1000000 * 20) (unpack . TE.decodeUtf8With lenientDecode . getResponseBody <$> httpBS request) -- 20 second timeout
   case response of
     Nothing -> error $ "Error fetching " <> location
     Just result -> return result
