@@ -44,6 +44,7 @@ library:
     - network
     - mtl
     - postgresql-simple
+    - process
     - regex-compat
     - resource-pool
     - scientific

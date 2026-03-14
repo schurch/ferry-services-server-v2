@@ -51,8 +51,11 @@ import Network.HTTP.Types.Header
     hOrigin,
     hUserAgent,
   )
+import System.Directory (doesFileExist, findExecutable)
+import System.Exit (ExitCode (..))
 import System.Logger.Class (Logger, info)
 import System.Logger.Message (msg)
+import System.Process (readProcessWithExitCode)
 import System.Timeout (timeout)
 import Text.HTML.TagSoup (Tag (..), fromAttrib, isTagOpen, isTagOpenName, parseTags, renderTags, (~/=))
 import Text.HTML.TagSoup.Tree (renderTree, tagTree)
@@ -81,7 +84,7 @@ fetchCorranFerryAndNotify = do
 
 fetchCorranFerry :: IO Service
 fetchCorranFerry = do
-  page <- fetchPage "https://www.highland.gov.uk/corran-ferry"
+  page <- fetchCorranPage
   let (resolvedStatus, selectedNews) = corranStatusAndNewsItemFromPageHtml page
   additionalInfo <- traverse fetchCorranAdditionalInfo selectedNews
   time <- getCurrentTime
@@ -90,13 +93,62 @@ fetchCorranFerry = do
       { serviceID = 6000,
         serviceUpdated = time,
         serviceArea = "Corran",
-        serviceRoute = "Nether Lochaber Ferry Terminal - Ardgour Ferry Terminal",
+        serviceRoute = "Nether Lochaber - Ardgour",
         serviceStatus = resolvedStatus,
         serviceAdditionalInfo = additionalInfo,
         serviceDisruptionReason = Nothing,
         serviceOrganisationID = 7,
         serviceLastUpdatedDate = Nothing
       }
+
+fetchCorranPage :: IO String
+fetchCorranPage = do
+  let url = "https://www.highland.gov.uk/corran-ferry"
+  page <- fetchPage url
+  if corranPageHasNewsItems page
+    then pure page
+    else fetchCorranPageWithPlaywright url
+
+corranPageHasNewsItems :: String -> Bool
+corranPageHasNewsItems = not . null . extractCorranNewsItems . parseTags
+
+fetchCorranPageWithPlaywright :: String -> IO String
+fetchCorranPageWithPlaywright url = do
+  nodeExecutable <- findExecutable "node"
+  case nodeExecutable of
+    Nothing ->
+      error "Corran Playwright fetch required but 'node' is not installed"
+    Just nodePath -> do
+      scriptPath <- resolveCorranPlaywrightScript
+      (exitCode, stdoutText, stderrText) <-
+        readProcessWithExitCode
+          nodePath
+          [scriptPath, url]
+          ""
+      case exitCode of
+        ExitSuccess -> pure stdoutText
+        ExitFailure _ ->
+          error ("Corran Playwright fetch failed: " <> stderrText)
+
+resolveCorranPlaywrightScript :: IO FilePath
+resolveCorranPlaywrightScript = do
+  let candidatePaths =
+        [ "/opt/ferry-services/scripts/fetch-corran-page.mjs",
+          "scripts/fetch-corran-page.mjs"
+        ]
+  existingPath <- findM doesFileExist candidatePaths
+  case existingPath of
+    Just path -> pure path
+    Nothing ->
+      error "Corran Playwright script not found"
+
+findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
+findM _ [] = pure Nothing
+findM predicate (x : xs) = do
+  matches <- predicate x
+  if matches
+    then pure (Just x)
+    else findM predicate xs
 
 corranStatusFromPageHtml :: String -> ServiceStatus
 corranStatusFromPageHtml = fst . corranStatusAndNewsItemFromPageHtml

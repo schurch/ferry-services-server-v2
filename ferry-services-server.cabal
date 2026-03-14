@@ -66,6 +66,7 @@ library
     , mtl
     , network
     , postgresql-simple
+    , process
     , regex-compat
     , resource-pool
     , scientific
