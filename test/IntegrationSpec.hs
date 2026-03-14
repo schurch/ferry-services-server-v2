@@ -7,7 +7,7 @@ import Control.Monad.Reader
     asks,
   )
 import Data.Aeson (FromJSON, decode, encode)
-import Data.List (find)
+import Data.List (find, isPrefixOf)
 import Data.Pool
   ( Pool,
     createPool,
@@ -20,7 +20,7 @@ import Network.HTTP.Types.Header (Header)
 import Network.Wai (Application)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
 import Scraper
-import System.Environment (getEnv, setEnv)
+import System.Environment (getEnv, lookupEnv, setEnv)
 import System.Logger
   ( Logger,
     Output (StdOut),
@@ -130,7 +130,7 @@ jsonReponseMatcher jsonChecker = do
 setupIntegrationTests :: IO ()
 setupIntegrationTests = do
   logger <- create StdOut
-  connectionString <- getEnv "DB_CONNECTION"
+  connectionString <- getDbConnectionString
   connectionPool <-
     createPool
       (connectPostgreSQL $ fromString connectionString)
@@ -164,7 +164,7 @@ app :: IO Network.Wai.Application
 app = do
   logger <- create StdOut
   requestLogger <- mkRequestLogger $ loggerSettings logger
-  connectionString <- getEnv "DB_CONNECTION"
+  connectionString <- getDbConnectionString
   connectionPool <-
     createPool
       (connectPostgreSQL $ fromString connectionString)
@@ -173,3 +173,19 @@ app = do
       60 -- unused connections are kept open for a minute
       10 -- max. 10 connections open per stripe
   scottyAppT (`runReaderT` Env logger connectionPool) (webApp requestLogger)
+
+getDbConnectionString :: IO String
+getDbConnectionString = do
+  current <- lookupEnv "DB_CONNECTION"
+  case current of
+    Just value | not (null value) -> return value
+    _ -> do
+      envfile <- readFile "envfile-test.local"
+      let prefix = "DB_CONNECTION=" :: String
+      let match = find (prefix `isPrefixOf`) (lines envfile)
+      case match of
+        Just line -> do
+          let value = drop (length prefix) line
+          setEnv "DB_CONNECTION" value
+          return value
+        Nothing -> error "DB_CONNECTION missing from env and envfile-test.local"

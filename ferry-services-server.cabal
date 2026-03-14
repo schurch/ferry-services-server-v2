@@ -205,6 +205,7 @@ test-suite ferry-services-server-test
       IntegrationSpec
       JSONSpec
       Paths_ferry_services_server
+      TransxchangeApiSpec
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
@@ -212,6 +213,7 @@ test-suite ferry-services-server-test
       aeson
     , aeson-qq
     , base >=4.7 && <5
+    , bytestring
     , ferry-services-server
     , hspec
     , hspec-wai

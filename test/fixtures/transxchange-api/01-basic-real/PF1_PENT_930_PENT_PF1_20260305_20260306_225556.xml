@@ -1,0 +1,732 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TransXChange xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" CreationDateTime="2026-03-06T18:30:35.694" ModificationDateTime="2026-03-06T18:30:35.694" Modification="new" RevisionNumber="0" FileName="PF1_PENT_930_PENT_PF1_20260305_20260306_225556.xml" SchemaVersion="2.1" RegistrationDocument="false" xsi:schemaLocation="http://www.transxchange.org.uk/ http://www.transxchange.org.uk/schema/2.1/TransXChange_general.xsd" xmlns="http://www.transxchange.org.uk/">
+  <StopPoints>
+    <AnnotatedStopPointRef>
+      <StopPointRef>9300GIL</StopPointRef>
+      <CommonName>Gills Bay Ferry Terminal</CommonName>
+    </AnnotatedStopPointRef>
+    <AnnotatedStopPointRef>
+      <StopPointRef>9300SMH</StopPointRef>
+      <CommonName>St Margarets Hope Ferry Terminal</CommonName>
+    </AnnotatedStopPointRef>
+  </StopPoints>
+  <RouteSections>
+    <RouteSection id="1">
+      <RouteLink id="1_1">
+        <From>
+          <StopPointRef>9300GIL</StopPointRef>
+        </From>
+        <To>
+          <StopPointRef>9300SMH</StopPointRef>
+        </To>
+        <Distance>28617</Distance>
+        <Direction>outbound</Direction>
+        <Track>
+          <Mapping>
+            <Location>
+              <Translation>
+                <Easting>332663</Easting>
+                <Northing>972955</Northing>
+                <Longitude>-3.1616675</Longitude>
+                <Latitude>58.6392199</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>332860</Easting>
+                <Northing>973008</Northing>
+                <Longitude>-3.1582934</Longitude>
+                <Latitude>58.6397244</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>332894</Easting>
+                <Northing>973245</Northing>
+                <Longitude>-3.1577693</Longitude>
+                <Latitude>58.6418572</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>332841</Easting>
+                <Northing>973420</Northing>
+                <Longitude>-3.1587439</Longitude>
+                <Latitude>58.6434145</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>333387</Easting>
+                <Northing>976205</Northing>
+                <Longitude>-3.1501639</Longitude>
+                <Latitude>58.6685082</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>334345</Easting>
+                <Northing>979427</Northing>
+                <Longitude>-3.134582</Longitude>
+                <Latitude>58.6975826</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>338378</Easting>
+                <Northing>989945</Northing>
+                <Longitude>-3.0678984</Longitude>
+                <Latitude>58.7926223</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>339656</Easting>
+                <Northing>994062</Northing>
+                <Longitude>-3.0469131</Longitude>
+                <Latitude>58.8297686</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>341423</Easting>
+                <Northing>994856</Northing>
+                <Longitude>-3.0165178</Longitude>
+                <Latitude>58.8371423</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>344571</Easting>
+                <Northing>995048</Northing>
+                <Longitude>-2.9620351</Longitude>
+                <Latitude>58.8392871</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>344936</Easting>
+                <Northing>994564</Northing>
+                <Longitude>-2.9556015</Longitude>
+                <Latitude>58.8349852</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>344782</Easting>
+                <Northing>994276</Northing>
+                <Longitude>-2.9581927</Longitude>
+                <Latitude>58.8323795</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>344591</Easting>
+                <Northing>994251</Northing>
+                <Longitude>-2.9614985</Longitude>
+                <Latitude>58.8321354</Latitude>
+              </Translation>
+            </Location>
+          </Mapping>
+        </Track>
+      </RouteLink>
+    </RouteSection>
+    <RouteSection id="2">
+      <RouteLink id="2_1">
+        <From>
+          <StopPointRef>9300SMH</StopPointRef>
+        </From>
+        <To>
+          <StopPointRef>9300GIL</StopPointRef>
+        </To>
+        <Distance>28617</Distance>
+        <Direction>inbound</Direction>
+        <Track>
+          <Mapping>
+            <Location>
+              <Translation>
+                <Easting>344591</Easting>
+                <Northing>994251</Northing>
+                <Longitude>-2.9614985</Longitude>
+                <Latitude>58.8321354</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>344782</Easting>
+                <Northing>994276</Northing>
+                <Longitude>-2.9581927</Longitude>
+                <Latitude>58.8323795</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>344936</Easting>
+                <Northing>994564</Northing>
+                <Longitude>-2.9556015</Longitude>
+                <Latitude>58.8349852</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>344571</Easting>
+                <Northing>995048</Northing>
+                <Longitude>-2.9620351</Longitude>
+                <Latitude>58.8392871</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>341423</Easting>
+                <Northing>994856</Northing>
+                <Longitude>-3.0165178</Longitude>
+                <Latitude>58.8371423</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>339656</Easting>
+                <Northing>994062</Northing>
+                <Longitude>-3.0469131</Longitude>
+                <Latitude>58.8297686</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>338378</Easting>
+                <Northing>989945</Northing>
+                <Longitude>-3.0678984</Longitude>
+                <Latitude>58.7926223</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>334345</Easting>
+                <Northing>979427</Northing>
+                <Longitude>-3.134582</Longitude>
+                <Latitude>58.6975826</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>333387</Easting>
+                <Northing>976205</Northing>
+                <Longitude>-3.1501639</Longitude>
+                <Latitude>58.6685082</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>332841</Easting>
+                <Northing>973420</Northing>
+                <Longitude>-3.1587439</Longitude>
+                <Latitude>58.6434145</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>332894</Easting>
+                <Northing>973245</Northing>
+                <Longitude>-3.1577693</Longitude>
+                <Latitude>58.6418572</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>332860</Easting>
+                <Northing>973008</Northing>
+                <Longitude>-3.1582934</Longitude>
+                <Latitude>58.6397244</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>332663</Easting>
+                <Northing>972955</Northing>
+                <Longitude>-3.1616675</Longitude>
+                <Latitude>58.6392199</Latitude>
+              </Translation>
+            </Location>
+          </Mapping>
+        </Track>
+      </RouteLink>
+    </RouteSection>
+  </RouteSections>
+  <Routes>
+    <Route id="1">
+      <Description>Gills Bay - St Margaret's Hope</Description>
+      <RouteSectionRef>1</RouteSectionRef>
+    </Route>
+    <Route id="2">
+      <Description>St Margaret's Hope - Gills Bay</Description>
+      <RouteSectionRef>2</RouteSectionRef>
+    </Route>
+  </Routes>
+  <JourneyPatternSections>
+    <JourneyPatternSection id="1">
+      <JourneyPatternTimingLink id="1_1">
+        <From SequenceNumber="0">
+          <Activity>pickUp</Activity>
+          <StopPointRef>9300GIL</StopPointRef>
+          <TimingStatus>PTP</TimingStatus>
+        </From>
+        <To SequenceNumber="1">
+          <Activity>setDown</Activity>
+          <StopPointRef>9300SMH</StopPointRef>
+          <TimingStatus>PTP</TimingStatus>
+        </To>
+        <RouteLinkRef>1_1</RouteLinkRef>
+        <RunTime>PT1H10M0S</RunTime>
+        <Distance>28617</Distance>
+      </JourneyPatternTimingLink>
+    </JourneyPatternSection>
+    <JourneyPatternSection id="2">
+      <JourneyPatternTimingLink id="2_1">
+        <From SequenceNumber="0">
+          <Activity>pickUp</Activity>
+          <StopPointRef>9300SMH</StopPointRef>
+          <TimingStatus>PTP</TimingStatus>
+        </From>
+        <To SequenceNumber="1">
+          <Activity>setDown</Activity>
+          <StopPointRef>9300GIL</StopPointRef>
+          <TimingStatus>PTP</TimingStatus>
+        </To>
+        <RouteLinkRef>2_1</RouteLinkRef>
+        <RunTime>PT1H10M0S</RunTime>
+        <Distance>28617</Distance>
+      </JourneyPatternTimingLink>
+    </JourneyPatternSection>
+  </JourneyPatternSections>
+  <Operators>
+    <Operator id="7778757">
+      <NationalOperatorCode>PENT</NationalOperatorCode>
+      <OperatorCode>PENT</OperatorCode>
+      <OperatorShortName>Pentland Ferries</OperatorShortName>
+      <OperatorNameOnLicence>Pentland Ferries</OperatorNameOnLicence>
+      <TradingName>Pentland Ferries</TradingName>
+      <LicenceNumber>PM0999991</LicenceNumber>
+      <LicenceClassification>standardNational</LicenceClassification>
+      <EnquiryTelephoneNumber>
+        <TelNationalNumber>01856 831226</TelNationalNumber>
+      </EnquiryTelephoneNumber>
+      <ContactTelephoneNumber>
+        <TelNationalNumber>01856 831226</TelNationalNumber>
+      </ContactTelephoneNumber>
+      <OperatorAddresses>
+        <CorrespondenceAddress>
+          <Line xmlns="http://www.govtalk.gov.uk/people/AddressAndPersonalDetails">Pier Rd</Line>
+          <Line xmlns="http://www.govtalk.gov.uk/people/AddressAndPersonalDetails">St Margaret's Hope</Line>
+          <Line xmlns="http://www.govtalk.gov.uk/people/AddressAndPersonalDetails">Orkney</Line>
+          <PostCode xmlns="http://www.govtalk.gov.uk/people/AddressAndPersonalDetails">KW17 2SW</PostCode>
+        </CorrespondenceAddress>
+      </OperatorAddresses>
+    </Operator>
+  </Operators>
+  <Services>
+    <Service>
+      <ServiceCode>PENT_PF1</ServiceCode>
+      <Lines>
+        <Line id="SLPF1">
+          <LineName>PF1</LineName>
+        </Line>
+      </Lines>
+      <OperatingPeriod>
+        <StartDate>2026-03-05</StartDate>
+        <EndDate>2027-03-04</EndDate>
+      </OperatingPeriod>
+      <RegisteredOperatorRef>7778757</RegisteredOperatorRef>
+      <StopRequirements>
+        <NoNewStopsRequired />
+      </StopRequirements>
+      <Mode>ferry</Mode>
+      <PublicUse>true</PublicUse>
+      <StandardService>
+        <Origin>Gills Bay</Origin>
+        <Destination>St Margaret's Hope</Destination>
+        <JourneyPattern id="1">
+          <DestinationDisplay>St Margarets Hope Ferry Terminal</DestinationDisplay>
+          <OperatorRef>7778757</OperatorRef>
+          <Direction>outbound</Direction>
+          <Operational>
+            <Block>
+              <Description>45378.Txc5DD1B039-F3A3-4B8C-BD8B-C857240CC7EF</Description>
+              <BlockNumber>Txc5DD1B039-F3A3-4B8C-BD8B-C857240CC7EF</BlockNumber>
+            </Block>
+          </Operational>
+          <RouteRef>1</RouteRef>
+          <JourneyPatternSectionRefs>1</JourneyPatternSectionRefs>
+        </JourneyPattern>
+        <JourneyPattern id="2">
+          <DestinationDisplay>Gills Bay Ferry Terminal</DestinationDisplay>
+          <OperatorRef>7778757</OperatorRef>
+          <Direction>inbound</Direction>
+          <Operational>
+            <Block>
+              <Description>45378.Txc1D080E31-2797-43A8-8419-EA4DE780C6B4</Description>
+              <BlockNumber>Txc1D080E31-2797-43A8-8419-EA4DE780C6B4</BlockNumber>
+            </Block>
+          </Operational>
+          <RouteRef>2</RouteRef>
+          <JourneyPatternSectionRefs>2</JourneyPatternSectionRefs>
+        </JourneyPattern>
+      </StandardService>
+    </Service>
+  </Services>
+  <VehicleJourneys>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>1</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>09:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="1_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>2</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>09:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="2_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>3</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>09:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="3_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>4</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>13:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="4_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>5</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>13:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="5_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>6</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>13:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="6_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>7</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>18:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="7_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>8</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>18:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="8_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>9</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>18:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="9_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>10</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>07:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="10_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>11</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>07:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="11_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>12</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>07:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="12_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>13</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>11:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="13_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>14</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>11:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="14_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>15</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>11:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="15_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>16</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="16_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>17</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="17_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778757</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>18</VehicleJourneyCode>
+      <ServiceRef>PENT_PF1</ServiceRef>
+      <LineRef>SLPF1</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="18_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+  </VehicleJourneys>
+</TransXChange>

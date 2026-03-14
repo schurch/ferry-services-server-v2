@@ -175,6 +175,7 @@ tests:
     dependencies:
     - aeson
     - aeson-qq
+    - bytestring
     - ferry-services-server
     - hspec
     - hspec-wai

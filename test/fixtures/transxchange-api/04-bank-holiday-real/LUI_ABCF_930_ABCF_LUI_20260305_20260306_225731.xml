@@ -1,0 +1,3712 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TransXChange xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" CreationDateTime="2026-03-06T18:30:36.216" ModificationDateTime="2026-03-06T18:30:36.216" Modification="new" RevisionNumber="0" FileName="LUI_ABCF_930_ABCF_LUI_20260305_20260306_225731.xml" SchemaVersion="2.1" RegistrationDocument="false" xsi:schemaLocation="http://www.transxchange.org.uk/ http://www.transxchange.org.uk/schema/2.1/TransXChange_general.xsd" xmlns="http://www.transxchange.org.uk/">
+  <ServicedOrganisations>
+    <ServicedOrganisation>
+      <OrganisationCode>Argyll_Bute</OrganisationCode>
+      <Name>Argyll &amp; Bute</Name>
+      <WorkingDays>
+        <DateRange>
+          <StartDate>2026-03-09</StartDate>
+          <EndDate>2026-03-13</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-03-16</StartDate>
+          <EndDate>2026-03-20</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-03-23</StartDate>
+          <EndDate>2026-03-27</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-03-30</StartDate>
+          <EndDate>2026-04-02</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-04-20</StartDate>
+          <EndDate>2026-04-24</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-04-27</StartDate>
+          <EndDate>2026-05-01</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-05-04</StartDate>
+          <EndDate>2026-05-08</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-05-11</StartDate>
+          <EndDate>2026-05-15</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-05-18</StartDate>
+          <EndDate>2026-05-21</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-05-26</StartDate>
+          <EndDate>2026-05-29</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-06-01</StartDate>
+          <EndDate>2026-06-05</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-06-08</StartDate>
+          <EndDate>2026-06-12</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-06-15</StartDate>
+          <EndDate>2026-06-19</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-06-22</StartDate>
+          <EndDate>2026-06-26</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-06-29</StartDate>
+          <EndDate>2026-07-01</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-08-17</StartDate>
+          <EndDate>2026-08-21</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-08-24</StartDate>
+          <EndDate>2026-08-28</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-08-31</StartDate>
+          <EndDate>2026-09-04</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-09-07</StartDate>
+          <EndDate>2026-09-11</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-09-14</StartDate>
+          <EndDate>2026-09-18</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-09-21</StartDate>
+          <EndDate>2026-09-25</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-09-28</StartDate>
+          <EndDate>2026-10-02</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-10-19</StartDate>
+          <EndDate>2026-10-23</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-10-26</StartDate>
+          <EndDate>2026-10-30</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-11-02</StartDate>
+          <EndDate>2026-11-06</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-11-09</StartDate>
+          <EndDate>2026-11-13</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-11-16</StartDate>
+          <EndDate>2026-11-20</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-11-24</StartDate>
+          <EndDate>2026-11-27</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-11-30</StartDate>
+          <EndDate>2026-12-04</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-12-07</StartDate>
+          <EndDate>2026-12-11</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-12-14</StartDate>
+          <EndDate>2026-12-18</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2026-12-21</StartDate>
+          <EndDate>2026-12-22</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2027-01-05</StartDate>
+          <EndDate>2027-01-08</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2027-01-11</StartDate>
+          <EndDate>2027-01-15</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2027-01-18</StartDate>
+          <EndDate>2027-01-22</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2027-01-25</StartDate>
+          <EndDate>2027-01-29</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2027-02-01</StartDate>
+          <EndDate>2027-02-05</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2027-02-16</StartDate>
+          <EndDate>2027-02-19</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2027-02-22</StartDate>
+          <EndDate>2027-02-26</EndDate>
+        </DateRange>
+        <DateRange>
+          <StartDate>2027-03-01</StartDate>
+          <EndDate>2027-03-04</EndDate>
+        </DateRange>
+      </WorkingDays>
+    </ServicedOrganisation>
+  </ServicedOrganisations>
+  <StopPoints>
+    <AnnotatedStopPointRef>
+      <StopPointRef>9300CUN</StopPointRef>
+      <CommonName>North Cuan Seil Ferry Terminal</CommonName>
+    </AnnotatedStopPointRef>
+    <AnnotatedStopPointRef>
+      <StopPointRef>9300LUI</StopPointRef>
+      <CommonName>South Cuan Luing Ferry Terminal</CommonName>
+    </AnnotatedStopPointRef>
+  </StopPoints>
+  <RouteSections>
+    <RouteSection id="1">
+      <RouteLink id="1_1">
+        <From>
+          <StopPointRef>9300CUN</StopPointRef>
+        </From>
+        <To>
+          <StopPointRef>9300LUI</StopPointRef>
+        </To>
+        <Distance>272</Distance>
+        <Direction>outbound</Direction>
+        <Track>
+          <Mapping>
+            <Location>
+              <Translation>
+                <Easting>175359</Easting>
+                <Northing>714287</Northing>
+                <Longitude>-5.629386</Longitude>
+                <Latitude>56.2677407</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>175120</Easting>
+                <Northing>714157</Northing>
+                <Longitude>-5.633129</Longitude>
+                <Latitude>56.266462</Latitude>
+              </Translation>
+            </Location>
+          </Mapping>
+        </Track>
+      </RouteLink>
+    </RouteSection>
+    <RouteSection id="2">
+      <RouteLink id="2_1">
+        <From>
+          <StopPointRef>9300LUI</StopPointRef>
+        </From>
+        <To>
+          <StopPointRef>9300CUN</StopPointRef>
+        </To>
+        <Distance>272</Distance>
+        <Direction>inbound</Direction>
+        <Track>
+          <Mapping>
+            <Location>
+              <Translation>
+                <Easting>175120</Easting>
+                <Northing>714157</Northing>
+                <Longitude>-5.633129</Longitude>
+                <Latitude>56.266462</Latitude>
+              </Translation>
+            </Location>
+            <Location>
+              <Translation>
+                <Easting>175359</Easting>
+                <Northing>714287</Northing>
+                <Longitude>-5.629386</Longitude>
+                <Latitude>56.2677407</Latitude>
+              </Translation>
+            </Location>
+          </Mapping>
+        </Track>
+      </RouteLink>
+    </RouteSection>
+  </RouteSections>
+  <Routes>
+    <Route id="1">
+      <Description>North Cuan Seil - South Cuan Luing</Description>
+      <RouteSectionRef>1</RouteSectionRef>
+    </Route>
+    <Route id="2">
+      <Description>South Cuan Luing - North Cuan Seil</Description>
+      <RouteSectionRef>2</RouteSectionRef>
+    </Route>
+  </Routes>
+  <JourneyPatternSections>
+    <JourneyPatternSection id="1">
+      <JourneyPatternTimingLink id="1_1">
+        <From SequenceNumber="0">
+          <Activity>pickUp</Activity>
+          <StopPointRef>9300CUN</StopPointRef>
+          <TimingStatus>PTP</TimingStatus>
+        </From>
+        <To SequenceNumber="1">
+          <Activity>setDown</Activity>
+          <StopPointRef>9300LUI</StopPointRef>
+          <TimingStatus>PTP</TimingStatus>
+        </To>
+        <RouteLinkRef>1_1</RouteLinkRef>
+        <RunTime>PT0H5M0S</RunTime>
+        <Distance>272</Distance>
+      </JourneyPatternTimingLink>
+    </JourneyPatternSection>
+    <JourneyPatternSection id="2">
+      <JourneyPatternTimingLink id="2_1">
+        <From SequenceNumber="0">
+          <Activity>pickUp</Activity>
+          <StopPointRef>9300LUI</StopPointRef>
+          <TimingStatus>PTP</TimingStatus>
+        </From>
+        <To SequenceNumber="1">
+          <Activity>setDown</Activity>
+          <StopPointRef>9300CUN</StopPointRef>
+          <TimingStatus>PTP</TimingStatus>
+        </To>
+        <RouteLinkRef>2_1</RouteLinkRef>
+        <RunTime>PT0H5M0S</RunTime>
+        <Distance>272</Distance>
+      </JourneyPatternTimingLink>
+    </JourneyPatternSection>
+  </JourneyPatternSections>
+  <Operators>
+    <Operator id="7778789">
+      <NationalOperatorCode>ABCF</NationalOperatorCode>
+      <OperatorCode>ABCF</OperatorCode>
+      <OperatorShortName>Argyll + Bute Council Fe</OperatorShortName>
+      <OperatorNameOnLicence>Argyll + Bute Council Ferries</OperatorNameOnLicence>
+      <TradingName>Argyll + Bute Council Ferries</TradingName>
+      <LicenceNumber>PM0999997</LicenceNumber>
+      <LicenceClassification>standardNational</LicenceClassification>
+      <EnquiryTelephoneNumber>
+        <TelNationalNumber>01631 562125</TelNationalNumber>
+      </EnquiryTelephoneNumber>
+      <ContactTelephoneNumber>
+        <TelNationalNumber>01631 562125</TelNationalNumber>
+      </ContactTelephoneNumber>
+      <OperatorAddresses>
+        <CorrespondenceAddress>
+          <Line xmlns="http://www.govtalk.gov.uk/people/AddressAndPersonalDetails">Kilbowie House</Line>
+          <Line xmlns="http://www.govtalk.gov.uk/people/AddressAndPersonalDetails">Oban</Line>
+          <Line xmlns="http://www.govtalk.gov.uk/people/AddressAndPersonalDetails">PA34 4PF</Line>
+        </CorrespondenceAddress>
+      </OperatorAddresses>
+      <EmailAddress>enquiries@argyll-bute.gov.uk</EmailAddress>
+    </Operator>
+  </Operators>
+  <Services>
+    <Service>
+      <ServiceCode>ABCF_LUI</ServiceCode>
+      <Lines>
+        <Line id="SLLUI">
+          <LineName>LUI</LineName>
+        </Line>
+      </Lines>
+      <OperatingPeriod>
+        <StartDate>2026-03-05</StartDate>
+        <EndDate>2027-03-04</EndDate>
+      </OperatingPeriod>
+      <RegisteredOperatorRef>7778789</RegisteredOperatorRef>
+      <StopRequirements>
+        <NoNewStopsRequired />
+      </StopRequirements>
+      <Mode>ferry</Mode>
+      <PublicUse>true</PublicUse>
+      <StandardService>
+        <Origin>North Cuan Seil</Origin>
+        <Destination>South Cuan Luing</Destination>
+        <JourneyPattern id="1">
+          <DestinationDisplay>South Cuan Luing Ferry Terminal</DestinationDisplay>
+          <OperatorRef>7778789</OperatorRef>
+          <Direction>outbound</Direction>
+          <Operational>
+            <Block>
+              <Description>45393.Txc4DB23097-6035-4CD2-977A-C157C320CB96</Description>
+              <BlockNumber>Txc4DB23097-6035-4CD2-977A-C157C320CB96</BlockNumber>
+            </Block>
+          </Operational>
+          <RouteRef>1</RouteRef>
+          <JourneyPatternSectionRefs>1</JourneyPatternSectionRefs>
+        </JourneyPattern>
+        <JourneyPattern id="2">
+          <DestinationDisplay>North Cuan Seil Ferry Terminal</DestinationDisplay>
+          <OperatorRef>7778789</OperatorRef>
+          <Direction>inbound</Direction>
+          <Operational>
+            <Block>
+              <Description>45393.TxcDB65E2CE-3E95-4E67-A142-03954A345960</Description>
+              <BlockNumber>TxcDB65E2CE-3E95-4E67-A142-03954A345960</BlockNumber>
+            </Block>
+          </Operational>
+          <RouteRef>2</RouteRef>
+          <JourneyPatternSectionRefs>2</JourneyPatternSectionRefs>
+        </JourneyPattern>
+      </StandardService>
+    </Service>
+  </Services>
+  <VehicleJourneys>
+    <VehicleJourney>
+      <PrivateCode>10cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>1</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>07:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="1_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>2</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>07:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="2_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>20cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>3</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>08:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="3_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>4</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>08:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="4_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>30cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>5</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>08:15:00</DepartureTime>
+      <VehicleJourneyTimingLink id="5_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>6</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>08:15:00</DepartureTime>
+      <VehicleJourneyTimingLink id="6_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>40cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>7</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>08:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="7_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>8</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>08:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="8_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <ServicedOrganisationDayType>
+          <DaysOfOperation>
+            <WorkingDays>
+              <ServicedOrganisationRef>Argyll_Bute</ServicedOrganisationRef>
+            </WorkingDays>
+          </DaysOfOperation>
+        </ServicedOrganisationDayType>
+        <SpecialDaysOperation>
+          <DaysOfNonOperation>
+            <DateRange>
+              <StartDate>2026-03-05</StartDate>
+              <EndDate>2026-03-08</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-04-07</StartDate>
+              <EndDate>2026-04-19</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-05-22</StartDate>
+              <EndDate>2026-05-24</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-07-02</StartDate>
+              <EndDate>2026-08-02</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-08-04</StartDate>
+              <EndDate>2026-08-16</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-10-03</StartDate>
+              <EndDate>2026-10-18</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-11-21</StartDate>
+              <EndDate>2026-11-23</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-12-23</StartDate>
+              <EndDate>2026-12-24</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-12-29</StartDate>
+              <EndDate>2026-12-31</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2027-02-06</StartDate>
+              <EndDate>2027-02-15</EndDate>
+            </DateRange>
+          </DaysOfNonOperation>
+        </SpecialDaysOperation>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <ChristmasDay />
+            <GoodFriday />
+            <NewYearsDay />
+            <EasterMonday />
+            <SpringBank />
+            <AugustBankHolidayScotland />
+            <BoxingDayHoliday />
+            <OtherPublicHoliday>
+              <Description>Jan2ndScotlandHoliday</Description>
+              <Date>2027-01-04</Date>
+            </OtherPublicHoliday>
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>9</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>09:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="9_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>50cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>10</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>09:15:00</DepartureTime>
+      <VehicleJourneyTimingLink id="10_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>11</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>09:15:00</DepartureTime>
+      <VehicleJourneyTimingLink id="11_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>60cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>12</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>09:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="12_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>13</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>09:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="13_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>70cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>14</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>10:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="14_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>15</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>10:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="15_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>80cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>16</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>10:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="16_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>17</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>10:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="17_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>90cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>18</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>11:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="18_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>n1cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>19</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>11:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="19_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>20</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>11:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="20_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>a0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>21</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>11:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="21_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>o1cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>22</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>11:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="22_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>23</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>11:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="23_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>b0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>24</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>12:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="24_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>p1cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>25</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>12:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="25_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>26</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>12:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="26_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>27</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>12:15:00</DepartureTime>
+      <VehicleJourneyTimingLink id="27_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>28</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>12:15:00</DepartureTime>
+      <VehicleJourneyTimingLink id="28_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>c0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>29</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>12:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="29_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>q1cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>30</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>12:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="30_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>31</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>12:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="31_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>r1cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>32</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>13:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="32_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>d0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>33</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>13:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="33_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>34</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>13:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="34_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>e0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>35</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>14:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="35_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>36</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>14:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="36_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>f0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>37</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>14:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="37_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>38</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>14:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="38_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>g0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>39</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>15:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="39_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>s1cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>40</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>15:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="40_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>41</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>15:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="41_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>h0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>42</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>15:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="42_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>t1cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>43</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>15:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="43_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>44</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>15:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="44_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>i0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>45</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>16:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="45_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>u1cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>46</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>16:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="46_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>47</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>16:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="47_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>j0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>48</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>16:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="48_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>v1cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>49</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>16:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="49_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>50</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>16:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="50_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>k0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>51</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>17:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="51_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>02cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>52</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>17:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="52_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>53</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>17:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="53_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>l0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>54</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>17:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="54_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>12cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>55</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>17:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="55_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>56</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>17:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="56_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>57</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>17:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="57_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>58</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>17:45:00</DepartureTime>
+      <VehicleJourneyTimingLink id="58_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>m0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>59</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>18:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="59_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>22cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>60</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>18:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="60_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>61</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>18:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="61_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>n0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>62</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>18:15:00</DepartureTime>
+      <VehicleJourneyTimingLink id="62_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>63</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>18:15:00</DepartureTime>
+      <VehicleJourneyTimingLink id="63_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>o0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Monday />
+            <Tuesday />
+            <Wednesday />
+            <Thursday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>64</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>19:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="64_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>65</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>19:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="65_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>66</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>19:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="66_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>p0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>67</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>20:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="67_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>68</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>20:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="68_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>q0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>69</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>21:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="69_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>70</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>21:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="70_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>r0cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Monday />
+            <Tuesday />
+            <Wednesday />
+            <Thursday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>71</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>22:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="71_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>72</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>22:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="72_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>73</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>22:00:00</DepartureTime>
+      <VehicleJourneyTimingLink id="73_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>74</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>22:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="74_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>75</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>1</JourneyPatternRef>
+      <DepartureTime>22:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="75_1">
+        <JourneyPatternTimingLinkRef>1_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>a2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>76</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>07:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="76_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>77</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>07:30:00</DepartureTime>
+      <VehicleJourneyTimingLink id="77_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>b2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>78</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>07:50:00</DepartureTime>
+      <VehicleJourneyTimingLink id="78_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>79</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>07:50:00</DepartureTime>
+      <VehicleJourneyTimingLink id="79_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>c2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>80</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>08:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="80_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>81</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>08:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="81_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>d2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>82</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>08:20:00</DepartureTime>
+      <VehicleJourneyTimingLink id="82_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>83</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>08:20:00</DepartureTime>
+      <VehicleJourneyTimingLink id="83_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>e2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>84</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>08:50:00</DepartureTime>
+      <VehicleJourneyTimingLink id="84_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>85</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>08:50:00</DepartureTime>
+      <VehicleJourneyTimingLink id="85_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <ServicedOrganisationDayType>
+          <DaysOfOperation>
+            <WorkingDays>
+              <ServicedOrganisationRef>Argyll_Bute</ServicedOrganisationRef>
+            </WorkingDays>
+          </DaysOfOperation>
+        </ServicedOrganisationDayType>
+        <SpecialDaysOperation>
+          <DaysOfNonOperation>
+            <DateRange>
+              <StartDate>2026-03-05</StartDate>
+              <EndDate>2026-03-08</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-04-07</StartDate>
+              <EndDate>2026-04-19</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-05-22</StartDate>
+              <EndDate>2026-05-24</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-07-02</StartDate>
+              <EndDate>2026-08-02</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-08-04</StartDate>
+              <EndDate>2026-08-16</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-10-03</StartDate>
+              <EndDate>2026-10-18</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-11-21</StartDate>
+              <EndDate>2026-11-23</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-12-23</StartDate>
+              <EndDate>2026-12-24</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2026-12-29</StartDate>
+              <EndDate>2026-12-31</EndDate>
+            </DateRange>
+            <DateRange>
+              <StartDate>2027-02-06</StartDate>
+              <EndDate>2027-02-15</EndDate>
+            </DateRange>
+          </DaysOfNonOperation>
+        </SpecialDaysOperation>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <ChristmasDay />
+            <GoodFriday />
+            <NewYearsDay />
+            <EasterMonday />
+            <SpringBank />
+            <AugustBankHolidayScotland />
+            <BoxingDayHoliday />
+            <OtherPublicHoliday>
+              <Description>Jan2ndScotlandHoliday</Description>
+              <Date>2027-01-04</Date>
+            </OtherPublicHoliday>
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>86</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>09:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="86_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>f2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>87</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>09:20:00</DepartureTime>
+      <VehicleJourneyTimingLink id="87_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>88</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>09:20:00</DepartureTime>
+      <VehicleJourneyTimingLink id="88_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>g2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>89</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>09:50:00</DepartureTime>
+      <VehicleJourneyTimingLink id="89_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>90</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>09:50:00</DepartureTime>
+      <VehicleJourneyTimingLink id="90_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>h2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>91</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>10:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="91_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>92</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>10:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="92_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>i2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>93</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>10:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="93_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>94</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>10:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="94_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>j2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>95</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>11:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="95_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>04cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>96</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>11:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="96_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>97</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>11:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="97_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>k2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>98</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>11:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="98_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>14cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>99</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>11:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="99_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>100</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>11:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="100_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>l2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>101</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>12:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="101_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>24cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>102</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>12:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="102_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>103</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>12:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="103_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>104</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>12:20:00</DepartureTime>
+      <VehicleJourneyTimingLink id="104_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>105</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>12:20:00</DepartureTime>
+      <VehicleJourneyTimingLink id="105_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>m2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>106</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>12:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="106_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>34cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>107</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>12:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="107_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>108</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>12:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="108_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>44cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>109</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>13:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="109_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>n2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>110</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>13:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="110_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>111</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>13:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="111_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>o2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>112</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>14:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="112_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>113</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>14:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="113_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>p2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>114</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>14:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="114_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>115</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>14:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="115_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>q2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>116</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>15:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="116_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>54cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>117</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>15:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="117_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>118</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>15:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="118_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>r2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>119</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>15:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="119_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>64cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>120</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>15:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="120_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>121</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>15:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="121_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>s2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>122</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>16:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="122_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>74cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>123</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>16:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="123_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>124</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>16:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="124_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>t2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>125</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>16:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="125_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>84cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>126</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>16:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="126_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>127</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>16:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="127_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>u2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>128</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="128_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>94cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>129</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="129_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>130</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="130_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>v2cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>131</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="131_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>a4cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>132</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="132_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>133</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="133_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>03cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>134</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:50:00</DepartureTime>
+      <VehicleJourneyTimingLink id="134_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>135</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>17:50:00</DepartureTime>
+      <VehicleJourneyTimingLink id="135_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>b4cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Sunday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>136</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>18:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="136_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <MondayToFriday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>137</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>18:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="137_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>138</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>18:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="138_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>13cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Monday />
+            <Tuesday />
+            <Wednesday />
+            <Thursday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>139</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>19:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="139_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>140</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>19:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="140_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>141</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>19:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="141_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>23cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>142</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>20:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="142_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>143</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>20:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="143_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>33cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>144</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>21:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="144_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>145</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>21:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="145_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <PrivateCode>43cic</PrivateCode>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Monday />
+            <Tuesday />
+            <Wednesday />
+            <Thursday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>146</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>22:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="146_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>147</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>22:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="147_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>148</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>22:05:00</DepartureTime>
+      <VehicleJourneyTimingLink id="148_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Friday />
+          </DaysOfWeek>
+        </RegularDayType>
+      </OperatingProfile>
+      <VehicleJourneyCode>149</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>22:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="149_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+    <VehicleJourney>
+      <OperatorRef>7778789</OperatorRef>
+      <OperatingProfile>
+        <RegularDayType>
+          <DaysOfWeek>
+            <Saturday />
+          </DaysOfWeek>
+        </RegularDayType>
+        <BankHolidayOperation>
+          <DaysOfNonOperation>
+            <AllBankHolidays />
+          </DaysOfNonOperation>
+        </BankHolidayOperation>
+      </OperatingProfile>
+      <VehicleJourneyCode>150</VehicleJourneyCode>
+      <ServiceRef>ABCF_LUI</ServiceRef>
+      <LineRef>SLLUI</LineRef>
+      <JourneyPatternRef>2</JourneyPatternRef>
+      <DepartureTime>22:35:00</DepartureTime>
+      <VehicleJourneyTimingLink id="150_1">
+        <JourneyPatternTimingLinkRef>2_1</JourneyPatternTimingLinkRef>
+      </VehicleJourneyTimingLink>
+    </VehicleJourney>
+  </VehicleJourneys>
+</TransXChange>
