@@ -19,7 +19,7 @@ import Amazonka (AWSRequest (response))
 import CMark (commonmarkToHtml)
 import Control.Applicative ((<|>))
 import Control.Concurrent (threadDelay)
-import Control.Exception (SomeException, catch)
+import Control.Exception (SomeException, catch, try)
 import Control.Monad (forM_, forever, void, when)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
@@ -84,9 +84,16 @@ fetchCorranFerryAndNotify = do
 
 fetchCorranFerry :: IO Service
 fetchCorranFerry = do
-  page <- fetchCorranPage
-  let (resolvedStatus, selectedNews) = corranStatusAndNewsItemFromPageHtml page
-  additionalInfo <- traverse fetchCorranAdditionalInfo selectedNews
+  facebookScrapeResult <- fetchCorranFromFacebook
+  (resolvedStatus, additionalInfo) <-
+    case facebookScrapeResult of
+      Just (status, info) ->
+        pure (status, Just info)
+      Nothing -> do
+        page <- fetchCorranPage
+        let (status, selectedNews) = corranStatusAndNewsItemFromPageHtml page
+        info <- traverse fetchCorranAdditionalInfo selectedNews
+        pure (status, info)
   time <- getCurrentTime
   return
     Service
@@ -100,6 +107,21 @@ fetchCorranFerry = do
         serviceOrganisationID = 7,
         serviceLastUpdatedDate = Nothing
       }
+
+fetchCorranFromFacebook :: IO (Maybe (ServiceStatus, String))
+fetchCorranFromFacebook = do
+  let url = "https://www.facebook.com/CorranFerryService/"
+  result <- try @SomeException (fetchCorranFacebookTextWithPlaywright url)
+  case result of
+    Left _ -> pure Nothing
+    Right text ->
+      case extractCorranFacebookLatestPost text of
+        Just postText ->
+          let status = corranFacebookTextToStatus postText
+           in if status == Unknown
+                then pure Nothing
+                else pure (Just (status, corranFacebookPostToHtml url postText))
+        Nothing -> pure Nothing
 
 fetchCorranPage :: IO String
 fetchCorranPage = do
@@ -119,7 +141,7 @@ fetchCorranPageWithPlaywright url = do
     Nothing ->
       error "Corran Playwright fetch required but 'node' is not installed"
     Just nodePath -> do
-      scriptPath <- resolveCorranPlaywrightScript
+      scriptPath <- resolveCorranPlaywrightScript "fetch-corran-page.mjs"
       (exitCode, stdoutText, stderrText) <-
         readProcessWithExitCode
           nodePath
@@ -130,11 +152,29 @@ fetchCorranPageWithPlaywright url = do
         ExitFailure _ ->
           error ("Corran Playwright fetch failed: " <> stderrText)
 
-resolveCorranPlaywrightScript :: IO FilePath
-resolveCorranPlaywrightScript = do
+fetchCorranFacebookTextWithPlaywright :: String -> IO String
+fetchCorranFacebookTextWithPlaywright url = do
+  nodeExecutable <- findExecutable "node"
+  case nodeExecutable of
+    Nothing ->
+      error "Corran Facebook Playwright fetch required but 'node' is not installed"
+    Just nodePath -> do
+      scriptPath <- resolveCorranPlaywrightScript "fetch-corran-facebook-text.mjs"
+      (exitCode, stdoutText, stderrText) <-
+        readProcessWithExitCode
+          nodePath
+          [scriptPath, url]
+          ""
+      case exitCode of
+        ExitSuccess -> pure stdoutText
+        ExitFailure _ ->
+          error ("Corran Facebook Playwright fetch failed: " <> stderrText)
+
+resolveCorranPlaywrightScript :: FilePath -> IO FilePath
+resolveCorranPlaywrightScript scriptName = do
   let candidatePaths =
-        [ "/opt/ferry-services/scripts/fetch-corran-page.mjs",
-          "scripts/fetch-corran-page.mjs"
+        [ "/opt/ferry-services/scripts/" <> scriptName,
+          "scripts/" <> scriptName
         ]
   existingPath <- findM doesFileExist candidatePaths
   case existingPath of
@@ -181,12 +221,79 @@ corranNewsItemToStatus CorranNewsItem {..} =
 
 corranTextToStatus :: String -> ServiceStatus
 corranTextToStatus text
-  | any (`isInfixOf` lowerText) ["service resumed", "returned to service", "back in operation", "usual seven day-a-week timetable"] = Normal
   | any (`isInfixOf` lowerText) ["withdrawn from service", "service suspended", "no service", "cancelled", "outage"] = Cancelled
   | any (`isInfixOf` lowerText) ["service update", "passenger service update", "repairs update", "refit update", "disruption", "reduced service"] = Disrupted
+  | any (`isInfixOf` lowerText) ["service resumed", "returned to service", "back in operation", "usual seven day-a-week timetable"] = Normal
   | otherwise = Unknown
   where
     lowerText = map toLower text
+
+extractCorranFacebookLatestPost :: String -> Maybe String
+extractCorranFacebookLatestPost text =
+  firstNonEmpty
+    [ extractPostBlock normalisedLines,
+      extractPostBlock (dropWhile (not . isLikelyPostPrefix) normalisedLines)
+    ]
+  where
+    normalisedLines =
+      filter (not . null) $
+        trim <$> lines text
+
+    extractPostBlock :: [String] -> Maybe String
+    extractPostBlock [] = Nothing
+    extractPostBlock (authorLine : timeLine : dotLine : rest)
+      | isCorranAuthor authorLine && isLikelyTimeLine timeLine && dotLine == "\183" =
+          let postLines = takeWhile (not . isFacebookPostStopLine) rest
+           in if null postLines then Nothing else Just (unlines postLines)
+    extractPostBlock (_ : rest) = extractPostBlock rest
+
+    isCorranAuthor :: String -> Bool
+    isCorranAuthor line = "corran ferry" == map toLower line
+
+    isLikelyTimeLine :: String -> Bool
+    isLikelyTimeLine line =
+      any (`isInfixOf` lowerLine) ["h", "hr", "hrs", "hour", "hours", "day", "days", "min", "mins", "minute", "minutes", "am", "pm", "/"]
+      where
+        lowerLine = map toLower line
+
+    isLikelyPostPrefix :: String -> Bool
+    isLikelyPostPrefix line = map toLower line == "corran ferry"
+
+    isFacebookPostStopLine :: String -> Bool
+    isFacebookPostStopLine line =
+      any (`isInfixOf` lowerLine)
+        [ "all reactions:",
+          "corran ferry restricted who can comment",
+          "see more from corran ferry",
+          "email or phone",
+          "password",
+          "log in",
+          "create new account",
+          "privacy policy",
+          "terms",
+          "ad choices",
+          "cookie"
+        ]
+        || line `elem` ["\36096\26377\24515\24773\35746\65306", "\36190", "\35780\35770", "\30331\24405"]
+      where
+        lowerLine = map toLower line
+
+    firstNonEmpty :: [Maybe String] -> Maybe String
+    firstNonEmpty = listToMaybe . mapMaybe id
+
+corranFacebookTextToStatus :: String -> ServiceStatus
+corranFacebookTextToStatus text
+  | any (`isInfixOf` lowerText) ["cancelled", "no service", "service suspended", "suspended", "withdrawn from service"] = Cancelled
+  | any (`isInfixOf` lowerText) ["investigate the issue", "issue on the mv corran", "issue on the", "apologise for any inconvenience", "replacement vessel", "technical issue", "technical issues", "reduced service", "disruption", "delayed", "delay"] = Disrupted
+  | any (`isInfixOf` lowerText) ["service resumed", "returned to service", "back in service", "operating normally", "operating as normal", "usual timetable", "usual seven day-a-week timetable"] = Normal
+  | otherwise = Unknown
+  where
+    lowerText = map toLower text
+
+corranFacebookPostToHtml :: String -> String -> String
+corranFacebookPostToHtml url postText =
+  "<p><a href='" <> url <> "'>Corran Ferry Facebook</a></p>"
+    <> concatMap (\paragraph -> "<p>" <> paragraph <> "</p>") (filter (not . null) (trim <$> lines postText))
 
 fetchCorranAdditionalInfo :: CorranNewsItem -> IO String
 fetchCorranAdditionalInfo CorranNewsItem {..} = do

@@ -13,6 +13,7 @@ RUN apt-get update && \
 RUN mkdir -p /opt/ferry-services/scripts
 
 COPY scripts/fetch-corran-page.mjs /opt/ferry-services/scripts/fetch-corran-page.mjs
+COPY scripts/fetch-corran-facebook-text.mjs /opt/ferry-services/scripts/fetch-corran-facebook-text.mjs
 COPY $BIN_DIR .
 
 RUN cd /opt/ferry-services && \
