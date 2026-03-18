@@ -84,16 +84,6 @@ fetchCorranFerryAndNotify = do
 
 fetchCorranFerry :: IO Service
 fetchCorranFerry = do
-  facebookScrapeResult <- fetchCorranFromFacebook
-  (resolvedStatus, additionalInfo) <-
-    case facebookScrapeResult of
-      Just (status, info) ->
-        pure (status, Just info)
-      Nothing -> do
-        page <- fetchCorranPage
-        let (status, selectedNews) = corranStatusAndNewsItemFromPageHtml page
-        info <- traverse fetchCorranAdditionalInfo selectedNews
-        pure (status, info)
   time <- getCurrentTime
   return
     Service
@@ -101,8 +91,8 @@ fetchCorranFerry = do
         serviceUpdated = time,
         serviceArea = "Corran",
         serviceRoute = "Nether Lochaber - Ardgour",
-        serviceStatus = resolvedStatus,
-        serviceAdditionalInfo = additionalInfo,
+        serviceStatus = Unknown,
+        serviceAdditionalInfo = Nothing,
         serviceDisruptionReason = Nothing,
         serviceOrganisationID = 7,
         serviceLastUpdatedDate = Nothing
