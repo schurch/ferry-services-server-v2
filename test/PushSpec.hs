@@ -27,9 +27,11 @@ import Test.Hspec
 import Types
   ( DeviceType (Android, IOS),
     Installation (..),
-    PushPayload (..),
     Service (..),
     ServiceStatus (..),
+  )
+import Types.Push
+  ( PushPayload (..),
   )
 
 spec :: Spec

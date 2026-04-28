@@ -29,6 +29,7 @@ import App.Logger (Logger)
 import qualified Database as DB
 import System.Environment (lookupEnv)
 import Types
+import Types.Push
 
 data PushEndpointClient m = PushEndpointClient
   { pushCreateEndpoint :: String -> DeviceType -> m String,

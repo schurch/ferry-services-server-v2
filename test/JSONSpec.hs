@@ -10,6 +10,7 @@ import Data.Time.Clock (UTCTime (UTCTime))
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Types
 import Types.Api
+import Types.Push
 
 spec :: Spec
 spec = do

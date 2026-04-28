@@ -10,20 +10,15 @@ import App.Logger (MonadLogger (askLogger))
 import Control.Monad.Reader (asks)
 import Data.Aeson
   ( FromJSON (parseJSON),
-    KeyValue ((.=)),
     Options (fieldLabelModifier, omitNothingFields),
     ToJSON (toJSON),
-    Value (..),
     camelTo2,
     defaultOptions,
-    encode,
     genericParseJSON,
     genericToJSON,
-    object,
     withScientific,
   )
 import qualified Data.ByteString.Lazy as B
-import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char (toLower, toUpper)
 import Data.Maybe (fromMaybe)
 import Data.Proxy
@@ -56,95 +51,6 @@ type Action = ActionT Application
 
 instance MonadLogger Types.Action where
   askLogger = asks logger
-
--- Push payloads
--- {
---   "default": "This is the default message which must be present when publishing a message to a topic. The default message will only be used if a message is not present for
--- one of the notification platforms.",
---   "APNS": "{\"aps\":{\"alert\": \"Check out these awesome deals!\",\"url\":\"www.amazon.com\"} }",
---   "GCM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}",
---   "ADM": "{\"data\":{\"message\":\"Check out these awesome deals!\",\"url\":\"www.amazon.com\"}}"
--- }
-data PushPayload = PushPayload
-  { pushPayloadDefault :: String,
-    pushPayloadContent :: PushPayloadContent
-  }
-  deriving (Show)
-
-data PushPayloadContent = ApplePayload APSPayload | GooglePayload GCMPayload deriving (Show)
-
-instance ToJSON PushPayload where
-  toJSON (PushPayload text (ApplePayload apns)) =
-    object
-      [ "default" .= text,
-        "APNS" .= (C.unpack . encode $ apns),
-        "APNS_SANDBOX" .= (C.unpack . encode $ apns),
-        "GCM" .= Null
-      ]
-  toJSON (PushPayload text (GooglePayload gcm)) =
-    object
-      [ "default" .= text,
-        "APNS" .= Null,
-        "APNS_SANDBOX" .= Null,
-        "GCM" .= (C.unpack . encode $ gcm)
-      ]
-
--- Apple
-data APSPayload = APSPayload
-  { apsPayloadAps :: APSPayloadBody,
-    apsPayloadServiceID :: Int
-  }
-  deriving (Generic, Show)
-
-instance ToJSON APSPayload where
-  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayload)
-
-data APSPayloadBody = APSPayloadBody
-  { apsPayloadBodyAlert :: APSPayloadBodyAlert,
-    apsPayloadBodySound :: String
-  }
-  deriving (Generic, Show)
-
-instance ToJSON APSPayloadBody where
-  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayloadBody)
-
-data APSPayloadBodyAlert = APSPayloadBodyAlert
-  { apsPayloadBodyAlertTitle :: String,
-    apsPayloadBodyAlertBody :: String
-  }
-  deriving (Generic, Show)
-
-instance ToJSON APSPayloadBodyAlert where
-  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy APSPayloadBodyAlert)
-
--- Google
-data GCMPayload = GCMPayload
-  { gcmPayloadData :: GCMPayloadData,
-    gcmPayloadPriority :: String,
-    gcmPayloadAndroid :: GCMPayloadAndroid
-  }
-  deriving (Generic, Show)
-
-instance ToJSON GCMPayload where
-  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPayload)
-
-data GCMPayloadData = GCMPayloadData
-  { gcmPayloadDataServiceID :: Int,
-    gcmPayloadDataTitle :: String,
-    gcmPayloadDataBody :: String
-  }
-  deriving (Generic, Show)
-
-instance ToJSON GCMPayloadData where
-  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPayloadData)
-
-data GCMPayloadAndroid = GCMPayloadAndroid
-  { gcmPayloadAndroidPriority :: String
-  }
-  deriving (Generic, Show)
-
-instance ToJSON GCMPayloadAndroid where
-  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy GCMPayloadAndroid)
 
 -- General
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)

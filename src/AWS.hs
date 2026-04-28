@@ -70,7 +70,9 @@ import System.IO (stdout)
 import qualified App.Logger as AppLogger
 import Types
   ( DeviceType (..),
-    PushPayload (..),
+  )
+import Types.Push
+  ( PushPayload (..),
   )
 
 data EndpointAttributesResult = EndpointAttributesEndpointNotFound | AttributeResults String Bool
