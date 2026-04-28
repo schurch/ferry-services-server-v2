@@ -48,11 +48,13 @@ import TransxchangeV2.Repository (clearTx2Tables)
 import App.Env
   ( Env (Env, connectionPool, logger),
   )
-import Types
+import Types.Api
   ( DepartureResponse (..),
     LocationResponse (..),
     ServiceResponse (..),
-    ServiceStatus (Unknown),
+  )
+import Types
+  ( ServiceStatus (Unknown),
   )
 import Web.Scotty.Trans (defaultOptions, scottyAppT)
 import WebServer (loggerSettings, webApp)

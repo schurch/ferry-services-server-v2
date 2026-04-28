@@ -46,6 +46,7 @@ import Test.Hspec.Wai
     with,
   )
 import Types
+import Types.Api
 import VesselFetcher
 import Web.Scotty.Trans (defaultOptions, scottyAppT)
 import WebServer

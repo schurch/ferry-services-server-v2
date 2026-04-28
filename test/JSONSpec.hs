@@ -9,6 +9,7 @@ import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import Data.Time.Clock (UTCTime (UTCTime))
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Types
+import Types.Api
 
 spec :: Spec
 spec = do
