@@ -63,6 +63,7 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import System.Environment (getEnv)
 import App.Env (Application, connectionPool)
 import Types
+import Types.Rail
 import Types.Weather
 import Utility (splitOn)
 

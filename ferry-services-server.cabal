@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c38875980379c5b7e392205402486caedb92bba3a7312fe6e90ae53d136951c1
+-- hash: 6efaa5e6220ff5a6e2bc80cd320441544c7cd27fbebbbfa0993baa6be5ec5905
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -42,7 +42,10 @@ library
       TransxchangeV2.Types
       Types
       Types.Api
+      Types.CalMac
       Types.Push
+      Types.Rail
+      Types.Vessel
       Types.Weather
       Utility
       VesselFetcher

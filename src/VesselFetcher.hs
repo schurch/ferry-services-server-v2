@@ -47,6 +47,7 @@ import System.Environment (getEnv)
 import App.Logger (logDebugM, logErrorM)
 import System.Timeout (timeout)
 import Types
+import Types.Vessel
 
 type OrganisationID = Int
 

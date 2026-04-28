@@ -56,6 +56,7 @@ import Text.HTML.TagSoup (Tag (..), fromAttrib, isTagOpen, isTagOpenName, parseT
 import Text.HTML.TagSoup.Tree (renderTree, tagTree)
 import Text.Regex (mkRegex, subRegex)
 import Types
+import Types.CalMac
 import Utility (trim)
 
 newtype ScrapedServices = ScrapedServices {unScrapedServices :: [Service]}

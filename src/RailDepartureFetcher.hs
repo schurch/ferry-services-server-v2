@@ -18,7 +18,7 @@ import Network.HTTP.Simple
 import System.Environment (getEnv)
 import App.Logger (logDebugM)
 import System.Timeout (timeout)
-import Types (RailDepartureFetcherResult (RailDepartureFetcherResult), railDepartureFetcherJsonOptions)
+import Types.Rail (RailDepartureFetcherResult (RailDepartureFetcherResult))
 
 fetchRailDepartures :: Application ()
 fetchRailDepartures =
