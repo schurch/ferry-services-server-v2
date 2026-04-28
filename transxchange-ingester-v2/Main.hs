@@ -7,16 +7,6 @@ import Control.Exception (SomeException, catch, throwIO)
 import Control.Concurrent (threadDelay)
 import Control.Monad (forever)
 import Control.Monad.Trans.Reader (runReaderT)
-import Data.Pool
-  ( defaultPoolConfig,
-    newPool,
-    setNumStripes,
-  )
-import Data.String (fromString)
-import Database.PostgreSQL.Simple
-  ( close,
-    connectPostgreSQL,
-  )
 import System.Environment (getArgs, getEnv)
 import System.Log.Raven
   ( initRaven,
@@ -35,6 +25,7 @@ import App.Logger
     logError,
     logInfo,
   )
+import App.Database (createConnectionPool)
 import TransxchangeV2.Ingest
   ( ingestDirectoryV2,
     ingestLatestV2,
@@ -47,14 +38,7 @@ main = do
   args <- getArgs
   logger <- create StdOut
   connectionString <- getEnv "DB_CONNECTION"
-  connectionPool <-
-    newPool $
-      setNumStripes (Just 2) $
-        defaultPoolConfig
-          (connectPostgreSQL $ fromString connectionString)
-          Database.PostgreSQL.Simple.close
-          60
-          10
+  connectionPool <- createConnectionPool connectionString
   let env = Env logger connectionPool
   case args of
     (directory : _) ->

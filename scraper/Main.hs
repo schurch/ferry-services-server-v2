@@ -12,16 +12,6 @@ import Control.Monad
     when,
   )
 import Control.Monad.Trans.Reader (runReaderT)
-import Data.Pool
-  ( defaultPoolConfig,
-    newPool,
-    setNumStripes,
-  )
-import Data.String (fromString)
-import Database.PostgreSQL.Simple
-  ( close,
-    connectPostgreSQL,
-  )
 import Scraper
 import System.Environment (getEnv)
 import System.Log.Raven
@@ -41,20 +31,14 @@ import App.Logger
     logError,
     logInfo,
   )
+import App.Database (createConnectionPool)
 import Types
 
 main :: IO ()
 main = do
   logger <- create StdOut
   connectionString <- getEnv "DB_CONNECTION"
-  connectionPool <-
-    newPool $
-      setNumStripes (Just 2) $
-        defaultPoolConfig
-          (connectPostgreSQL $ fromString connectionString)
-          Database.PostgreSQL.Simple.close
-          60 -- unused connections are kept open for a minute
-          10 -- max. 10 connections open per stripe
+  connectionPool <- createConnectionPool connectionString
   let env = Env logger connectionPool
   forever $ do
     logInfo logger "Fetching statuses"

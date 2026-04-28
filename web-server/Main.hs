@@ -7,17 +7,7 @@ import Control.Monad.Reader (runReaderT)
 import Data.Aeson (Value (String))
 import Data.ByteString.Char8 (unpack)
 import qualified Data.HashMap.Strict as HM
-import Data.Pool
-  ( defaultPoolConfig,
-    newPool,
-    setNumStripes,
-  )
-import Data.String (fromString)
 import Data.Text.Encoding (decodeUtf8)
-import Database.PostgreSQL.Simple
-  ( close,
-    connectPostgreSQL,
-  )
 import Network.Wai
   ( Middleware,
     Request,
@@ -52,6 +42,7 @@ import App.Logger
     create,
     logInfo,
   )
+import App.Database (createConnectionPool)
 import Types (Env (Env))
 import Web.Scotty.Trans
   ( Options (Options, settings, verbose),
@@ -69,14 +60,7 @@ main = do
   let options = Options {verbose = 0, settings = settings}
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getEnv "DB_CONNECTION"
-  connectionPool <-
-    newPool $
-      setNumStripes (Just 2) $
-        defaultPoolConfig
-          (connectPostgreSQL $ fromString connectionString)
-          Database.PostgreSQL.Simple.close
-          60 -- unused connections are kept open for a minute
-          10 -- max. 10 connections open per stripe
+  connectionPool <- createConnectionPool connectionString
   scottyOptsT options (`runReaderT` Env logger connectionPool) (webApp requestLogger)
 
 exceptionHandler :: Maybe Request -> SomeException -> IO ()

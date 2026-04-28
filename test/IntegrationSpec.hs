@@ -6,28 +6,25 @@ import Control.Monad.Reader
   ( ReaderT (runReaderT),
     asks,
   )
-import Data.Aeson (FromJSON, decode, encode)
-import Data.List (find, isPrefixOf)
-import Data.Pool
-  ( Pool,
-    defaultPoolConfig,
-    newPool,
-    setNumStripes,
-    withResource,
-  )
-import Data.String (fromString)
-import qualified Database as DB
-import Database.PostgreSQL.Simple (Connection, close, connectPostgreSQL)
-import Network.HTTP.Types.Header (Header)
-import Network.Wai (Application)
-import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
-import Scraper
-import System.Environment (lookupEnv, setEnv)
+import App.Database (createConnectionPool)
 import App.Logger
   ( Logger,
     Output (StdOut),
     create,
   )
+import Data.Aeson (FromJSON, decode, encode)
+import Data.List (find, isPrefixOf)
+import Data.Pool
+  ( Pool,
+    withResource,
+  )
+import qualified Database as DB
+import Database.PostgreSQL.Simple (Connection)
+import Network.HTTP.Types.Header (Header)
+import Network.Wai (Application)
+import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
+import Scraper
+import System.Environment (lookupEnv, setEnv)
 import Test.Hspec
   ( Spec,
     beforeAll,
@@ -136,14 +133,7 @@ setupIntegrationTests = do
   setEnv "FERRY_SERVICES_TEST_AWS_ENDPOINT_ARN" "arn:aws:sns:ap-southeast-2:000000000000:endpoint/APNS_SANDBOX/test/test"
   logger <- create StdOut
   connectionString <- getDbConnectionString
-  connectionPool <-
-    newPool $
-      setNumStripes (Just 2) $
-        defaultPoolConfig
-          (connectPostgreSQL $ fromString connectionString)
-          Database.PostgreSQL.Simple.close
-          60 -- unused connections are kept open for a minute
-          10 -- max. 10 connections open per stripe
+  connectionPool <- createConnectionPool connectionString
   let env = Env logger connectionPool
   runReaderT (runScraper >> seedBrodickWeather >> fetchCaledonianIslesVessel) env
   where
@@ -176,14 +166,7 @@ app = do
   logger <- create StdOut
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getDbConnectionString
-  connectionPool <-
-    newPool $
-      setNumStripes (Just 2) $
-        defaultPoolConfig
-          (connectPostgreSQL $ fromString connectionString)
-          Database.PostgreSQL.Simple.close
-          60 -- unused connections are kept open for a minute
-          10 -- max. 10 connections open per stripe
+  connectionPool <- createConnectionPool connectionString
   scottyAppT defaultOptions (`runReaderT` Env logger connectionPool) (webApp requestLogger)
 
 getDbConnectionString :: IO String

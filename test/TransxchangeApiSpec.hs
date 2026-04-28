@@ -6,6 +6,12 @@ module TransxchangeApiSpec where
 
 import Control.Monad (void)
 import Control.Monad.Reader (ReaderT (runReaderT))
+import App.Database (createConnectionPool)
+import App.Logger
+  ( Logger,
+    Output (StdOut),
+    create,
+  )
 import Data.Aeson (decode)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
@@ -13,20 +19,14 @@ import Data.List (find, isPrefixOf)
 import Data.Maybe (fromMaybe)
 import Data.Pool
   ( Pool,
-    defaultPoolConfig,
-    newPool,
-    setNumStripes,
     withResource,
   )
-import Data.String (fromString)
 import Data.Time.Calendar (Day, fromGregorian)
 import Data.Time.Clock (UTCTime)
 import Database.PostgreSQL.Simple
   ( Connection,
     In (In),
     Only (Only),
-    close,
-    connectPostgreSQL,
     execute,
     execute_,
   )
@@ -35,11 +35,6 @@ import Network.Wai (Application, queryString, rawPathInfo, rawQueryString, reque
 import Network.Wai.Test (SResponse (simpleBody), defaultRequest, request, runSession, setPath)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
 import System.Environment (lookupEnv, setEnv)
-import App.Logger
-  ( Logger,
-    Output (StdOut),
-    create,
-  )
 import Test.Hspec
   ( Spec,
     Expectation,
@@ -140,14 +135,7 @@ setupTx2ApiTests = do
   logger <- create StdOut
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getDbConnectionString
-  connectionPool <-
-    newPool $
-      setNumStripes (Just 2) $
-        defaultPoolConfig
-          (connectPostgreSQL $ fromString connectionString)
-          close
-          60
-          10
+  connectionPool <- createConnectionPool connectionString
   app <- scottyAppT defaultOptions (`runReaderT` Env logger connectionPool) (webApp requestLogger)
   pure $
     TestContext
