@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b61e1ea8ddd4b98f9b11d7d16380171c4fa6d5926cc6e8c7c4f6844a6b0ba822
+-- hash: c38875980379c5b7e392205402486caedb92bba3a7312fe6e90ae53d136951c1
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -43,6 +43,7 @@ library
       Types
       Types.Api
       Types.Push
+      Types.Weather
       Utility
       VesselFetcher
       WeatherFetcher

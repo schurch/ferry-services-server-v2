@@ -28,6 +28,7 @@ import System.Environment (getEnv)
 import App.Logger (logDebugM)
 import System.Timeout (timeout)
 import Types
+import Types.Weather
 
 fetchWeather :: Application ()
 fetchWeather = do
