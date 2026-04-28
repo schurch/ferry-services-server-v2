@@ -22,6 +22,7 @@ import Data.Time
 import Data.Time.Clock (UTCTime (..), getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Database as DB
+import App.Env (Application)
 import Database.Postgis
   ( Geometry (GeoPoint),
     Point (Point),

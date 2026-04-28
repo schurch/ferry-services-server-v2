@@ -11,6 +11,7 @@ import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Maybe (fromJust)
 import Data.Pool (Pool, withResource)
 import qualified Database as DB
+import App.Env (Application)
 import Database.Postgis
   ( Geometry (GeoPoint),
     Point (Point),

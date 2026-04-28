@@ -34,6 +34,7 @@ import Data.Text.Encoding.Error (lenientDecode)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Database as DB
+import App.Env (Application)
 import Network.HTTP.Simple (getResponseBody, httpBS, parseRequest, setRequestBodyJSON, setRequestHeaders, setRequestMethod)
 import Network.HTTP.Types.Header
   ( hAccept,

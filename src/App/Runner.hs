@@ -10,6 +10,7 @@ module App.Runner
 where
 
 import App.Database (createConnectionPool)
+import App.Env (Application, Env (Env))
 import App.Logger
   ( Logger,
     Output (StdOut),
@@ -32,7 +33,6 @@ import System.Log.Raven.Types
   ( SentryLevel (Error),
     SentryRecord (..),
   )
-import Types (Application, Env (Env))
 
 data SentryConfig = SentryConfig
   { sentryDsnEnvVar :: String,

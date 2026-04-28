@@ -7,6 +7,8 @@ import Control.Monad.Reader
     asks,
   )
 import App.Database (createConnectionPool)
+import App.Env (Env (Env))
+import qualified App.Env
 import App.Logger
   ( Logger,
     Output (StdOut),
@@ -137,12 +139,12 @@ setupIntegrationTests = do
   let env = Env logger connectionPool
   runReaderT (runScraper >> seedBrodickWeather >> fetchCaledonianIslesVessel) env
   where
-    runScraper :: Types.Application ()
+    runScraper :: App.Env.Application ()
     runScraper = do
       fetchNorthLinkServicesAndNotify
       fetchCalMacStatusesAndNotify
 
-    seedBrodickWeather :: Types.Application ()
+    seedBrodickWeather :: App.Env.Application ()
     seedBrodickWeather =
       DB.insertLocationWeather
         4
@@ -152,7 +154,7 @@ setupIntegrationTests = do
             (WeatherFetcherResultWind 8.04672 196.4)
         )
 
-    fetchCaledonianIslesVessel :: Types.Application ()
+    fetchCaledonianIslesVessel :: App.Env.Application ()
     fetchCaledonianIslesVessel = fetchVessels [(calMacOrganisationID, [caledonianIslesMMSI])]
 
 calMacOrganisationID :: Int

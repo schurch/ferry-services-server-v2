@@ -5,7 +5,9 @@
 
 module Types where
 
-import Control.Monad.Reader (ReaderT, asks)
+import App.Env (Application, logger)
+import App.Logger (MonadLogger (askLogger))
+import Control.Monad.Reader (asks)
 import Data.Aeson
   ( FromJSON (parseJSON),
     KeyValue ((.=)),
@@ -24,7 +26,6 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char (toLower, toUpper)
 import Data.Maybe (fromMaybe)
-import Data.Pool (Pool)
 import Data.Proxy
 import Data.Scientific
   ( Scientific,
@@ -40,28 +41,13 @@ import Database.Postgis
     writeGeometry,
   )
 import Database.PostgreSQL.Simple
-  ( Connection,
-    FromRow,
+  ( FromRow,
     ToRow,
   )
 import Database.PostgreSQL.Simple.FromField (FromField (..))
 import Database.PostgreSQL.Simple.ToField (ToField (..))
 import GHC.Generics (Generic)
-import App.Logger
-  ( Logger,
-    MonadLogger (askLogger),
-  )
 import Web.Scotty.Trans (ActionT, ScottyT)
-
-data Env = Env
-  { logger :: Logger,
-    connectionPool :: Pool Connection
-  }
-
-type Application = ReaderT Env IO
-
-instance MonadLogger Application where
-  askLogger = asks logger
 
 -- Web server
 type Scotty = ScottyT Application ()

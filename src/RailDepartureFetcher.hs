@@ -8,6 +8,7 @@ import Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.ByteString.UTF8 as BSU (fromString)
 import qualified Database as DB
+import App.Env (Application)
 import Network.HTTP.Simple
   ( getResponseBody,
     httpBS,
@@ -17,7 +18,7 @@ import Network.HTTP.Simple
 import System.Environment (getEnv)
 import App.Logger (logDebugM)
 import System.Timeout (timeout)
-import Types (Application, RailDepartureFetcherResult (RailDepartureFetcherResult), railDepartureFetcherJsonOptions)
+import Types (RailDepartureFetcherResult (RailDepartureFetcherResult), railDepartureFetcherJsonOptions)
 
 fetchRailDepartures :: Application ()
 fetchRailDepartures =

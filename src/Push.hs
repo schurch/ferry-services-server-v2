@@ -22,6 +22,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
 import Data.List (find)
 import Data.UUID (UUID)
+import App.Env (Application, logger)
 import App.Logger (Logger)
 import qualified Database as DB
 import System.Environment (lookupEnv)

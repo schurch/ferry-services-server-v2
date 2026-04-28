@@ -45,9 +45,11 @@ import Test.Hspec
   )
 import TransxchangeV2.Ingest (ingestDirectoryV2)
 import TransxchangeV2.Repository (clearTx2Tables)
+import App.Env
+  ( Env (Env, connectionPool, logger),
+  )
 import Types
   ( DepartureResponse (..),
-    Env (Env, connectionPool, logger),
     LocationResponse (..),
     ServiceResponse (..),
     ServiceStatus (Unknown),

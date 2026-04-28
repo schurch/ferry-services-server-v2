@@ -8,6 +8,7 @@ import App.Runner
     createEnv,
     handleSentryException,
   )
+import App.Env (Env (Env))
 import App.Logger
   ( Logger,
     logInfo,
@@ -22,7 +23,6 @@ import TransxchangeV2.Ingest
     ingestLatestV2,
   )
 import TransxchangeV2.Types (Tx2IngestSummary (..))
-import Types (Env (Env))
 
 main :: IO ()
 main = do

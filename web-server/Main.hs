@@ -35,6 +35,7 @@ import System.Log.Raven.Types
   ( SentryLevel (Error),
     SentryRecord (..),
   )
+import App.Env (Env (Env))
 import App.Logger
   ( Level (..),
     Logger,
@@ -43,7 +44,6 @@ import App.Logger
     logInfo,
   )
 import App.Database (createConnectionPool)
-import Types (Env (Env))
 import Web.Scotty.Trans
   ( Options (Options, settings, verbose),
     scottyOptsT,

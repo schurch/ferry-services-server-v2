@@ -56,6 +56,7 @@ import System.Directory
     removeFile,
   )
 import System.Environment (getEnv)
+import App.Env (Application, Env, connectionPool, logger)
 import App.Logger
   ( Level (Debug, Info),
     Logger,
@@ -73,7 +74,6 @@ import TransxchangeV2.Repository
   )
 import TransxchangeV2.Transform (filterFerryDocuments)
 import TransxchangeV2.Types
-import Types (Application, Env (connectionPool, logger))
 import Utility (splitOn, trim)
 
 data FTPConnectionDetails = FTPConnectionDetails
