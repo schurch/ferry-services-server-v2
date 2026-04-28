@@ -269,7 +269,10 @@ runTCPClient host port client = withSocketsDo $ do
     resolve :: IO AddrInfo
     resolve = do
       let hints = defaultHints {addrSocketType = Stream}
-      head <$> getAddrInfo (Just hints) (Just host) (Just port)
+      addresses <- getAddrInfo (Just hints) (Just host) (Just port)
+      case addresses of
+        address : _ -> pure address
+        [] -> fail $ "No address info found for " <> host <> ":" <> port
 
     open :: AddrInfo -> IO Socket
     open addr =

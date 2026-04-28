@@ -78,7 +78,7 @@ rail-departure-fetcher: build dev-env
 
 .PHONY: tests
 tests: test-env
-	psql "$(DB_CONNECTION)" -c 'DROP TABLE IF EXISTS vessels; DROP TABLE IF EXISTS service_locations; DROP TABLE IF EXISTS installation_services; DROP TABLE IF EXISTS installations; DROP TABLE IF EXISTS location_weather; DROP TABLE IF EXISTS rail_departures; DROP TABLE IF EXISTS locations; DROP TABLE IF EXISTS schema_migrations; DROP TABLE IF EXISTS days_of_non_operation; DROP TABLE IF EXISTS days_of_operation; DROP TABLE IF EXISTS vehicle_journeys; DROP TABLE IF EXISTS journey_patterns CASCADE; DROP TABLE IF EXISTS lines; DROP TABLE IF EXISTS transxchangeservice_services; DROP TABLE IF EXISTS transxchange_services; DROP TABLE IF EXISTS operators; DROP TABLE IF EXISTS journey_pattern_timing_links; DROP TABLE IF EXISTS journey_pattern_sections; DROP TABLE IF EXISTS routes; DROP TABLE IF EXISTS route_links; DROP TABLE IF EXISTS route_sections; DROP TABLE IF EXISTS stop_points; DROP TYPE IF EXISTS day_of_week; DROP TABLE IF EXISTS serviced_organisation_working_days; DROP TABLE IF EXISTS serviced_organisations; DROP TABLE IF EXISTS services; DROP TABLE IF EXISTS organisations;'
+	psql "$(DB_CONNECTION)" -v ON_ERROR_STOP=1 -c 'DO $$$$ DECLARE app_table record; BEGIN FOR app_table IN SELECT schemaname, tablename FROM pg_tables WHERE schemaname = '"'"'public'"'"' AND tablename <> '"'"'spatial_ref_sys'"'"' LOOP EXECUTE format('"'"'DROP TABLE IF EXISTS %I.%I CASCADE'"'"', app_table.schemaname, app_table.tablename); END LOOP; END $$$$; DROP TYPE IF EXISTS day_of_week;'
 	migrate -source file://migrations -database "$(DB_CONNECTION)" up
 	$(STACK_ENV_PREFIX) stack test
 

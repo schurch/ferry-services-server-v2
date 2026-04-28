@@ -198,6 +198,7 @@ spec = do
             "disruption_reason": "Weather",
             "last_updated_date": "2022-02-01T01:23:20Z",
             "updated": "2022-02-02T01:23:20Z",
+            "scheduled_departures_available": false,
             "locations": [
               {
                 "id": 4,

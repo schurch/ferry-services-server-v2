@@ -52,7 +52,6 @@ import Network.Wai.Middleware.AddHeaders (addHeaders)
 import Network.Wai.Middleware.Cors
 import Network.Wai.Middleware.Gzip
   ( GzipFiles (..),
-    def,
     gzip,
     gzipFiles,
   )
@@ -68,6 +67,7 @@ import Network.Wai.Middleware.Static
     noDots,
     staticPolicy,
   )
+import System.Environment (lookupEnv)
 import System.Log.FastLogger.Internal (LogStr, fromLogStr)
 import System.Logger
   ( Level (Debug, Info, Trace),
@@ -81,16 +81,16 @@ import Types
 import Utility (stringToDay)
 import Web.Scotty.Trans
   ( Parsable (parseParam),
+    captureParam,
     delete,
     file,
     get,
     json,
     jsonData,
     middleware,
-    param,
     post,
+    queryParamMaybe,
     redirect,
-    rescue,
     setHeader,
     status,
   )
@@ -115,37 +115,38 @@ webApp requestLogger = do
     services <- getServices
     json services
   get "/api/services/:serviceID" $ do
-    serviceID <- param "serviceID"
-    departuresDate <- param "departuresDate" `rescue` (\_ -> return Nothing)
+    serviceID <- captureParam "serviceID"
+    departuresDateParam <- queryParamMaybe "departuresDate"
+    let departuresDate = (departuresDateParam :: Maybe Text) >>= stringToDay . unpack
     service <- getService serviceID departuresDate
     json service
   post "/api/installations/:installationID" $ do
-    installationID <- param "installationID"
+    installationID <- captureParam "installationID"
     request <- jsonData
     services <- createInstallation installationID request
     json services
   get "/api/installations/:installationID/push-status" $ do
-    installationID <- param "installationID"
+    installationID <- captureParam "installationID"
     pushStatus <- getPushStatus installationID
     maybe (status status404) json pushStatus
   post "/api/installations/:installationID/push-status" $ do
-    installationID <- param "installationID"
+    installationID <- captureParam "installationID"
     request <- jsonData
     lift $ DB.updatePushEnabled installationID (pushStatusEnabled request)
     pushStatus <- getPushStatus installationID
     maybe (status status404) json pushStatus
   get "/api/installations/:installationID/services" $ do
-    installationID <- param "installationID"
+    installationID <- captureParam "installationID"
     services <- getServicesForInstallation installationID
     json services
   post "/api/installations/:installationID/services" $ do
-    installationID <- param "installationID"
+    installationID <- captureParam "installationID"
     (AddServiceRequest serviceID) <- jsonData
     services <- addServiceToInstallation installationID serviceID
     json services
   delete "/api/installations/:installationID/services/:serviceID" $ do
-    installationID <- param "installationID"
-    serviceID <- param "serviceID"
+    installationID <- captureParam "installationID"
+    serviceID <- captureParam "serviceID"
     services <- deleteServiceForInstallation installationID serviceID
     json services
   get "/api/vessels" $ do
@@ -348,23 +349,29 @@ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup o
 registerDeviceToken :: UUID -> String -> DeviceType -> Action String
 registerDeviceToken installationID deviceToken deviceType = do
   logger' <- asks logger
-  storedInstallation <- lift $ DB.getInstallationWithID installationID
-  currentEndpointARN <-
-    if isNothing storedInstallation
-      then liftIO $ createPushEndpoint logger' deviceToken deviceType
-      else return $ installationEndpointARN . fromJust $ storedInstallation
-  endpointAttributesResult <-
-    liftIO $
-      getAttributesForEndpoint logger' currentEndpointARN
-  case endpointAttributesResult of
-    EndpointAttributesEndpointNotFound ->
-      liftIO $ createPushEndpoint logger' deviceToken deviceType
-    AttributeResults awsDeviceToken isEnabled -> do
-      when (awsDeviceToken /= deviceToken || not isEnabled)
-        $ liftIO
-          . void
-        $ updateDeviceTokenForEndpoint logger' currentEndpointARN deviceToken
-      return currentEndpointARN
+  testEndpointARN <- liftIO $ lookupEnv "FERRY_SERVICES_TEST_AWS_ENDPOINT_ARN"
+  case testEndpointARN of
+    Just endpointARN -> return endpointARN
+    Nothing -> registerDeviceTokenWithAWS logger'
+  where
+    registerDeviceTokenWithAWS logger' = do
+      storedInstallation <- lift $ DB.getInstallationWithID installationID
+      currentEndpointARN <-
+        if isNothing storedInstallation
+          then liftIO $ createPushEndpoint logger' deviceToken deviceType
+          else return $ installationEndpointARN . fromJust $ storedInstallation
+      endpointAttributesResult <-
+        liftIO $
+          getAttributesForEndpoint logger' currentEndpointARN
+      case endpointAttributesResult of
+        EndpointAttributesEndpointNotFound ->
+          liftIO $ createPushEndpoint logger' deviceToken deviceType
+        AttributeResults awsDeviceToken isEnabled -> do
+          when (awsDeviceToken /= deviceToken || not isEnabled)
+            $ liftIO
+              . void
+            $ updateDeviceTokenForEndpoint logger' currentEndpointARN deviceToken
+          return currentEndpointARN
 
 createNextDepartureLookup :: Int -> Action LocationNextDepartureLookup
 createNextDepartureLookup serviceID = do

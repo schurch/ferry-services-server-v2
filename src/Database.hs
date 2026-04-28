@@ -36,7 +36,7 @@ import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (asks)
 import Data.List (nub)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Pool (Pool, withResource)
 import Data.Time.Calendar
   ( Day,
@@ -89,25 +89,27 @@ insertRailDepartureFetcherResult railDeparturesFetcherResult locationID = withCo
       let departureCRS = railDepartureFetcherResultCrs
           departureName = railDepartureFetcherResultLocationName
        in case railDepartureFetcherResultTrainServices of
-            Just trainServices -> convertToRailDeparture departureCRS departureName locationID <$> filter (isValidService departureCRS) trainServices
+            Just trainServices -> mapMaybe (convertToRailDeparture departureCRS departureName locationID) $ filter (isValidService departureCRS) trainServices
             Nothing -> []
 
-    convertToRailDeparture :: String -> String -> Int -> RailDepartureFetcherTrainService -> (String, String, String, String, TimeOfDay, String, Bool, Maybe String, Int)
-    convertToRailDeparture departureCRS departureName locationID trainService =
-      ( departureCRS,
-        departureName,
-        railDepartureFetcherLocationCrs . head . railDepartureFetcherTrainServiceDestination $ trainService,
-        railDepartureFetcherLocationLocationName . head . railDepartureFetcherTrainServiceDestination $ trainService,
-        timeStringToTime . railDepartureFetcherTrainServiceStd $ trainService,
-        railDepartureFetcherTrainServiceEtd trainService,
-        railDepartureFetcherTrainServiceIsCancelled trainService,
-        railDepartureFetcherTrainServicePlatform trainService,
-        locationID
-      )
+    convertToRailDeparture :: String -> String -> Int -> RailDepartureFetcherTrainService -> Maybe (String, String, String, String, TimeOfDay, String, Bool, Maybe String, Int)
+    convertToRailDeparture departureCRS departureName locationID trainService = do
+      destination <- listToMaybe $ railDepartureFetcherTrainServiceDestination trainService
+      pure
+        ( departureCRS,
+          departureName,
+          railDepartureFetcherLocationCrs destination,
+          railDepartureFetcherLocationLocationName destination,
+          timeStringToTime . railDepartureFetcherTrainServiceStd $ trainService,
+          railDepartureFetcherTrainServiceEtd trainService,
+          railDepartureFetcherTrainServiceIsCancelled trainService,
+          railDepartureFetcherTrainServicePlatform trainService,
+          locationID
+        )
 
     isValidService :: String -> RailDepartureFetcherTrainService -> Bool
     isValidService departureCRS trainService =
-      let currentDestination = railDepartureFetcherLocationCrs . head <$> railDepartureFetcherTrainServiceCurrentDestinations trainService
+      let currentDestination = railDepartureFetcherTrainServiceCurrentDestinations trainService >>= fmap railDepartureFetcherLocationCrs . listToMaybe
        in currentDestination /= Just departureCRS
 
     deleteOldData :: Connection -> RailDepartureFetcherResult -> IO ()
@@ -1085,11 +1087,15 @@ isEarlyRunOffDay day =
 
 firstMondayOfMonth :: Integer -> Int -> Day
 firstMondayOfMonth year month =
-  head [candidate | dayOfMonth <- [1 .. 7], let candidate = fromGregorian year month dayOfMonth, isMonday candidate]
+  case [candidate | dayOfMonth <- [1 .. 7], let candidate = fromGregorian year month dayOfMonth, isMonday candidate] of
+    firstMonday : _ -> firstMonday
+    [] -> fromGregorian year month 1
 
 lastMondayOfMonth :: Integer -> Int -> Day
 lastMondayOfMonth year month =
-  head [candidate | offset <- [0 .. 6], let candidate = addDays (negate offset) monthEnd, isMonday candidate]
+  case [candidate | offset <- [0 .. 6], let candidate = addDays (negate offset) monthEnd, isMonday candidate] of
+    lastMonday : _ -> lastMonday
+    [] -> monthEnd
   where
     monthEnd =
       addDays

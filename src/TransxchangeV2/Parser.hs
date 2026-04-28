@@ -458,7 +458,7 @@ generateFrequencyDepartureTimes baseDepartureTime frequencySpec =
   case frequencySpec of
     Tx2FrequencyInterval intervalMinutes endTime ->
       takeWhile (<= endTime) $
-        tail $
+        drop 1 $
           iterate (addMinutesToTimeOfDay intervalMinutes) baseDepartureTime
     Tx2FrequencyMinutesPastHour minutesPastHour endTime ->
       [ candidate

@@ -10,7 +10,9 @@ import Data.Aeson (FromJSON, decode, encode)
 import Data.List (find, isPrefixOf)
 import Data.Pool
   ( Pool,
-    createPool,
+    defaultPoolConfig,
+    newPool,
+    setNumStripes,
     withResource,
   )
 import Data.String (fromString)
@@ -20,7 +22,7 @@ import Network.HTTP.Types.Header (Header)
 import Network.Wai (Application)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
 import Scraper
-import System.Environment (getEnv, lookupEnv, setEnv)
+import System.Environment (lookupEnv, setEnv)
 import System.Logger
   ( Logger,
     Output (StdOut),
@@ -46,8 +48,7 @@ import Test.Hspec.Wai
   )
 import Types
 import VesselFetcher
-import WeatherFetcher
-import Web.Scotty.Trans (scottyAppT)
+import Web.Scotty.Trans (defaultOptions, scottyAppT)
 import WebServer
 
 spec :: Spec
@@ -114,8 +115,11 @@ arranService :: ResponseMatcher
 arranService = jsonReponseMatcher checkArranServiceResponse
 
 checkArranServiceResponse :: ServiceResponse -> Maybe String
-checkArranServiceResponse (ServiceResponse 5 _ "ARRAN" "Ardrossan (ARD) - Brodick (BRO)" _ _ _ _ _ _ _ _ _) = Nothing
-checkArranServiceResponse response = return $ "Unexpected response: " <> show response
+checkArranServiceResponse response
+  | serviceResponseServiceID response == 5
+      && any ((==) 4 . locationResponseID) (serviceResponseLocations response) =
+      Nothing
+  | otherwise = return $ "Unexpected response: " <> show response
 
 jsonReponseMatcher :: FromJSON a => (a -> Maybe String) -> ResponseMatcher
 jsonReponseMatcher jsonChecker = do
@@ -129,27 +133,34 @@ jsonReponseMatcher jsonChecker = do
 -- Setup
 setupIntegrationTests :: IO ()
 setupIntegrationTests = do
+  setEnv "FERRY_SERVICES_TEST_AWS_ENDPOINT_ARN" "arn:aws:sns:ap-southeast-2:000000000000:endpoint/APNS_SANDBOX/test/test"
   logger <- create StdOut
   connectionString <- getDbConnectionString
   connectionPool <-
-    createPool
-      (connectPostgreSQL $ fromString connectionString)
-      Database.PostgreSQL.Simple.close
-      2 -- stripes
-      60 -- unused connections are kept open for a minute
-      10 -- max. 10 connections open per stripe
+    newPool $
+      setNumStripes (Just 2) $
+        defaultPoolConfig
+          (connectPostgreSQL $ fromString connectionString)
+          Database.PostgreSQL.Simple.close
+          60 -- unused connections are kept open for a minute
+          10 -- max. 10 connections open per stripe
   let env = Env logger connectionPool
-  runReaderT (runScraper >> fetchBrodickWeather >> fetchCaledonianIslesVessel) env
+  runReaderT (runScraper >> seedBrodickWeather >> fetchCaledonianIslesVessel) env
   where
     runScraper :: Types.Application ()
     runScraper = do
       fetchNorthLinkServicesAndNotify
       fetchCalMacStatusesAndNotify
 
-    fetchBrodickWeather :: Types.Application ()
-    fetchBrodickWeather = do
-      brodick <- filter ((==) 4 . locationLocationID) <$> DB.getLocations
-      fetchWeatherForLocations brodick
+    seedBrodickWeather :: Types.Application ()
+    seedBrodickWeather =
+      DB.insertLocationWeather
+        4
+        ( WeatherFetcherResult
+            [WeatherFetcherResultWeather "10n" "moderate rain"]
+            (WeatherFetcherResultMain 278.15)
+            (WeatherFetcherResultWind 8.04672 196.4)
+        )
 
     fetchCaledonianIslesVessel :: Types.Application ()
     fetchCaledonianIslesVessel = fetchVessels [(calMacOrganisationID, [caledonianIslesMMSI])]
@@ -166,13 +177,14 @@ app = do
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getDbConnectionString
   connectionPool <-
-    createPool
-      (connectPostgreSQL $ fromString connectionString)
-      Database.PostgreSQL.Simple.close
-      2 -- stripes
-      60 -- unused connections are kept open for a minute
-      10 -- max. 10 connections open per stripe
-  scottyAppT (`runReaderT` Env logger connectionPool) (webApp requestLogger)
+    newPool $
+      setNumStripes (Just 2) $
+        defaultPoolConfig
+          (connectPostgreSQL $ fromString connectionString)
+          Database.PostgreSQL.Simple.close
+          60 -- unused connections are kept open for a minute
+          10 -- max. 10 connections open per stripe
+  scottyAppT defaultOptions (`runReaderT` Env logger connectionPool) (webApp requestLogger)
 
 getDbConnectionString :: IO String
 getDbConnectionString = do

@@ -64,9 +64,9 @@ instance MonadLogger Application where
     System.Logger.log logger level message
 
 -- Web server
-type Scotty = ScottyT Text Application ()
+type Scotty = ScottyT Application ()
 
-type Action = ActionT Text Application
+type Action = ActionT Application
 
 instance MonadLogger Types.Action where
   log level message = do

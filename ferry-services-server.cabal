@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.0.
+-- This file has been generated from package.yaml by hpack version 0.38.1.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c17b98c440c5631ce42384da76e60c28a1cd202ef12343681f1e414065efa1a2
+-- hash: 8f56c824cb8db0ff55641560174f32439351da8d37d007158c4fdd9f22b43af9
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -204,8 +204,8 @@ test-suite ferry-services-server-test
   other-modules:
       IntegrationSpec
       JSONSpec
-      Paths_ferry_services_server
       TransxchangeApiSpec
+      Paths_ferry_services_server
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N

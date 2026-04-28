@@ -7,7 +7,11 @@ import Control.Exception (SomeException, catch, throwIO)
 import Control.Concurrent (threadDelay)
 import Control.Monad (forever)
 import Control.Monad.Trans.Reader (runReaderT)
-import Data.Pool (createPool)
+import Data.Pool
+  ( defaultPoolConfig,
+    newPool,
+    setNumStripes,
+  )
 import Data.String (fromString)
 import Database.PostgreSQL.Simple
   ( close,
@@ -45,12 +49,13 @@ main = do
   logger <- create StdOut
   connectionString <- getEnv "DB_CONNECTION"
   connectionPool <-
-    createPool
-      (connectPostgreSQL $ fromString connectionString)
-      Database.PostgreSQL.Simple.close
-      2
-      60
-      10
+    newPool $
+      setNumStripes (Just 2) $
+        defaultPoolConfig
+          (connectPostgreSQL $ fromString connectionString)
+          Database.PostgreSQL.Simple.close
+          60
+          10
   let env = Env logger connectionPool
   case args of
     (directory : _) ->

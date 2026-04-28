@@ -7,7 +7,11 @@ import Control.Monad.Reader (runReaderT)
 import Data.Aeson (Value (String))
 import Data.ByteString.Char8 (unpack)
 import qualified Data.HashMap.Strict as HM
-import Data.Pool (createPool)
+import Data.Pool
+  ( defaultPoolConfig,
+    newPool,
+    setNumStripes,
+  )
 import Data.String (fromString)
 import Data.Text.Encoding (decodeUtf8)
 import Database.PostgreSQL.Simple
@@ -67,12 +71,13 @@ main = do
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getEnv "DB_CONNECTION"
   connectionPool <-
-    createPool
-      (connectPostgreSQL $ fromString connectionString)
-      Database.PostgreSQL.Simple.close
-      2 -- stripes
-      60 -- unused connections are kept open for a minute
-      10 -- max. 10 connections open per stripe
+    newPool $
+      setNumStripes (Just 2) $
+        defaultPoolConfig
+          (connectPostgreSQL $ fromString connectionString)
+          Database.PostgreSQL.Simple.close
+          60 -- unused connections are kept open for a minute
+          10 -- max. 10 connections open per stripe
   scottyOptsT options (`runReaderT` Env logger connectionPool) (webApp requestLogger)
 
 exceptionHandler :: Maybe Request -> SomeException -> IO ()

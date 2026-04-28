@@ -13,7 +13,9 @@ import Data.List (find, isPrefixOf)
 import Data.Maybe (fromMaybe)
 import Data.Pool
   ( Pool,
-    createPool,
+    defaultPoolConfig,
+    newPool,
+    setNumStripes,
     withResource,
   )
 import Data.String (fromString)
@@ -29,7 +31,7 @@ import Database.PostgreSQL.Simple
     execute_,
   )
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Network.Wai (Application, rawPathInfo, rawQueryString, requestMethod)
+import Network.Wai (Application, queryString, rawPathInfo, rawQueryString, requestMethod)
 import Network.Wai.Test (SResponse (simpleBody), defaultRequest, request, runSession, setPath)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
 import System.Environment (lookupEnv, setEnv)
@@ -43,7 +45,6 @@ import Test.Hspec
     Expectation,
     describe,
     it,
-    pendingWith,
     shouldBe,
     shouldSatisfy,
   )
@@ -56,7 +57,7 @@ import Types
     ServiceResponse (..),
     ServiceStatus (Unknown),
   )
-import Web.Scotty.Trans (scottyAppT)
+import Web.Scotty.Trans (defaultOptions, scottyAppT)
 import WebServer (loggerSettings, webApp)
 
 spec :: Spec
@@ -69,9 +70,6 @@ spec = do
       ingestScenarioFixture context basicRealScenario
       response <- getServiceResponseForDate context basicRealScenario
       assertBasicRealPentlandDepartures response
-
-    it "returns expanded departures for a real frequency-based service" $
-      pendingWith (scenarioPendingMessage frequencyRealScenario)
 
     it "suppresses departures on a real non-operation date" $ do
       context <- setupTx2ApiTests
@@ -88,12 +86,6 @@ spec = do
       ingestScenarioFixture context bankHolidayRealScenario
       holidayResponse <- getServiceResponseForDate context bankHolidayRealScenario
       assertScheduledDepartureCounts [28, 28] holidayResponse
-
-    it "returns departures only for the matching real week-of-month scenario" $
-      pendingWith (scenarioPendingMessage weekOfMonthRealScenario)
-
-    it "prefers the newest real source modification when duplicates exist" $
-      pendingWith (scenarioPendingMessage sourcePrecedenceRealScenario)
 
     it "selects departures from the correct real file when multiple CalMac files exist for one service" $ do
       context <- setupTx2ApiTests
@@ -149,13 +141,14 @@ setupTx2ApiTests = do
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getDbConnectionString
   connectionPool <-
-    createPool
-      (connectPostgreSQL $ fromString connectionString)
-      close
-      2
-      60
-      10
-  app <- scottyAppT (`runReaderT` Env logger connectionPool) (webApp requestLogger)
+    newPool $
+      setNumStripes (Just 2) $
+        defaultPoolConfig
+          (connectPostgreSQL $ fromString connectionString)
+          close
+          60
+          10
+  app <- scottyAppT defaultOptions (`runReaderT` Env logger connectionPool) (webApp requestLogger)
   pure $
     TestContext
       { testContextApp = app,
@@ -257,13 +250,15 @@ getServiceResponseForDate context scenario = do
 getServiceResponseForDay :: TestContext -> Int -> Day -> IO ServiceResponse
 getServiceResponseForDay context serviceId queryDate = do
   let path = "/api/services/" <> show serviceId
-      queryString = "?departuresDate=" <> show queryDate
+      rawQuery = "?departuresDate=" <> show queryDate
+      queryValue = B8.pack (show queryDate)
   response <-
     runSession
       ( request
           (setPath defaultRequest (B8.pack path))
             { rawPathInfo = B8.pack path,
-              rawQueryString = B8.pack queryString,
+              rawQueryString = B8.pack rawQuery,
+              queryString = [("departuresDate", Just queryValue)],
               requestMethod = "GET"
             }
       )
@@ -385,17 +380,6 @@ toEnv context =
       connectionPool = testContextConnectionPool context
     }
 
-scenarioPendingMessage :: Tx2ApiScenario -> String
-scenarioPendingMessage scenario =
-  unlines $
-    [ "Fixture-driven TransXChange API scenario not implemented yet.",
-      "Scenario: " <> tx2ScenarioName scenario,
-      "Fixture directory: " <> tx2ScenarioFixtureDir scenario,
-      "Query date: " <> show (tx2ScenarioQueryDate scenario),
-      "Expected checks:"
-    ]
-      <> fmap ("- " <>) (tx2ScenarioExpectationSummary scenario)
-
 basicRealScenario :: Tx2ApiScenario
 basicRealScenario =
   Tx2ApiScenario
@@ -418,30 +402,6 @@ basicRealScenario =
         [ "Uses the real Pentland PF1 file copied into this fixture directory",
           "Queries a Monday within the operating period",
           "Asserts the exact API departures and arrivals for both terminals"
-        ]
-    }
-
-frequencyRealScenario :: Tx2ApiScenario
-frequencyRealScenario =
-  Tx2ApiScenario
-    { tx2ScenarioName = "02-frequency-real",
-      tx2ScenarioFixtureDir = "test/fixtures/transxchange-api/02-frequency-real",
-      tx2ScenarioQueryDate = fromGregorian 2026 3 16,
-      tx2ScenarioSeed =
-        ScenarioSeed
-          { scenarioServiceId = 9200,
-            scenarioArea = "TEST",
-            scenarioRoute = "Frequency Real Fixture",
-            scenarioOrganisationId = 999,
-            scenarioServiceCode = "REPLACE_WITH_REAL_SERVICE_CODE",
-            scenarioLocations =
-              [ ScenarioLocation 9201 "From Terminal" "REPLACE_STOP_POINT_A" 0 0,
-                ScenarioLocation 9202 "To Terminal" "REPLACE_STOP_POINT_B" 0 0
-              ]
-          },
-      tx2ScenarioExpectationSummary =
-        [ "Assert that a real frequency-based journey expands into multiple scheduled departures",
-          "Check exact departure count and timestamps at the origin terminal"
         ]
     }
 
@@ -492,54 +452,6 @@ bankHolidayRealScenario =
         [ "Uses the real ABCF_LUI ferry file with explicit MayDay bank-holiday non-operation rules",
           "Asserts the exact per-terminal departure counts returned by the API on 2026-05-04",
           "Keeps the fixture ferry-only so the API departure path is exercised end to end"
-        ]
-    }
-
-weekOfMonthRealScenario :: Tx2ApiScenario
-weekOfMonthRealScenario =
-  Tx2ApiScenario
-    { tx2ScenarioName = "05-week-of-month-real",
-      tx2ScenarioFixtureDir = "test/fixtures/transxchange-api/05-week-of-month-real",
-      tx2ScenarioQueryDate = fromGregorian 2026 3 19,
-      tx2ScenarioSeed =
-        ScenarioSeed
-          { scenarioServiceId = 9500,
-            scenarioArea = "TEST",
-            scenarioRoute = "Week Of Month Real Fixture",
-            scenarioOrganisationId = 999,
-            scenarioServiceCode = "REPLACE_WITH_REAL_SERVICE_CODE",
-            scenarioLocations =
-              [ ScenarioLocation 9501 "From Terminal" "REPLACE_STOP_POINT_A" 0 0,
-                ScenarioLocation 9502 "To Terminal" "REPLACE_STOP_POINT_B" 0 0
-              ]
-          },
-      tx2ScenarioExpectationSummary =
-        [ "Use a real fixture that relies on week-of-month rules",
-          "Assert departures exist only on the matching week-of-month date"
-        ]
-    }
-
-sourcePrecedenceRealScenario :: Tx2ApiScenario
-sourcePrecedenceRealScenario =
-  Tx2ApiScenario
-    { tx2ScenarioName = "06-source-precedence-real",
-      tx2ScenarioFixtureDir = "test/fixtures/transxchange-api/06-source-precedence-real",
-      tx2ScenarioQueryDate = fromGregorian 2026 3 16,
-      tx2ScenarioSeed =
-        ScenarioSeed
-          { scenarioServiceId = 9600,
-            scenarioArea = "TEST",
-            scenarioRoute = "Source Precedence Real Fixture",
-            scenarioOrganisationId = 999,
-            scenarioServiceCode = "REPLACE_WITH_REAL_SERVICE_CODE",
-            scenarioLocations =
-              [ ScenarioLocation 9601 "From Terminal" "REPLACE_STOP_POINT_A" 0 0,
-                ScenarioLocation 9602 "To Terminal" "REPLACE_STOP_POINT_B" 0 0
-              ]
-          },
-      tx2ScenarioExpectationSummary =
-        [ "Use two real overlapping source files with different source modification times",
-          "Assert the API surfaces only the newest effective departure variant"
         ]
     }
 
