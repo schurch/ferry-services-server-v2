@@ -4,10 +4,8 @@
 
 module WebServer where
 
-import AWS
-import Control.Monad (forM, void, when)
+import Control.Monad (forM, void)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (asks)
 import Control.Monad.Trans (lift)
 import Data.Aeson (Value (..))
 import qualified Data.ByteString as BS
@@ -19,7 +17,6 @@ import qualified Data.Map as M
 import Data.Maybe
   ( fromJust,
     fromMaybe,
-    isNothing,
   )
 import Data.Pool (withResource)
 import Data.Scientific
@@ -67,7 +64,6 @@ import Network.Wai.Middleware.Static
     noDots,
     staticPolicy,
   )
-import System.Environment (lookupEnv)
 import System.Log.FastLogger.Internal (LogStr, fromLogStr)
 import App.Logger
   ( Level (Debug, Info, Trace),
@@ -77,6 +73,7 @@ import App.Logger
   )
 import Types
 import Utility (stringToDay)
+import qualified Push
 import Web.Scotty.Trans
   ( Parsable (parseParam),
     captureParam,
@@ -234,7 +231,8 @@ createInstallation ::
 createInstallation installationID (CreateInstallationRequest deviceToken deviceType) =
   do
     awsSNSEndpointARN <-
-      registerDeviceToken
+      lift $
+      Push.registerDeviceToken
         installationID
         deviceToken
         deviceType
@@ -323,53 +321,6 @@ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup o
     serviceStatusForTime currentTime serviceUpdated serviceStatus =
       let diff = diffUTCTime currentTime serviceUpdated
        in if diff > 1800 then Unknown else serviceStatus
-
--- Pseudo code from AWS docs:
--- retrieve the latest device token from the mobile operating system
--- if (the platform endpoint ARN is not stored)
---   # this is a first-time registration
---   call create platform endpoint
---   store the returned platform endpoint ARN
--- endif
-
--- call get endpoint attributes on the platform endpoint ARN
-
--- if (while getting the attributes a not-found exception is thrown)
---   # the platform endpoint was deleted
---   call create platform endpoint with the latest device token
---   store the returned platform endpoint ARN
--- else
---   if (the device token in the endpoint does not match the latest one) or
---       (get endpoint attributes shows the endpoint as disabled)
---     call set endpoint attributes to set the latest device token and then enable the platform endpoint
---   endif
--- endif
-registerDeviceToken :: UUID -> String -> DeviceType -> Action String
-registerDeviceToken installationID deviceToken deviceType = do
-  logger' <- asks logger
-  testEndpointARN <- liftIO $ lookupEnv "FERRY_SERVICES_TEST_AWS_ENDPOINT_ARN"
-  case testEndpointARN of
-    Just endpointARN -> return endpointARN
-    Nothing -> registerDeviceTokenWithAWS logger'
-  where
-    registerDeviceTokenWithAWS logger' = do
-      storedInstallation <- lift $ DB.getInstallationWithID installationID
-      currentEndpointARN <-
-        if isNothing storedInstallation
-          then liftIO $ createPushEndpoint logger' deviceToken deviceType
-          else return $ installationEndpointARN . fromJust $ storedInstallation
-      endpointAttributesResult <-
-        liftIO $
-          getAttributesForEndpoint logger' currentEndpointARN
-      case endpointAttributesResult of
-        EndpointAttributesEndpointNotFound ->
-          liftIO $ createPushEndpoint logger' deviceToken deviceType
-        AttributeResults awsDeviceToken isEnabled -> do
-          when (awsDeviceToken /= deviceToken || not isEnabled)
-            $ liftIO
-              . void
-            $ updateDeviceTokenForEndpoint logger' currentEndpointARN deviceToken
-          return currentEndpointARN
 
 createNextDepartureLookup :: Int -> Action LocationNextDepartureLookup
 createNextDepartureLookup serviceID = do

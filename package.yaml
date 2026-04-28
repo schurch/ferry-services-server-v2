@@ -179,5 +179,6 @@ tests:
     - resource-pool
     - scotty
     - time
+    - uuid
     - wai
     - wai-extra

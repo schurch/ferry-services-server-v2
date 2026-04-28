@@ -14,15 +14,12 @@ module Scraper
   )
 where
 
-import AWS
-import Amazonka (AWSRequest (response))
 import CMark (commonmarkToHtml)
 import Control.Applicative ((<|>))
 import Control.Concurrent (threadDelay)
 import Control.Exception (SomeException, catch, try)
-import Control.Monad (forM_, forever, void, when)
+import Control.Monad (forM_, forever, when)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (asks)
 import Data.Aeson (Value (String), eitherDecode, encode)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as C
@@ -31,15 +28,12 @@ import Data.List (find, isInfixOf, isPrefixOf, nub, sortOn, (\\))
 import Data.List.Utils (replace)
 import Data.Map (Map, findWithDefault, fromList)
 import Data.Maybe (fromJust, fromMaybe, listToMaybe, mapMaybe)
-import Data.Pool (Pool, withResource)
 import Data.Text (pack, unpack)
 import qualified Data.Text.Encoding as TE
 import Data.Text.Encoding.Error (lenientDecode)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Data.UUID (UUID)
 import qualified Database as DB
-import Database.PostgreSQL.Simple (Connection)
 import Network.HTTP.Simple (getResponseBody, httpBS, parseRequest, setRequestBodyJSON, setRequestHeaders, setRequestMethod)
 import Network.HTTP.Types.Header
   ( hAccept,
@@ -54,6 +48,7 @@ import Network.HTTP.Types.Header
 import System.Directory (doesFileExist, findExecutable)
 import System.Exit (ExitCode (..))
 import App.Logger (logInfoM)
+import qualified Push
 import System.Process (readProcessWithExitCode)
 import System.Timeout (timeout)
 import Text.HTML.TagSoup (Tag (..), fromAttrib, isTagOpen, isTagOpenName, parseTags, renderTags, (~/=))
@@ -946,101 +941,5 @@ calmacRouteToService time CalMacAPIResponseRoute {..} =
         ]
 
 notifyForServices :: ScrapedServices -> DatabaseServices -> Application ()
-notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) = do
-  logger <- asks logger
-  forM_ newServices $ \service -> do
-    let oldService = find (\s -> serviceID s == serviceID service) oldServices
-    case oldService of
-      Just oldService -> do
-        let statusesDifferent =
-              serviceStatus service /= serviceStatus oldService
-        let statusValid = serviceStatus service /= Unknown
-        let shouldNotify = statusesDifferent && statusValid
-        when shouldNotify $ do
-          interestedInstallations <- DB.getIntererestedInstallationsForServiceID $ serviceID service
-          let defaultNotificationMessage = serviceToDefaultNotificationMessage service
-          let iOSInterestedInstallations =
-                filter
-                  ((==) IOS . installationDeviceType)
-                  interestedInstallations
-          let (iosTitle, iosBody) = serviceToIOSNotificationMessage service
-          forM_ iOSInterestedInstallations $
-            \Installation {installationID = installationID, installationEndpointARN = endpointARN} ->
-              do
-                let payload = createApplePushPayload defaultNotificationMessage iosTitle iosBody (serviceID service)
-                sendNotification installationID endpointARN payload
-
-          let androidInterestedInstallations =
-                filter
-                  ((==) Android . installationDeviceType)
-                  interestedInstallations
-          let (androidTitle, androidBody) = serviceToAndroidNotificationMessage service
-          forM_ androidInterestedInstallations $
-            \Installation {installationID = installationID, installationEndpointARN = endpointARN} ->
-              do
-                let payload = createAndroidPushPayload defaultNotificationMessage androidTitle androidBody (serviceID service)
-                sendNotification installationID endpointARN payload
-      Nothing -> return ()
-  where
-    sendNotification :: UUID -> String -> PushPayload -> Application ()
-    sendNotification installationID endpointARN payload = do
-      logger <- asks logger
-      result <- liftIO $ sendNotificationWihPayload logger endpointARN payload
-      case result of
-        SendNotificationEndpointDisabled -> do
-          void $ DB.deleteInstallationWithID installationID
-          liftIO $ deletePushEndpoint logger endpointARN
-        SendNotificationResultSuccess -> return ()
-
-    serviceToDefaultNotificationMessage :: Service -> String
-    serviceToDefaultNotificationMessage Service {serviceRoute = serviceRoute, serviceStatus = serviceStatus}
-      | serviceStatus == Normal =
-          "Normal services have resumed for " <> serviceRoute
-      | serviceStatus == Disrupted =
-          "There is a disruption to the service " <> serviceRoute
-      | serviceStatus == Cancelled =
-          "Sailings have been cancelled for " <> serviceRoute
-      | serviceStatus == Unknown =
-          error "Do not message for unknow service"
-
-    serviceToIOSNotificationMessage :: Service -> (String, String)
-    serviceToIOSNotificationMessage Service {serviceArea = serviceArea, serviceRoute = serviceRoute, serviceStatus = serviceStatus}
-      | serviceStatus == Normal =
-          (serviceArea, "Normal services have resumed for " <> serviceRoute)
-      | serviceStatus == Disrupted =
-          (serviceArea, "There is a disruption to the service " <> serviceRoute)
-      | serviceStatus == Cancelled =
-          (serviceArea, "Sailings have been cancelled for " <> serviceRoute)
-      | serviceStatus == Unknown =
-          error "Do not message for unknow service"
-
-    serviceToAndroidNotificationMessage :: Service -> (String, String)
-    serviceToAndroidNotificationMessage Service {serviceArea = serviceArea, serviceRoute = serviceRoute, serviceStatus = serviceStatus}
-      | serviceStatus == Normal =
-          (serviceArea <> " sailings resumed", serviceRoute)
-      | serviceStatus == Disrupted =
-          (serviceArea <> " sailings disrupted", serviceRoute)
-      | serviceStatus == Cancelled =
-          (serviceArea <> " sailings cancelled", serviceRoute)
-      | serviceStatus == Unknown =
-          error "Do not message for unknow service"
-
-    createApplePushPayload :: String -> String -> String -> Int -> PushPayload
-    createApplePushPayload defaultMessage title body serviceID =
-      let apsPayload =
-            APSPayload
-              ( APSPayloadBody
-                  { apsPayloadBodyAlert =
-                      APSPayloadBodyAlert
-                        { apsPayloadBodyAlertTitle = title,
-                          apsPayloadBodyAlertBody = body
-                        },
-                    apsPayloadBodySound = "default"
-                  }
-              )
-              serviceID
-       in PushPayload defaultMessage (ApplePayload apsPayload)
-
-    createAndroidPushPayload :: String -> String -> String -> Int -> PushPayload
-    createAndroidPushPayload defaultMessage title body serviceID =
-      PushPayload defaultMessage (GooglePayload (GCMPayload (GCMPayloadData serviceID title body) "high" (GCMPayloadAndroid "high")))
+notifyForServices (ScrapedServices newServices) (DatabaseServices oldServices) =
+  Push.notifyForServices newServices oldServices

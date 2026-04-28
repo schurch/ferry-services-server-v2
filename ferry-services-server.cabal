@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1c50aa869bdfdd3ed87780138d64bc06b138dc400b190faf1d910aac522eb742
+-- hash: 52749a84f00259b2b108ef44f6b5be7729f86fdbae881b07946aacc8c566ef91
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -30,6 +30,7 @@ library
       App.Logger
       AWS
       Database
+      Push
       RailDepartureFetcher
       Scraper
       TransxchangeV2.Ingest
@@ -199,6 +200,7 @@ test-suite ferry-services-server-test
   other-modules:
       IntegrationSpec
       JSONSpec
+      PushSpec
       TransxchangeApiSpec
       Paths_ferry_services_server
   hs-source-dirs:
@@ -219,6 +221,7 @@ test-suite ferry-services-server-test
     , resource-pool
     , scotty
     , time
+    , uuid
     , wai
     , wai-extra
   default-language: Haskell2010
