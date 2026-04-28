@@ -5,6 +5,8 @@ module Push
     registerDeviceToken,
     registerDeviceTokenWithClient,
     notifyForServices,
+    shouldNotifyForServiceStatusChange,
+    sendServiceNotificationsWithCleanup,
   )
 where
 
@@ -18,7 +20,7 @@ import AWS
     updateDeviceTokenForEndpoint,
   )
 import Control.Monad (forM_, void, when)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (asks)
 import Data.List (find)
 import Data.UUID (UUID)
@@ -79,18 +81,23 @@ notifyForServices newServices oldServices = do
     let oldService = find (\s -> serviceID s == serviceID service) oldServices
     case oldService of
       Just oldService -> do
-        let statusesDifferent =
-              serviceStatus service /= serviceStatus oldService
-        let statusValid = serviceStatus service /= Unknown
-        let shouldNotify = statusesDifferent && statusValid
-        when shouldNotify $ do
+        when (shouldNotifyForServiceStatusChange service oldService) $ do
           interestedInstallations <- DB.getIntererestedInstallationsForServiceID $ serviceID service
           let client = awsPushEndpointClient logger'
           sendServiceNotifications client service interestedInstallations
       Nothing -> return ()
 
+shouldNotifyForServiceStatusChange :: Service -> Service -> Bool
+shouldNotifyForServiceStatusChange newService oldService =
+  serviceStatus newService /= serviceStatus oldService
+    && serviceStatus newService /= Unknown
+
 sendServiceNotifications :: PushEndpointClient IO -> Service -> [Installation] -> Application ()
-sendServiceNotifications client service interestedInstallations = do
+sendServiceNotifications client =
+  sendServiceNotificationsWithCleanup client DB.deleteInstallationWithID
+
+sendServiceNotificationsWithCleanup :: MonadIO m => PushEndpointClient IO -> (UUID -> m ()) -> Service -> [Installation] -> m ()
+sendServiceNotificationsWithCleanup client deleteInstallation service interestedInstallations = do
   let defaultNotificationMessage = serviceToDefaultNotificationMessage service
   let iOSInterestedInstallations =
         filter
@@ -100,7 +107,7 @@ sendServiceNotifications client service interestedInstallations = do
   forM_ iOSInterestedInstallations $
     \Installation {installationID = installationID, installationEndpointARN = endpointARN} -> do
       let payload = createApplePushPayload defaultNotificationMessage iosTitle iosBody (serviceID service)
-      sendNotification client installationID endpointARN payload
+      sendNotification client deleteInstallation installationID endpointARN payload
 
   let androidInterestedInstallations =
         filter
@@ -110,14 +117,14 @@ sendServiceNotifications client service interestedInstallations = do
   forM_ androidInterestedInstallations $
     \Installation {installationID = installationID, installationEndpointARN = endpointARN} -> do
       let payload = createAndroidPushPayload defaultNotificationMessage androidTitle androidBody (serviceID service)
-      sendNotification client installationID endpointARN payload
+      sendNotification client deleteInstallation installationID endpointARN payload
 
-sendNotification :: PushEndpointClient IO -> UUID -> String -> PushPayload -> Application ()
-sendNotification client installationID endpointARN payload = do
+sendNotification :: MonadIO m => PushEndpointClient IO -> (UUID -> m ()) -> UUID -> String -> PushPayload -> m ()
+sendNotification client deleteInstallation installationID endpointARN payload = do
   result <- liftIO $ pushSendNotification client endpointARN payload
   case result of
     SendNotificationEndpointDisabled -> do
-      void $ DB.deleteInstallationWithID installationID
+      void $ deleteInstallation installationID
       liftIO $ pushDeleteEndpoint client endpointARN
     SendNotificationResultSuccess -> return ()
 
