@@ -1,59 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
-import Control.Concurrent (threadDelay)
-import Control.Exception (SomeException, catch)
-import Control.Monad (forever)
-import Control.Monad.Trans.Reader (runReaderT)
+import App.Runner
+  ( SentryConfig (SentryConfig),
+    runRepeatedAction,
+  )
 import RailDepartureFetcher
   ( fetchRailDepartures,
   )
-import System.Environment (getEnv)
-import System.Log.Raven
-  ( initRaven,
-    register,
-    silentFallback,
-  )
-import System.Log.Raven.Transport.HttpConduit (sendRecord)
-import System.Log.Raven.Types
-  ( SentryLevel (Error),
-    SentryRecord (..),
-  )
-import App.Logger
-  ( Logger,
-    Output (StdOut),
-    create,
-    logError,
-    logInfo,
-  )
-import App.Database (createConnectionPool)
-import Types
 
 main :: IO ()
-main = do
-  logger <- create StdOut
-  connectionString <- getEnv "DB_CONNECTION"
-  connectionPool <- createConnectionPool connectionString
-  let env = Env logger connectionPool
-  forever $ do
-    logInfo logger "Fetching rail departures"
-    catch (runReaderT fetchRailDepartures env) (handleException logger)
-    threadDelay (1 * 60 * 1000 * 1000) -- 1 min
-
-handleException :: Logger -> SomeException -> IO ()
-handleException logger exception = do
-  logError logger $ "An error occured: " <> show exception
-  sentryDSN <- getEnv "RAIL_DEPARTURE_FETCHER_SENTRY_DSN"
-  env <- getEnv "ENVIRONMENT"
-  sentryService <- initRaven sentryDSN id sendRecord silentFallback
-  register
-    sentryService
-    "rail-departure-fetcher-logger"
-    Error
-    (show exception)
-    (recordUpdate env)
-
-recordUpdate :: String -> SentryRecord -> SentryRecord
-recordUpdate env record = record {srEnvironment = Just env}
+main =
+  runRepeatedAction
+    (SentryConfig "RAIL_DEPARTURE_FETCHER_SENTRY_DSN" "rail-departure-fetcher-logger")
+    "Fetching rail departures"
+    (1 * 60 * 1000 * 1000)
+    fetchRailDepartures

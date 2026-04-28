@@ -45,6 +45,7 @@ library:
     - mtl
     - postgresql-simple
     - process
+    - raven-haskell
     - regex-compat
     - resource-pool
     - scientific
@@ -52,6 +53,7 @@ library:
     - tagsoup
     - time
     - text
+    - transformers
     - unordered-containers
     - utf8-string
     - uuid
@@ -96,10 +98,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - ferry-services-server
-    - postgresql-simple
-    - raven-haskell
-    - resource-pool
-    - transformers
 
   ferry-services-weather-fetcher-exe:
     main:                Main.hs
@@ -110,10 +108,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - ferry-services-server
-    - postgresql-simple
-    - raven-haskell
-    - resource-pool
-    - transformers
 
   ferry-services-rail-departure-fetcher-exe:
     main:                Main.hs
@@ -124,10 +118,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - ferry-services-server
-    - postgresql-simple
-    - raven-haskell
-    - resource-pool
-    - transformers
 
   ferry-services-vessel-fetcher-exe:
     main:                Main.hs
@@ -138,10 +128,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - ferry-services-server
-    - postgresql-simple
-    - raven-haskell
-    - resource-pool
-    - transformers
 
   ferry-services-transxchange-ingester-v2-exe:
     main:                Main.hs
@@ -152,9 +138,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - ferry-services-server
-    - postgresql-simple
-    - raven-haskell
-    - resource-pool
     - transformers
 
 tests:

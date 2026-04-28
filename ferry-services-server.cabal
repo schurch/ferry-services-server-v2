@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 52749a84f00259b2b108ef44f6b5be7729f86fdbae881b07946aacc8c566ef91
+-- hash: cfc057f2772e83b91d1644b213661c43c2065f11ec197f1013062b29773d551c
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -28,6 +28,7 @@ library
   exposed-modules:
       App.Database
       App.Logger
+      App.Runner
       AWS
       Database
       Push
@@ -70,6 +71,7 @@ library
     , network
     , postgresql-simple
     , process
+    , raven-haskell
     , regex-compat
     , resource-pool
     , scientific
@@ -77,6 +79,7 @@ library
     , tagsoup
     , text
     , time
+    , transformers
     , unordered-containers
     , utf8-string
     , uuid
@@ -100,10 +103,6 @@ executable ferry-services-rail-departure-fetcher-exe
   build-depends:
       base >=4.7 && <5
     , ferry-services-server
-    , postgresql-simple
-    , raven-haskell
-    , resource-pool
-    , transformers
   default-language: Haskell2010
 
 executable ferry-services-scraper-exe
@@ -116,10 +115,6 @@ executable ferry-services-scraper-exe
   build-depends:
       base >=4.7 && <5
     , ferry-services-server
-    , postgresql-simple
-    , raven-haskell
-    , resource-pool
-    , transformers
   default-language: Haskell2010
 
 executable ferry-services-server-exe
@@ -156,9 +151,6 @@ executable ferry-services-transxchange-ingester-v2-exe
   build-depends:
       base >=4.7 && <5
     , ferry-services-server
-    , postgresql-simple
-    , raven-haskell
-    , resource-pool
     , transformers
   default-language: Haskell2010
 
@@ -172,10 +164,6 @@ executable ferry-services-vessel-fetcher-exe
   build-depends:
       base >=4.7 && <5
     , ferry-services-server
-    , postgresql-simple
-    , raven-haskell
-    , resource-pool
-    , transformers
   default-language: Haskell2010
 
 executable ferry-services-weather-fetcher-exe
@@ -188,10 +176,6 @@ executable ferry-services-weather-fetcher-exe
   build-depends:
       base >=4.7 && <5
     , ferry-services-server
-    , postgresql-simple
-    , raven-haskell
-    , resource-pool
-    , transformers
   default-language: Haskell2010
 
 test-suite ferry-services-server-test

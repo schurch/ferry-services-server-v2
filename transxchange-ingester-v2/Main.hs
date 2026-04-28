@@ -3,29 +3,20 @@
 
 module Main where
 
-import Control.Exception (SomeException, catch, throwIO)
-import Control.Concurrent (threadDelay)
-import Control.Monad (forever)
-import Control.Monad.Trans.Reader (runReaderT)
-import System.Environment (getArgs, getEnv)
-import System.Log.Raven
-  ( initRaven,
-    register,
-    silentFallback,
-  )
-import System.Log.Raven.Transport.HttpConduit (sendRecord)
-import System.Log.Raven.Types
-  ( SentryLevel (Error),
-    SentryRecord (..),
+import App.Runner
+  ( SentryConfig (SentryConfig),
+    createEnv,
+    handleSentryException,
   )
 import App.Logger
   ( Logger,
-    Output (StdOut),
-    create,
-    logError,
     logInfo,
   )
-import App.Database (createConnectionPool)
+import Control.Concurrent (threadDelay)
+import Control.Exception (SomeException, catch, throwIO)
+import Control.Monad (forever)
+import Control.Monad.Trans.Reader (runReaderT)
+import System.Environment (getArgs)
 import TransxchangeV2.Ingest
   ( ingestDirectoryV2,
     ingestLatestV2,
@@ -36,10 +27,7 @@ import Types (Env (Env))
 main :: IO ()
 main = do
   args <- getArgs
-  logger <- create StdOut
-  connectionString <- getEnv "DB_CONNECTION"
-  connectionPool <- createConnectionPool connectionString
-  let env = Env logger connectionPool
+  env@(Env logger _) <- createEnv
   case args of
     (directory : _) ->
       catch
@@ -83,17 +71,8 @@ renderSummary summary =
     <> show (tx2JourneyWritten summary)
 
 handleException :: Logger -> SomeException -> IO ()
-handleException logger exception = do
-  logError logger $ "An error occured: " <> show exception
-  sentryDSN <- getEnv "TRANSXCHANGE_INGESTER_SENTRY_DSN"
-  env <- getEnv "ENVIRONMENT"
-  sentryService <- initRaven sentryDSN id sendRecord silentFallback
-  register
-    sentryService
-    "transxchange-ingester-v2-logger"
-    Error
-    (show exception)
-    (recordUpdate env)
-
-recordUpdate :: String -> SentryRecord -> SentryRecord
-recordUpdate env record = record {srEnvironment = Just env}
+handleException =
+  handleSentryException $
+    SentryConfig
+      "TRANSXCHANGE_INGESTER_SENTRY_DSN"
+      "transxchange-ingester-v2-logger"
