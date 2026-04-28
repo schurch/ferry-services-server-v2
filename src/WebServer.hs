@@ -69,14 +69,12 @@ import Network.Wai.Middleware.Static
   )
 import System.Environment (lookupEnv)
 import System.Log.FastLogger.Internal (LogStr, fromLogStr)
-import System.Logger
+import App.Logger
   ( Level (Debug, Info, Trace),
     Logger,
     level,
-    log,
-    msg,
+    logMessage,
   )
-import System.Logger.Message (msg)
 import Types
 import Utility (stringToDay)
 import Web.Scotty.Trans
@@ -178,7 +176,7 @@ loggerSettings logger = case level logger of
 
     callbackLog :: Level -> LogStr -> IO ()
     callbackLog level str =
-      System.Logger.log logger level $ msg $ (removeTrailingNewline . fromLogStr) str
+      logMessage logger level $ removeTrailingNewline $ fromLogStr str
 
     removeTrailingNewline :: BS.ByteString -> BS.ByteString
     removeTrailingNewline =

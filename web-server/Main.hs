@@ -45,14 +45,13 @@ import System.Log.Raven.Types
   ( SentryLevel (Error),
     SentryRecord (..),
   )
-import System.Logger
+import App.Logger
   ( Level (..),
     Logger,
     Output (StdOut),
     create,
-    info,
+    logInfo,
   )
-import System.Logger.Message (msg)
 import Types (Env (Env))
 import Web.Scotty.Trans
   ( Options (Options, settings, verbose),
@@ -64,7 +63,7 @@ main :: IO ()
 main = do
   logger <- create StdOut
   port <- getEnv "SERVER_PORT"
-  info logger (msg $ "Listening on port " <> port)
+  logInfo logger $ "Listening on port " <> port
   let settings =
         setPort (read port) . setOnException exceptionHandler $ defaultSettings
   let options = Options {verbose = 0, settings = settings}

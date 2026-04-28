@@ -23,7 +23,7 @@ import Network.Wai (Application)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
 import Scraper
 import System.Environment (lookupEnv, setEnv)
-import System.Logger
+import App.Logger
   ( Logger,
     Output (StdOut),
     create,

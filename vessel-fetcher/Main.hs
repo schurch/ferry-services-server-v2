@@ -28,15 +28,13 @@ import System.Log.Raven.Types
   ( SentryLevel (Error),
     SentryRecord (..),
   )
-import System.Logger
+import App.Logger
   ( Logger,
     Output (StdOut),
     create,
-    debug,
-    err,
-    info,
+    logError,
+    logInfo,
   )
-import System.Logger.Message (msg)
 import Types
 import VesselFetcher
   ( defaultMmsis,
@@ -57,13 +55,13 @@ main = do
           10 -- max. 10 connections open per stripe
   let env = Env logger connectionPool
   forever $ do
-    info logger (msg @String "Fetching vessels")
+    logInfo logger "Fetching vessels"
     catch (runReaderT (fetchVessels defaultMmsis) env) (handleException logger)
     threadDelay (5 * 60 * 1000 * 1000) -- 5 mins
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do
-  err logger (msg $ "An error occured: " <> show exception)
+  logError logger $ "An error occured: " <> show exception
   sentryDSN <- getEnv "VESSEL_FETCHER_SENTRY_DSN"
   env <- getEnv "ENVIRONMENT"
   sentryService <- initRaven sentryDSN id sendRecord silentFallback

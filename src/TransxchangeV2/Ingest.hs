@@ -56,13 +56,12 @@ import System.Directory
     removeFile,
   )
 import System.Environment (getEnv)
-import System.Logger
+import App.Logger
   ( Level (Debug, Info),
     Logger,
+    logInfoM,
+    logMessage,
   )
-import qualified System.Logger as Logger
-import System.Logger.Class (info)
-import System.Logger.Message (msg)
 import TransxchangeV2.Parser
   ( findTransxchangeFilesV2,
     fileMayContainFerryServiceV2,
@@ -92,7 +91,7 @@ ingestLatestV2 = do
   env <- ask
   let ftpConnectionDetails =
         FTPConnectionDetails ftpAddress ftpUsername ftpPassword
-  info (msg @String "Downloading S.zip for TransXChange V2 ingest ...")
+  logInfoM "Downloading S.zip for TransXChange V2 ingest ..."
   liftIO $
     finally
       (downloadAndIngest appLogger ftpConnectionDetails env)
@@ -117,9 +116,9 @@ ingestLatestV2 = do
 
 ingestDirectoryV2 :: FilePath -> Application Tx2IngestSummary
 ingestDirectoryV2 directory = do
-  info (msg @String $ "TransXChange V2 ingest from directory: " <> directory)
+  logInfoM $ "TransXChange V2 ingest from directory: " <> directory
   files <- liftIO $ findTransxchangeFilesV2 directory
-  info (msg @String $ "TransXChange V2 files discovered: " <> show (length files))
+  logInfoM $ "TransXChange V2 files discovered: " <> show (length files)
   pool <- asks connectionPool
   appLogger <- asks logger
   liftIO $
@@ -177,29 +176,28 @@ ingestDirectoryV2 directory = do
     logProgress appLogger index totalFiles filePath summary =
       if shouldLogProgress index totalFiles
         then
-          Logger.log
+          logMessage
             appLogger
             Info
-            ( msg @String $
-                "TransXChange V2 progress "
-                  <> show index
-                  <> "/"
-                  <> show totalFiles
-                  <> ": "
-                  <> filePath
-                  <> " (parsed="
-                  <> show (tx2FilesParsed summary)
-                  <> ", skipped="
-                  <> show (tx2FilesSkipped summary)
-                  <> ", failed="
-                  <> show (tx2FilesFailed summary)
-                  <> ", ferry_documents="
-                  <> show (tx2FerryDocuments summary)
-                  <> ", services_written="
-                  <> show (tx2ServicesWritten summary)
-                  <> ", vehicle_journeys_written="
-                  <> show (tx2JourneyWritten summary)
-                  <> ")"
+            ( "TransXChange V2 progress "
+                <> show index
+                <> "/"
+                <> show totalFiles
+                <> ": "
+                <> filePath
+                <> " (parsed="
+                <> show (tx2FilesParsed summary)
+                <> ", skipped="
+                <> show (tx2FilesSkipped summary)
+                <> ", failed="
+                <> show (tx2FilesFailed summary)
+                <> ", ferry_documents="
+                <> show (tx2FerryDocuments summary)
+                <> ", services_written="
+                <> show (tx2ServicesWritten summary)
+                <> ", vehicle_journeys_written="
+                <> show (tx2JourneyWritten summary)
+                <> ")"
             )
         else return ()
 
@@ -212,7 +210,7 @@ downloadFile appLogger (FTPConnectionDetails ftpAddress ftpUsername ftpPassword)
   removeFileIfExists filePath
   runTCPClient ftpAddress "21" $ \socketHandle -> do
     welcomeMessage <- recv socketHandle 1024
-    Logger.log appLogger Info (msg @String $ "FTP: " <> C.unpack (headOrEmpty $ C.split '\r' welcomeMessage))
+    logMessage appLogger Info $ "FTP: " <> C.unpack (headOrEmpty $ C.split '\r' welcomeMessage)
     sendMessage appLogger ("USER " <> C.pack ftpUsername) socketHandle
     sendMessage appLogger ("PASS " <> C.pack ftpPassword) socketHandle
     passiveResponse <- sendMessage appLogger "PASV" socketHandle
@@ -248,7 +246,7 @@ sendMessage :: Logger -> C.ByteString -> Socket -> IO C.ByteString
 sendMessage appLogger message socketHandle = do
   sendAll socketHandle $ message <> "\r\n"
   response <- recv socketHandle 1024
-  Logger.log appLogger Debug (msg @String $ "FTP: " <> C.unpack (headOrEmpty $ C.split '\r' response))
+  logMessage appLogger Debug $ "FTP: " <> C.unpack (headOrEmpty $ C.split '\r' response)
   return response
 
 extractAddressAndPort :: String -> (String, String)

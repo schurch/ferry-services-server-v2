@@ -67,8 +67,7 @@ import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as TE
 import System.Environment (getEnv)
 import System.IO (stdout)
-import qualified System.Logger as L
-import qualified System.Logger.Message as L
+import qualified App.Logger as AppLogger
 import Types
   ( DeviceType (..),
     PushPayload (..),
@@ -78,7 +77,7 @@ data EndpointAttributesResult = EndpointAttributesEndpointNotFound | AttributeRe
 
 data SendNotificationResult = SendNotificationResultSuccess | SendNotificationEndpointDisabled
 
-createPushEndpoint :: L.Logger -> String -> DeviceType -> IO String
+createPushEndpoint :: AppLogger.Logger -> String -> DeviceType -> IO String
 createPushEndpoint logger deviceToken deviceType = do
   platformARN <- case deviceType of
     IOS -> getEnv "AWS_APPLE_PLATFORM_ARN"
@@ -87,12 +86,12 @@ createPushEndpoint logger deviceToken deviceType = do
   result <- performRequestLogging logger request
   return (unpack . fromJust $ result ^. createPlatformEndpointResponse_endpointArn)
 
-deletePushEndpoint :: L.Logger -> String -> IO ()
+deletePushEndpoint :: AppLogger.Logger -> String -> IO ()
 deletePushEndpoint logger endpointARN = do
   let request = newDeleteEndpoint (pack endpointARN)
   void $ performRequestLogging logger request
 
-getAttributesForEndpoint :: L.Logger -> String -> IO EndpointAttributesResult
+getAttributesForEndpoint :: AppLogger.Logger -> String -> IO EndpointAttributesResult
 getAttributesForEndpoint logger endpointARN = do
   let request = newGetEndpointAttributes (pack endpointARN)
   result <- trying _NotFoundException (performRequestLogging logger request)
@@ -108,7 +107,7 @@ getAttributesForEndpoint logger endpointARN = do
                   "Enabled"
       return $ AttributeResults deviceToken enabled
 
-updateDeviceTokenForEndpoint :: L.Logger -> String -> String -> IO ()
+updateDeviceTokenForEndpoint :: AppLogger.Logger -> String -> String -> IO ()
 updateDeviceTokenForEndpoint logger endpointARN deviceToken = do
   let request =
         newSetEndpointAttributes (pack endpointARN)
@@ -118,7 +117,7 @@ updateDeviceTokenForEndpoint logger endpointARN deviceToken = do
   void $ performRequestLogging logger request
 
 sendNotificationWihPayload ::
-  L.Logger -> String -> PushPayload -> IO SendNotificationResult
+  AppLogger.Logger -> String -> PushPayload -> IO SendNotificationResult
 sendNotificationWihPayload logger endpointARN payload = do
   let pushData = encode payload
   let request =
@@ -134,7 +133,7 @@ sendNotificationWihPayload logger endpointARN payload = do
     Left _ -> return SendNotificationEndpointDisabled
     Right _ -> return SendNotificationResultSuccess
 
-performRequestLogging :: (AWSRequest a) => L.Logger -> a -> IO (AWSResponse a)
+performRequestLogging :: (AWSRequest a) => AppLogger.Logger -> a -> IO (AWSResponse a)
 performRequestLogging logger request = do
   lgr <- createLogger logger
   key_id <- getEnv "AWS_ACCESS_KEY_ID"
@@ -147,11 +146,11 @@ performRequestLogging logger request = do
           }
   runResourceT $ send env request
   where
-    createLogger :: L.Logger -> IO Logger
+    createLogger :: AppLogger.Logger -> IO Logger
     createLogger logger = do
       return $ \lvl builder -> do
         case lvl of
-          Info -> L.info logger (L.msg $ toLazyByteString builder)
-          Error -> L.err logger (L.msg $ toLazyByteString builder)
-          Debug -> L.debug logger (L.msg $ toLazyByteString builder)
-          Trace -> L.trace logger (L.msg $ toLazyByteString builder)
+          Info -> AppLogger.logMessage logger AppLogger.Info (toLazyByteString builder)
+          Error -> AppLogger.logMessage logger AppLogger.Error (toLazyByteString builder)
+          Debug -> AppLogger.logMessage logger AppLogger.Debug (toLazyByteString builder)
+          Trace -> AppLogger.logMessage logger AppLogger.Trace (toLazyByteString builder)

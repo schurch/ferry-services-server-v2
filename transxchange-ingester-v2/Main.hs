@@ -28,14 +28,13 @@ import System.Log.Raven.Types
   ( SentryLevel (Error),
     SentryRecord (..),
   )
-import System.Logger
+import App.Logger
   ( Logger,
     Output (StdOut),
     create,
-    err,
-    info,
+    logError,
+    logInfo,
   )
-import System.Logger.Message (msg)
 import TransxchangeV2.Ingest
   ( ingestDirectoryV2,
     ingestLatestV2,
@@ -75,14 +74,14 @@ main = do
 runOnce :: Logger -> Env -> FilePath -> IO ()
 runOnce logger env directory = do
   summary <- runReaderT (ingestDirectoryV2 directory) env
-  info logger (msg @String $ "TransXChange v2 ingest complete from: " <> directory)
-  info logger (msg @String $ renderSummary summary)
+  logInfo logger $ "TransXChange v2 ingest complete from: " <> directory
+  logInfo logger $ renderSummary summary
 
 runLatest :: Logger -> Env -> IO ()
 runLatest logger env = do
   summary <- runReaderT ingestLatestV2 env
-  info logger (msg @String "TransXChange v2 ingest complete from: FTP S.zip")
-  info logger (msg @String $ renderSummary summary)
+  logInfo logger "TransXChange v2 ingest complete from: FTP S.zip"
+  logInfo logger $ renderSummary summary
 
 renderSummary :: Tx2IngestSummary -> String
 renderSummary summary =
@@ -101,7 +100,7 @@ renderSummary summary =
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do
-  err logger (msg $ "An error occured: " <> show exception)
+  logError logger $ "An error occured: " <> show exception
   sentryDSN <- getEnv "TRANSXCHANGE_INGESTER_SENTRY_DSN"
   env <- getEnv "ENVIRONMENT"
   sentryService <- initRaven sentryDSN id sendRecord silentFallback

@@ -43,8 +43,7 @@ import Network.HTTP.Types.Header
     hUserAgent,
   )
 import System.Environment (getEnv)
-import System.Logger.Class (debug, err)
-import System.Logger.Message (msg)
+import App.Logger (logDebugM, logErrorM)
 import System.Timeout (timeout)
 import Types
 
@@ -59,9 +58,9 @@ fetchVessels organisations = do
       vessel <- liftIO $ fetchVessel organisationID mmsi
       case vessel of
         Left error ->
-          err (msg $ "Error fetching " <> show mmsi)
+          logErrorM $ "Error fetching " <> show mmsi
         Right vessel -> do
-          debug (msg $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel))
+          logDebugM $ "Fetched " <> vesselName vessel <> " " <> (show . vesselMmsi $ vessel)
           DB.saveVessel vessel
       liftIO $ threadDelay (4 * 1000 * 1000) -- 4 second delay
 

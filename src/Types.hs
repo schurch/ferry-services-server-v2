@@ -47,8 +47,10 @@ import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromField (FromField (..))
 import Database.PostgreSQL.Simple.ToField (ToField (..))
 import GHC.Generics (Generic)
-import System.Logger (Logger, log)
-import System.Logger.Class (MonadLogger, log)
+import App.Logger
+  ( Logger,
+    MonadLogger (askLogger),
+  )
 import Web.Scotty.Trans (ActionT, ScottyT)
 
 data Env = Env
@@ -59,9 +61,7 @@ data Env = Env
 type Application = ReaderT Env IO
 
 instance MonadLogger Application where
-  log level message = do
-    logger <- asks logger
-    System.Logger.log logger level message
+  askLogger = asks logger
 
 -- Web server
 type Scotty = ScottyT Application ()
@@ -69,9 +69,7 @@ type Scotty = ScottyT Application ()
 type Action = ActionT Application
 
 instance MonadLogger Types.Action where
-  log level message = do
-    logger <- asks logger
-    System.Logger.log logger level message
+  askLogger = asks logger
 
 -- Push payloads
 -- {

@@ -15,8 +15,7 @@ import Network.HTTP.Simple
     setRequestHeaders,
   )
 import System.Environment (getEnv)
-import System.Logger.Class (debug, err)
-import System.Logger.Message (msg)
+import App.Logger (logDebugM)
 import System.Timeout (timeout)
 import Types (Application, RailDepartureFetcherResult (RailDepartureFetcherResult), railDepartureFetcherJsonOptions)
 
@@ -37,7 +36,7 @@ fetchRailDepartures =
 
 fetchRailDeparture :: (String, Int) -> Application ()
 fetchRailDeparture (crs, locationID) = do
-  debug (msg $ "Fetching " <> crs)
+  logDebugM $ "Fetching " <> crs
   apiKey <- liftIO $ getEnv "RAIL_DATA_API_KEY"
   let headers = [("x-apikey", BSU.fromString apiKey)]
   request <- setRequestHeaders headers <$> parseRequest ("https://api1.raildata.org.uk/1010-live-departure-board-dep/LDBWS/api/20220120/GetDepBoardWithDetails/" <> crs)

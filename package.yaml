@@ -51,7 +51,6 @@ library:
     - scotty
     - tagsoup
     - time
-    - tinylog
     - text
     - unordered-containers
     - utf8-string
@@ -82,7 +81,6 @@ executables:
     - raven-haskell
     - resource-pool
     - scotty
-    - tinylog
     - text
     - unordered-containers
     - wai
@@ -101,7 +99,6 @@ executables:
     - postgresql-simple
     - raven-haskell
     - resource-pool
-    - tinylog
     - transformers
 
   ferry-services-weather-fetcher-exe:
@@ -116,7 +113,6 @@ executables:
     - postgresql-simple
     - raven-haskell
     - resource-pool
-    - tinylog
     - transformers
 
   ferry-services-rail-departure-fetcher-exe:
@@ -131,7 +127,6 @@ executables:
     - postgresql-simple
     - raven-haskell
     - resource-pool
-    - tinylog
     - transformers
 
   ferry-services-vessel-fetcher-exe:
@@ -146,7 +141,6 @@ executables:
     - postgresql-simple
     - raven-haskell
     - resource-pool
-    - tinylog
     - transformers
 
   ferry-services-transxchange-ingester-v2-exe:
@@ -161,7 +155,6 @@ executables:
     - postgresql-simple
     - raven-haskell
     - resource-pool
-    - tinylog
     - transformers
 
 tests:
@@ -186,6 +179,5 @@ tests:
     - resource-pool
     - scotty
     - time
-    - tinylog
     - wai
     - wai-extra

@@ -35,7 +35,7 @@ import Network.Wai (Application, queryString, rawPathInfo, rawQueryString, reque
 import Network.Wai.Test (SResponse (simpleBody), defaultRequest, request, runSession, setPath)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
 import System.Environment (lookupEnv, setEnv)
-import System.Logger
+import App.Logger
   ( Logger,
     Output (StdOut),
     create,

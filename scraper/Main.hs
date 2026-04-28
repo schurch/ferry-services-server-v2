@@ -34,15 +34,13 @@ import System.Log.Raven.Types
   ( SentryLevel (Error),
     SentryRecord (..),
   )
-import System.Logger
+import App.Logger
   ( Logger,
     Output (StdOut),
     create,
-    err,
-    info,
+    logError,
+    logInfo,
   )
-import System.Logger.Class (Logger, debug)
-import System.Logger.Message (msg)
 import Types
 
 main :: IO ()
@@ -59,7 +57,7 @@ main = do
           10 -- max. 10 connections open per stripe
   let env = Env logger connectionPool
   forever $ do
-    info logger (msg @String "Fetching statuses")
+    logInfo logger "Fetching statuses"
     catch (runReaderT fetchCalMacStatusesAndNotify env) (handleException logger)
     catch (runReaderT fetchCorranFerryAndNotify env) (handleException logger)
     catch (runReaderT fetchNorthLinkServicesAndNotify env) (handleException logger)
@@ -71,7 +69,7 @@ main = do
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do
-  err logger (msg $ "An error occured: " <> show exception)
+  logError logger $ "An error occured: " <> show exception
   sentryDSN <- getEnv "SCRAPER_SENTRY_DSN"
   env <- getEnv "ENVIRONMENT"
   sentryService <- initRaven sentryDSN id sendRecord silentFallback

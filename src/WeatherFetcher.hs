@@ -24,8 +24,7 @@ import Network.HTTP.Simple
     setRequestHeaders,
   )
 import System.Environment (getEnv)
-import System.Logger.Class (debug)
-import System.Logger.Message (msg)
+import App.Logger (logDebugM)
 import System.Timeout (timeout)
 import Types
 
@@ -45,7 +44,7 @@ fetchWeatherForLocation :: Location -> Application WeatherFetcherResult
 fetchWeatherForLocation (Location locationID name (GeoPoint _ (Point (Position latitude longitude _ _))) created) = do
   appID <- liftIO $ getEnv "OPENWEATHERMAP_APPID"
   let url = "http://api.openweathermap.org/data/2.5/weather?lat=" <> show latitude <> "&lon=" <> show longitude <> "&APPID=" <> appID
-  debug (msg $ "Fetching " <> name)
+  logDebugM $ "Fetching " <> name
   request <- parseRequest url
   responseBody <-
     liftIO $

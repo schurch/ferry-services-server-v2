@@ -31,15 +31,13 @@ import System.Log.Raven.Types
   ( SentryLevel (Error),
     SentryRecord (..),
   )
-import System.Logger
+import App.Logger
   ( Logger,
     Output (StdOut),
     create,
-    debug,
-    err,
-    info,
+    logError,
+    logInfo,
   )
-import System.Logger.Message (msg)
 import Types
 
 main :: IO ()
@@ -56,13 +54,13 @@ main = do
           10 -- max. 10 connections open per stripe
   let env = Env logger connectionPool
   forever $ do
-    info logger (msg @String "Fetching rail departures")
+    logInfo logger "Fetching rail departures"
     catch (runReaderT fetchRailDepartures env) (handleException logger)
     threadDelay (1 * 60 * 1000 * 1000) -- 1 min
 
 handleException :: Logger -> SomeException -> IO ()
 handleException logger exception = do
-  err logger (msg $ "An error occured: " <> show exception)
+  logError logger $ "An error occured: " <> show exception
   sentryDSN <- getEnv "RAIL_DEPARTURE_FETCHER_SENTRY_DSN"
   env <- getEnv "ENVIRONMENT"
   sentryService <- initRaven sentryDSN id sendRecord silentFallback

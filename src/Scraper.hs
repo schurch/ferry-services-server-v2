@@ -53,8 +53,7 @@ import Network.HTTP.Types.Header
   )
 import System.Directory (doesFileExist, findExecutable)
 import System.Exit (ExitCode (..))
-import System.Logger.Class (Logger, info)
-import System.Logger.Message (msg)
+import App.Logger (logInfoM)
 import System.Process (readProcessWithExitCode)
 import System.Timeout (timeout)
 import Text.HTML.TagSoup (Tag (..), fromAttrib, isTagOpen, isTagOpenName, parseTags, renderTags, (~/=))
@@ -75,7 +74,7 @@ data CorranNewsItem = CorranNewsItem
 
 fetchCorranFerryAndNotify :: Application ()
 fetchCorranFerryAndNotify = do
-  info (msg @String "Fetching Corran Ferry service")
+  logInfoM "Fetching Corran Ferry service"
   scrapedService <- liftIO fetchCorranFerry
   let scrapedServices = ScrapedServices [scrapedService]
   databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 7
@@ -390,7 +389,7 @@ extractTagContent tagName predicate = go
 
 fetchOrkneyFerriesAndNotify :: Application ()
 fetchOrkneyFerriesAndNotify = do
-  info (msg @String "Fetching Orkney Ferries services")
+  logInfoM "Fetching Orkney Ferries services"
   scrapedServices <- liftIO fetchOrkneyFerries
   databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 5
   DB.saveServices $ unScrapedServices scrapedServices
@@ -398,7 +397,7 @@ fetchOrkneyFerriesAndNotify = do
 
 fetchPentlandFerriesAndNotify :: Application ()
 fetchPentlandFerriesAndNotify = do
-  info (msg @String "Fetching Pentland Ferries service")
+  logInfoM "Fetching Pentland Ferries service"
   scrapedServices <- ScrapedServices . (: []) <$> liftIO fetchPentlandFerries
   databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 6
   DB.saveServices $ unScrapedServices scrapedServices
@@ -585,7 +584,7 @@ fetchOrkneyFerries = do
 
 fetchShetlandFerriesAndNotify :: Application ()
 fetchShetlandFerriesAndNotify = do
-  info (msg @String "Fetching Shetland Ferries services")
+  logInfoM "Fetching Shetland Ferries services"
   scrapedServices <- liftIO fetchShetlandFerries
   databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 4
   DB.saveServices $ unScrapedServices scrapedServices
@@ -678,7 +677,7 @@ fetchShetlandFerries = do
 
 fetchWesternFerriesAndNotify :: Application ()
 fetchWesternFerriesAndNotify = do
-  info (msg @String "Fetching Western Ferries service")
+  logInfoM "Fetching Western Ferries service"
   scrapedServices <- ScrapedServices . (: []) <$> fetchWesternFerries
   databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 3
   DB.saveServices $ unScrapedServices scrapedServices
@@ -719,7 +718,7 @@ fetchWesternFerries = do
 
 fetchNorthLinkServicesAndNotify :: Application ()
 fetchNorthLinkServicesAndNotify = do
-  info (msg @String "Fetching NorthLink service")
+  logInfoM "Fetching NorthLink service"
   scrapedServices <- ScrapedServices . (: []) <$> fetchNorthLinkService
   databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 2
   DB.saveServices $ unScrapedServices scrapedServices
@@ -818,7 +817,7 @@ fetchPage location = do
 
 fetchCalMacStatusesAndNotify :: Application ()
 fetchCalMacStatusesAndNotify = do
-  info (msg @String "Fetching CalMac services")
+  logInfoM "Fetching CalMac services"
   scrapedServices <- liftIO fetchCalMacServices
   databaseServices <- DatabaseServices <$> DB.getServicesForOrganisation 1
   DB.saveServices $ unScrapedServices scrapedServices

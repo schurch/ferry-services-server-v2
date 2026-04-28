@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8f56c824cb8db0ff55641560174f32439351da8d37d007158c4fdd9f22b43af9
+-- hash: a3815181d18eca37a444f87b277ae79b22ac416cbe1ee2ea8bd44286782a90c3
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -26,6 +26,7 @@ source-repository head
 
 library
   exposed-modules:
+      App.Logger
       AWS
       Database
       RailDepartureFetcher
@@ -74,7 +75,6 @@ library
     , tagsoup
     , text
     , time
-    , tinylog
     , unordered-containers
     , utf8-string
     , uuid
@@ -101,7 +101,6 @@ executable ferry-services-rail-departure-fetcher-exe
     , postgresql-simple
     , raven-haskell
     , resource-pool
-    , tinylog
     , transformers
   default-language: Haskell2010
 
@@ -118,7 +117,6 @@ executable ferry-services-scraper-exe
     , postgresql-simple
     , raven-haskell
     , resource-pool
-    , tinylog
     , transformers
   default-language: Haskell2010
 
@@ -140,7 +138,6 @@ executable ferry-services-server-exe
     , resource-pool
     , scotty
     , text
-    , tinylog
     , unordered-containers
     , wai
     , wai-extra
@@ -160,7 +157,6 @@ executable ferry-services-transxchange-ingester-v2-exe
     , postgresql-simple
     , raven-haskell
     , resource-pool
-    , tinylog
     , transformers
   default-language: Haskell2010
 
@@ -177,7 +173,6 @@ executable ferry-services-vessel-fetcher-exe
     , postgresql-simple
     , raven-haskell
     , resource-pool
-    , tinylog
     , transformers
   default-language: Haskell2010
 
@@ -194,7 +189,6 @@ executable ferry-services-weather-fetcher-exe
     , postgresql-simple
     , raven-haskell
     , resource-pool
-    , tinylog
     , transformers
   default-language: Haskell2010
 
@@ -224,7 +218,6 @@ test-suite ferry-services-server-test
     , resource-pool
     , scotty
     , time
-    , tinylog
     , wai
     , wai-extra
   default-language: Haskell2010
