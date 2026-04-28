@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module TransxchangeV2.Repository
+module Database.TransxchangeV2
   ( clearTx2Tables,
     insertTx2Document,
     replaceTx2Data,

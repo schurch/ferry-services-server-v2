@@ -68,7 +68,7 @@ import TransxchangeV2.Parser
     fileMayContainFerryServiceV2,
     parseTransxchangeFileV2,
   )
-import TransxchangeV2.Repository
+import Database.TransxchangeV2
   ( clearTx2Tables,
     insertTx2Document,
   )

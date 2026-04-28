@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6efaa5e6220ff5a6e2bc80cd320441544c7cd27fbebbbfa0993baa6be5ec5905
+-- hash: ea6717f373909c5aa28b878b987e5ca7876ee6cc3d9ef0621fa649aca437633b
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -32,12 +32,18 @@ library
       App.Runner
       AWS
       Database
+      Database.Connection
+      Database.Installations
+      Database.Rail
+      Database.Services
+      Database.TransxchangeV2
+      Database.Vessels
+      Database.Weather
       Push
       RailDepartureFetcher
       Scraper
       TransxchangeV2.Ingest
       TransxchangeV2.Parser
-      TransxchangeV2.Repository
       TransxchangeV2.Transform
       TransxchangeV2.Types
       Types
