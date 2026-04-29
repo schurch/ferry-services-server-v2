@@ -8,3 +8,4 @@ envfile.docker-prod
 .DS_Store
 S.zip
 S/
+.codex
