@@ -15,9 +15,9 @@ import Codec.Archive.Zip
   )
 import Control.Concurrent
   ( forkIO,
-    newQSem,
-    signalQSem,
-    waitQSem,
+    newEmptyMVar,
+    putMVar,
+    takeMVar,
   )
 import Control.Exception (finally)
 import qualified Control.Exception as E
@@ -215,16 +215,18 @@ downloadFile appLogger (FTPConnectionDetails ftpAddress ftpUsername ftpPassword)
     sendMessage appLogger ("PASS " <> C.pack ftpPassword) socketHandle
     passiveResponse <- sendMessage appLogger "PASV" socketHandle
     let (host, port) = extractAddressAndPort $ C.unpack passiveResponse
-    semaphore <- newQSem 0
+    transferResult <- newEmptyMVar
     _ <-
       forkIO $ do
-        runTCPClient host port $ \transferSocket -> do
-          transferData filePath transferSocket
-          signalQSem semaphore
+        result <-
+          E.try $
+            runTCPClient host port $ \transferSocket ->
+              transferData filePath transferSocket
+        putMVar transferResult (result :: Either E.SomeException ())
     sendMessage appLogger ("RETR " <> C.pack filePath) socketHandle
-    waitQSem semaphore
-    _ <- sendMessage appLogger "QUIT" socketHandle
-    return ()
+    result <- takeMVar transferResult
+    _ <- E.try (sendMessage appLogger "QUIT" socketHandle) :: IO (Either E.SomeException C.ByteString)
+    either E.throwIO return result
 
 removeFileIfExists :: FilePath -> IO ()
 removeFileIfExists filePath = do
