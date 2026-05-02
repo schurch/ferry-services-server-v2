@@ -15,24 +15,31 @@ where
 
 import Control.Monad (forM)
 import Control.Monad.IO.Class (liftIO)
+import Control.Lens ((&), (%~), (.~), (?~))
 import App.Env (Application)
 import App.Logger (logInfoM)
 import qualified Crypto.Hash as Crypto
 import Data.Aeson
   ( FromJSON (parseJSON),
     ToJSON (toJSON),
+    Value,
     decode,
     encode,
     genericParseJSON,
     genericToJSON,
+    object,
+    (.=),
   )
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
 import Data.List (nubBy, sortOn)
 import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
 import qualified Data.OpenApi as OpenApi
+import Data.OpenApi.Declare (Declare)
 import Data.Proxy (Proxy (Proxy))
 import Data.Scientific (Scientific, fromFloatDigits)
+import Data.Text (Text)
 import Data.Time
   ( LocalTime (LocalTime),
     TimeOfDay (TimeOfDay),
@@ -97,7 +104,33 @@ instance FromJSON OfflineSnapshot where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineSnapshot)
 
 instance OpenApi.ToSchema OfflineSnapshot where
-  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineSnapshot)
+  declareNamedSchema =
+    offlineNamedSchema
+      "Generated offline timetable snapshot. This is static timetable/reference data for local device caching; live status, disruptions, vessels, weather and push installation state are intentionally excluded."
+      [ ("schema_version", "Snapshot schema version. Increment this when clients need a migration path."),
+        ("data_version", "Stable SHA-256 version for the snapshot content. Also used as the ETag value without surrounding quotes."),
+        ("generated_at", "UTC time when this artifact was generated."),
+        ("valid_from", "First local timetable date covered by departures."),
+        ("valid_to", "Last local timetable date covered by departures."),
+        ("services", "Visible ferry services included in the offline cache."),
+        ("locations", "Location lookup table. Services and departures reference these rows by id."),
+        ("organisations", "Operator lookup table. Services reference these rows by organisation_id."),
+        ("departures", "Generated scheduled ferry departures for the snapshot validity window.")
+      ]
+      ( Just $
+          object
+            [ "schema_version" .= (1 :: Int),
+              "data_version" .= ("sha256-abc123" :: String),
+              "generated_at" .= ("2026-05-02T10:00:00Z" :: String),
+              "valid_from" .= ("2026-05-02" :: String),
+              "valid_to" .= ("2026-06-30" :: String),
+              "services" .= ([] :: [OfflineService]),
+              "locations" .= ([] :: [OfflineLocation]),
+              "organisations" .= ([] :: [OfflineOrganisation]),
+              "departures" .= ([] :: [OfflineDeparture])
+            ]
+      )
+      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineSnapshot)) (Proxy :: Proxy OfflineSnapshot))
 
 data OfflineSnapshotMetadata = OfflineSnapshotMetadata
   { offlineSnapshotMetadataDataVersion :: String,
@@ -115,7 +148,17 @@ instance FromJSON OfflineSnapshotMetadata where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineSnapshotMetadata)
 
 instance OpenApi.ToSchema OfflineSnapshotMetadata where
-  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineSnapshotMetadata)
+  declareNamedSchema =
+    offlineNamedSchema
+      "Small sidecar metadata file used by the web server to serve cache validators for the offline snapshot."
+      [ ("data_version", "Stable SHA-256 version for the snapshot content."),
+        ("etag", "HTTP ETag header value, including quotes."),
+        ("generated_at", "UTC time when this artifact was generated."),
+        ("valid_from", "First local timetable date covered by departures."),
+        ("valid_to", "Last local timetable date covered by departures.")
+      ]
+      Nothing
+      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineSnapshotMetadata)) (Proxy :: Proxy OfflineSnapshotMetadata))
 
 data OfflineService = OfflineService
   { offlineServiceId :: Int,
@@ -135,7 +178,29 @@ instance FromJSON OfflineService where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineService)
 
 instance OpenApi.ToSchema OfflineService where
-  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineService)
+  declareNamedSchema =
+    offlineNamedSchema
+      "Offline service row. This is deliberately normalized for compact storage."
+      [ ("id", "Service id used by existing live API responses."),
+        ("sort_order", "Display ordering from the service list."),
+        ("area", "Geographic service grouping shown in the app."),
+        ("route", "Human-readable route name."),
+        ("organisation_id", "Operator id; resolve via organisations[].id."),
+        ("location_ids", "Ordered location ids served by this service; resolve via locations[].id."),
+        ("scheduled_departures_available", "Whether scheduled TransXChange departures are available for this service.")
+      ]
+      ( Just $
+          object
+            [ "id" .= (5 :: Int),
+              "sort_order" .= (1 :: Int),
+              "area" .= ("Arran" :: String),
+              "route" .= ("Ardrossan - Brodick" :: String),
+              "organisation_id" .= (1 :: Int),
+              "location_ids" .= ([4, 5] :: [Int]),
+              "scheduled_departures_available" .= True
+            ]
+      )
+      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineService)) (Proxy :: Proxy OfflineService))
 
 data OfflineLocation = OfflineLocation
   { offlineLocationId :: Int,
@@ -152,7 +217,23 @@ instance FromJSON OfflineLocation where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineLocation)
 
 instance OpenApi.ToSchema OfflineLocation where
-  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineLocation)
+  declareNamedSchema =
+    offlineNamedSchema
+      "Offline location lookup row."
+      [ ("id", "Location id used by service location_ids and departure location references."),
+        ("name", "Display name for the port/location."),
+        ("latitude", "Latitude in decimal degrees."),
+        ("longitude", "Longitude in decimal degrees.")
+      ]
+      ( Just $
+          object
+            [ "id" .= (4 :: Int),
+              "name" .= ("Brodick" :: String),
+              "latitude" .= (55.576 :: Double),
+              "longitude" .= (-5.138 :: Double)
+            ]
+      )
+      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineLocation)) (Proxy :: Proxy OfflineLocation))
 
 data OfflineOrganisation = OfflineOrganisation
   { offlineOrganisationId :: Int,
@@ -173,7 +254,26 @@ instance FromJSON OfflineOrganisation where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineOrganisation)
 
 instance OpenApi.ToSchema OfflineOrganisation where
-  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineOrganisation)
+  declareNamedSchema =
+    offlineNamedSchema
+      "Offline ferry operator lookup row."
+      [ ("id", "Organisation/operator id used by services[].organisation_id."),
+        ("name", "Operator display name."),
+        ("website", "Operator website."),
+        ("local_number", "Local contact telephone number."),
+        ("international_number", "International contact telephone number."),
+        ("email", "Operator contact email address."),
+        ("x", "Operator X/Twitter URL or handle."),
+        ("facebook", "Operator Facebook URL.")
+      ]
+      ( Just $
+          object
+            [ "id" .= (1 :: Int),
+              "name" .= ("CalMac Ferries" :: String),
+              "website" .= ("https://www.calmac.co.uk" :: String)
+            ]
+      )
+      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineOrganisation)) (Proxy :: Proxy OfflineOrganisation))
 
 data OfflineDeparture = OfflineDeparture
   { offlineDepartureServiceId :: Int,
@@ -192,7 +292,57 @@ instance FromJSON OfflineDeparture where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineDeparture)
 
 instance OpenApi.ToSchema OfflineDeparture where
-  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineDeparture)
+  declareNamedSchema =
+    offlineNamedSchema
+      "Offline scheduled ferry departure. Times are local ferry timetable display times, not UTC instants."
+      [ ("service_id", "Service id for this departure; resolve via services[].id."),
+        ("from_location_id", "Origin location id; resolve via locations[].id."),
+        ("to_location_id", "Destination location id; resolve via locations[].id."),
+        ("departure_local", "Local timetable departure time, formatted as an ISO-like local date-time without a timezone."),
+        ("arrival_local", "Local timetable arrival time, formatted as an ISO-like local date-time without a timezone."),
+        ("notes", "Optional timetable note/check-in text from the source data.")
+      ]
+      ( Just $
+          object
+            [ "service_id" .= (5 :: Int),
+              "from_location_id" .= (4 :: Int),
+              "to_location_id" .= (5 :: Int),
+              "departure_local" .= ("2026-05-02T07:00:00" :: String),
+              "arrival_local" .= ("2026-05-02T07:55:00" :: String),
+              "notes" .= ("Check in 30 minutes before departure" :: String)
+            ]
+      )
+      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineDeparture)) (Proxy :: Proxy OfflineDeparture))
+
+offlineNamedSchema ::
+  Text ->
+  [(Text, Text)] ->
+  Maybe Value ->
+  Declare (OpenApi.Definitions OpenApi.Schema) OpenApi.NamedSchema
+  ->
+  Proxy a ->
+  Declare (OpenApi.Definitions OpenApi.Schema) OpenApi.NamedSchema
+offlineNamedSchema schemaDescription fieldDescriptions schemaExample declareNamedSchema _ = do
+  namedSchema <- declareNamedSchema
+  pure $
+    namedSchema
+      & OpenApi.schema . OpenApi.description ?~ schemaDescription
+      & OpenApi.schema . OpenApi.example .~ schemaExample
+      & OpenApi.schema . OpenApi.properties %~ describeProperties fieldDescriptions
+
+describeProperties ::
+  [(Text, Text)] ->
+  OpenApi.Definitions (OpenApi.Referenced OpenApi.Schema) ->
+  OpenApi.Definitions (OpenApi.Referenced OpenApi.Schema)
+describeProperties descriptions properties =
+  foldr describeProperty properties descriptions
+  where
+    describeProperty ::
+      (Text, Text) ->
+      OpenApi.Definitions (OpenApi.Referenced OpenApi.Schema) ->
+      OpenApi.Definitions (OpenApi.Referenced OpenApi.Schema)
+    describeProperty (propertyName, propertyDescription) =
+      InsOrdHashMap.adjust (fmap (OpenApi.description ?~ propertyDescription)) propertyName
 
 generateAndWriteOfflineSnapshot :: Application OfflineSnapshotMetadata
 generateAndWriteOfflineSnapshot = do

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0298de52ac5fa22d54071f8c7d1c9f1ee5c5c896e911f86b4468a670f6ad4bc2
+-- hash: 171878b2b11db0b18ecaf6413e2a83bb310ad66eb814ed6218d506a3156a2ed2
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -82,6 +82,7 @@ library
     , haskell-postgis
     , http-conduit
     , http-types
+    , insert-ordered-containers
     , lens
     , mtl
     , network

@@ -108,6 +108,8 @@ import Servant
     QueryParam,
     ReqBody,
     ServerT,
+    Description,
+    Summary,
     addHeader,
     err400,
     err304,
@@ -163,16 +165,16 @@ type AppAPI =
     :<|> JsonAPI
 
 type JsonAPI =
-  "api" :> "services" :> Get '[JSON] [ServiceResponse]
-    :<|> "api" :> "services" :> Capture "serviceID" Int :> QueryParam "departuresDate" String :> Get '[JSON] (Maybe ServiceResponse)
-    :<|> "api" :> "installations" :> Capture "installationID" Text :> ReqBody '[JSON] CreateInstallationRequest :> Post '[JSON] [ServiceResponse]
-    :<|> "api" :> "installations" :> Capture "installationID" Text :> "push-status" :> Get '[JSON] PushStatus
-    :<|> "api" :> "installations" :> Capture "installationID" Text :> "push-status" :> ReqBody '[JSON] PushStatus :> Post '[JSON] PushStatus
-    :<|> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Get '[JSON] [ServiceResponse]
-    :<|> "api" :> "installations" :> Capture "installationID" Text :> "services" :> ReqBody '[JSON] AddServiceRequest :> Post '[JSON] [ServiceResponse]
-    :<|> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Capture "serviceID" Int :> Delete '[JSON] [ServiceResponse]
-    :<|> "api" :> "vessels" :> Get '[JSON] [VesselResponse]
-    :<|> "api" :> "offline" :> "snapshot.json" :> Header "If-None-Match" String :> Get '[SnapshotJSON] (Headers '[Header "Cache-Control" String, Header "ETag" String, Header "Last-Modified" String] SnapshotBody)
+  Summary "List services" :> Description "Returns all visible ferry services with current live status, operator, route and location metadata. Scheduled departures are not embedded in this list response." :> "api" :> "services" :> Get '[JSON] [ServiceResponse]
+    :<|> Summary "Get service detail" :> Description "Returns one visible service. Pass departuresDate as YYYY-MM-DD to include scheduled ferry departures for that local date." :> "api" :> "services" :> Capture "serviceID" Int :> QueryParam "departuresDate" String :> Get '[JSON] (Maybe ServiceResponse)
+    :<|> Summary "Create installation" :> Description "Registers a mobile app installation for push notifications and returns that installation's saved services." :> "api" :> "installations" :> Capture "installationID" Text :> ReqBody '[JSON] CreateInstallationRequest :> Post '[JSON] [ServiceResponse]
+    :<|> Summary "Get push status" :> Description "Returns whether push notifications are enabled for the mobile app installation." :> "api" :> "installations" :> Capture "installationID" Text :> "push-status" :> Get '[JSON] PushStatus
+    :<|> Summary "Update push status" :> Description "Enables or disables push notifications for the mobile app installation." :> "api" :> "installations" :> Capture "installationID" Text :> "push-status" :> ReqBody '[JSON] PushStatus :> Post '[JSON] PushStatus
+    :<|> Summary "List installation services" :> Description "Returns the services saved by one mobile app installation." :> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Get '[JSON] [ServiceResponse]
+    :<|> Summary "Add installation service" :> Description "Adds a service to one mobile app installation and returns the updated saved service list." :> "api" :> "installations" :> Capture "installationID" Text :> "services" :> ReqBody '[JSON] AddServiceRequest :> Post '[JSON] [ServiceResponse]
+    :<|> Summary "Delete installation service" :> Description "Removes a service from one mobile app installation and returns the updated saved service list." :> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Capture "serviceID" Int :> Delete '[JSON] [ServiceResponse]
+    :<|> Summary "List vessels" :> Description "Returns recent vessel positions used by the live service UI." :> "api" :> "vessels" :> Get '[JSON] [VesselResponse]
+    :<|> Summary "Download offline snapshot" :> Description "Returns the generated offline timetable snapshot. Clients should send If-None-Match with the stored ETag; unchanged snapshots return 304 Not Modified. The response is CDN-cacheable and includes Cache-Control, ETag and Last-Modified headers." :> "api" :> "offline" :> "snapshot.json" :> Header "If-None-Match" String :> Get '[SnapshotJSON] (Headers '[Header "Cache-Control" String, Header "ETag" String, Header "Last-Modified" String] SnapshotBody)
 
 api :: Proxy API
 api = Proxy
@@ -228,7 +230,8 @@ jsonServer =
 
 openApiSpec :: OpenApi.OpenApi
 openApiSpec =
-  toOpenApi (Proxy :: Proxy JsonAPI)
+  OpenApi.applyTags [OpenApi.Tag "Ferry Services API" (Just "Live ferry service data, mobile installation state, vessel positions and offline timetable downloads.") Nothing] $
+    toOpenApi (Proxy :: Proxy JsonAPI)
     & OpenApi.info . OpenApi.title .~ "Scottish Ferry Services API"
     & OpenApi.info . OpenApi.version .~ "1.0"
 

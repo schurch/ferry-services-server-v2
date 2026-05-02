@@ -41,6 +41,7 @@ library:
     - http-types
     - http-conduit
     - crypton
+    - insert-ordered-containers
     - lens
     - MissingH
     - network
