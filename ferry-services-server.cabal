@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7a2772d20139b0b07cc4f747ce502425383b7d0e662660f0bc3dafc4cbc83123
+-- hash: 482a279f47edb595b6d38df7c4e435ab024e604add1e74b2b13ff3a48b2dede6
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -82,6 +82,7 @@ library
     , lens
     , mtl
     , network
+    , openapi3
     , postgresql-simple
     , process
     , raven-haskell
@@ -89,6 +90,7 @@ library
     , resource-pool
     , scientific
     , servant
+    , servant-openapi3
     , servant-server
     , tagsoup
     , text

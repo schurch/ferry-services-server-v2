@@ -43,6 +43,7 @@ library:
     - MissingH
     - network
     - mtl
+    - openapi3
     - postgresql-simple
     - process
     - raven-haskell
@@ -50,6 +51,7 @@ library:
     - resource-pool
     - scientific
     - servant
+    - servant-openapi3
     - servant-server
     - tagsoup
     - time

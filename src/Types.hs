@@ -9,12 +9,15 @@ import Data.Aeson
   ( FromJSON (parseJSON),
     Options (fieldLabelModifier, omitNothingFields),
     ToJSON (toJSON),
+    Value (Number, String),
     camelTo2,
     defaultOptions,
     withScientific,
   )
+import Control.Lens ((&), (?~))
 import qualified Data.ByteString.Lazy as B
 import Data.Maybe (fromMaybe)
+import qualified Data.OpenApi as OpenApi
 import Data.Proxy
 import Data.Scientific
   ( Scientific,
@@ -55,6 +58,14 @@ instance ToJSON ServiceStatus where
 instance FromJSON ServiceStatus where
   parseJSON = withScientific "ServiceStatus" (pure . toEnum . fromMaybe (-99) . toBoundedInteger)
 
+instance OpenApi.ToSchema ServiceStatus where
+  declareNamedSchema _ =
+    pure $
+      OpenApi.NamedSchema (Just "ServiceStatus") $
+        mempty
+          & OpenApi.type_ ?~ OpenApi.OpenApiInteger
+          & OpenApi.enum_ ?~ [Number 0, Number 1, Number 2, Number (-99)]
+
 instance ToField ServiceStatus where
   toField = toField . fromEnum
 
@@ -66,6 +77,14 @@ data DeviceType = IOS | Android deriving (Eq, Show, Generic, Bounded, Enum)
 instance ToJSON DeviceType
 
 instance FromJSON DeviceType
+
+instance OpenApi.ToSchema DeviceType where
+  declareNamedSchema _ =
+    pure $
+      OpenApi.NamedSchema (Just "DeviceType") $
+        mempty
+          & OpenApi.type_ ?~ OpenApi.OpenApiString
+          & OpenApi.enum_ ?~ [String "IOS", String "Android"]
 
 instance ToField DeviceType where
   toField = toField . fromEnum

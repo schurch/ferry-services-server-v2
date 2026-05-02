@@ -6,6 +6,7 @@
 
 module WebServer where
 
+import Control.Lens ((&), (.~))
 import Control.Monad (forM)
 import Control.Monad.Reader
   ( ReaderT,
@@ -31,6 +32,7 @@ import Data.Scientific
     toRealFloat,
   )
 import qualified Data.Set as S
+import qualified Data.OpenApi as OpenApi
 import Data.Text (Text)
 import Data.Time
   ( LocalTime,
@@ -100,6 +102,7 @@ import Servant
     serve,
     throwError,
   )
+import Servant.OpenApi (toOpenApi)
 
 data HTML
 
@@ -109,9 +112,28 @@ instance Accept HTML where
 instance MimeRender HTML BL.ByteString where
   mimeRender _ = id
 
+data JavaScript
+
+instance Accept JavaScript where
+  contentType _ = "application/javascript;charset=utf-8"
+
+instance MimeRender JavaScript BL.ByteString where
+  mimeRender _ = id
+
 type API =
+  DocumentationAPI :<|> AppAPI
+
+type DocumentationAPI =
+  "openapi.json" :> Get '[JSON] OpenApi.OpenApi
+    :<|> "swagger" :> Get '[HTML] BL.ByteString
+    :<|> "swagger-initializer.js" :> Get '[JavaScript] BL.ByteString
+
+type AppAPI =
   Get '[HTML] BL.ByteString
-    :<|> "api" :> "services" :> Get '[JSON] [ServiceResponse]
+    :<|> JsonAPI
+
+type JsonAPI =
+  "api" :> "services" :> Get '[JSON] [ServiceResponse]
     :<|> "api" :> "services" :> Capture "serviceID" Int :> QueryParam "departuresDate" String :> Get '[JSON] (Maybe ServiceResponse)
     :<|> "api" :> "installations" :> Capture "installationID" Text :> ReqBody '[JSON] CreateInstallationRequest :> Post '[JSON] [ServiceResponse]
     :<|> "api" :> "installations" :> Capture "installationID" Text :> "push-status" :> Get '[JSON] PushStatus
@@ -146,8 +168,23 @@ webApp env requestLogger =
 
 server :: ServerT API WebHandler
 server =
+  documentationServer
+    :<|> appServer
+
+documentationServer :: ServerT DocumentationAPI WebHandler
+documentationServer =
+  pure openApiSpec
+    :<|> pure swaggerHtml
+    :<|> pure swaggerInitializer
+
+appServer :: ServerT AppAPI WebHandler
+appServer =
   getIndex
-    :<|> getServices
+    :<|> jsonServer
+
+jsonServer :: ServerT JsonAPI WebHandler
+jsonServer =
+  getServices
     :<|> getServiceWithDate
     :<|> createInstallationEndpoint
     :<|> getPushStatusEndpoint
@@ -156,6 +193,20 @@ server =
     :<|> addServiceToInstallationEndpoint
     :<|> deleteServiceForInstallationEndpoint
     :<|> getVessels
+
+openApiSpec :: OpenApi.OpenApi
+openApiSpec =
+  toOpenApi (Proxy :: Proxy JsonAPI)
+    & OpenApi.info . OpenApi.title .~ "Scottish Ferry Services API"
+    & OpenApi.info . OpenApi.version .~ "1.0"
+
+swaggerHtml :: BL.ByteString
+swaggerHtml =
+  "<!doctype html><html><head><meta charset=\"utf-8\"><title>Scottish Ferry Services API</title><link rel=\"stylesheet\" href=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui.css\"></head><body><div id=\"swagger-ui\"></div><script src=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js\"></script><script src=\"/swagger-initializer.js\"></script></body></html>"
+
+swaggerInitializer :: BL.ByteString
+swaggerInitializer =
+  "window.onload = function () { window.ui = SwaggerUIBundle({ url: '/openapi.json', dom_id: '#swagger-ui' }); };"
 
 runWebHandler :: App.Env -> WebHandler a -> Handler a
 runWebHandler env action = runReaderT action env

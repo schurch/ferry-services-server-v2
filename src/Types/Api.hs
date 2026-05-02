@@ -5,12 +5,15 @@ module Types.Api where
 import Data.Aeson
   ( FromJSON (parseJSON),
     ToJSON (toJSON),
+    camelTo2,
     genericParseJSON,
     genericToJSON,
   )
+import qualified Data.OpenApi as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Scientific (Scientific)
 import Data.Time (UTCTime)
+import Data.Typeable (Typeable, typeRep)
 import GHC.Generics (Generic)
 import Types
   ( DeviceType,
@@ -41,6 +44,9 @@ instance ToJSON ServiceResponse where
 instance FromJSON ServiceResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy ServiceResponse)
 
+instance OpenApi.ToSchema ServiceResponse where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy ServiceResponse)
+
 data OrganisationResponse = OrganisationResponse
   { organisationResponseID :: Int,
     organisationResponseName :: String,
@@ -59,6 +65,9 @@ instance FromJSON OrganisationResponse where
 instance ToJSON OrganisationResponse where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy OrganisationResponse)
 
+instance OpenApi.ToSchema OrganisationResponse where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OrganisationResponse)
+
 data CreateInstallationRequest = CreateInstallationRequest
   { createInstallationRequestDeviceToken :: String,
     createInstallationRequestDeviceType :: DeviceType
@@ -71,6 +80,9 @@ instance FromJSON CreateInstallationRequest where
 instance ToJSON CreateInstallationRequest where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy CreateInstallationRequest)
 
+instance OpenApi.ToSchema CreateInstallationRequest where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy CreateInstallationRequest)
+
 data AddServiceRequest = AddServiceRequest
   { addServiceRequestServiceID :: Int
   }
@@ -82,6 +94,9 @@ instance FromJSON AddServiceRequest where
 instance ToJSON AddServiceRequest where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy AddServiceRequest)
 
+instance OpenApi.ToSchema AddServiceRequest where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy AddServiceRequest)
+
 data PushStatus = PushStatus
   { pushStatusEnabled :: Bool
   }
@@ -92,6 +107,9 @@ instance FromJSON PushStatus where
 
 instance ToJSON PushStatus where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy PushStatus)
+
+instance OpenApi.ToSchema PushStatus where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy PushStatus)
 
 data LocationResponse = LocationResponse
   { locationResponseID :: Int,
@@ -111,6 +129,9 @@ instance ToJSON LocationResponse where
 instance FromJSON LocationResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy LocationResponse)
 
+instance OpenApi.ToSchema LocationResponse where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy LocationResponse)
+
 data LocationWeatherResponse = LocationWeatherResponse
   { locationWeatherResponseIcon :: String,
     locationWeatherResponseDescription :: String,
@@ -126,6 +147,9 @@ instance ToJSON LocationWeatherResponse where
 
 instance FromJSON LocationWeatherResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy LocationWeatherResponse)
+
+instance OpenApi.ToSchema LocationWeatherResponse where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy LocationWeatherResponse)
 
 data VesselResponse = VesselResponse
   { vesselResponseMmsi :: Int,
@@ -144,6 +168,9 @@ instance ToJSON VesselResponse where
 instance FromJSON VesselResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy VesselResponse)
 
+instance OpenApi.ToSchema VesselResponse where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy VesselResponse)
+
 data DepartureResponse = DepartureResponse
   { departureResponseDestination :: LocationResponse,
     departureResponseDeparture :: UTCTime,
@@ -157,6 +184,9 @@ instance ToJSON DepartureResponse where
 
 instance FromJSON DepartureResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy DepartureResponse)
+
+instance OpenApi.ToSchema DepartureResponse where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy DepartureResponse)
 
 data RailDepartureResponse = RailDepartureResponse
   { railDepartureResponseFrom :: String,
@@ -173,3 +203,13 @@ instance ToJSON RailDepartureResponse where
 
 instance FromJSON RailDepartureResponse where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy RailDepartureResponse)
+
+instance OpenApi.ToSchema RailDepartureResponse where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy RailDepartureResponse)
+
+openApiOptions :: Typeable a => Proxy a -> OpenApi.SchemaOptions
+openApiOptions type' =
+  let typeName = show $ typeRep type'
+   in OpenApi.defaultSchemaOptions
+        { OpenApi.fieldLabelModifier = camelTo2 '_' . drop (length typeName)
+        }

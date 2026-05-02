@@ -54,6 +54,14 @@ import WebServer
 
 spec :: Spec
 spec = beforeAll_ setupIntegrationTests $ with app $ do
+  describe "GET /openapi.json" $ do
+    it "responds with 200" $ do
+      get "/openapi.json" `shouldRespondWith` 200
+
+  describe "GET /swagger" $ do
+    it "responds with 200" $ do
+      get "/swagger" `shouldRespondWith` 200
+
   describe "GET /api/services" $ do
     it "responds with 200" $ do
       get "/api/services" `shouldRespondWith` serviceList
