@@ -56,7 +56,6 @@ import Types.Api
 import Types
   ( ServiceStatus (Unknown),
   )
-import Web.Scotty.Trans (defaultOptions, scottyAppT)
 import WebServer (loggerSettings, webApp)
 
 spec :: Spec
@@ -140,10 +139,9 @@ setupTx2ApiTests = do
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getDbConnectionString
   connectionPool <- createConnectionPool connectionString
-  app <- scottyAppT defaultOptions (`runReaderT` Env logger connectionPool) (webApp requestLogger)
   pure $
     TestContext
-      { testContextApp = app,
+      { testContextApp = webApp (Env logger connectionPool) requestLogger,
         testContextConnectionPool = connectionPool,
         testContextLogger = logger
       }

@@ -3,7 +3,6 @@
 module Main where
 
 import Control.Exception.Base (SomeException)
-import Control.Monad.Reader (runReaderT)
 import Data.Aeson (Value (String))
 import Data.ByteString.Char8 (unpack)
 import qualified Data.HashMap.Strict as HM
@@ -20,6 +19,7 @@ import Network.Wai.Handler.Warp
   ( Settings,
     defaultOnException,
     defaultSettings,
+    runSettings,
     setOnException,
     setPort,
   )
@@ -44,10 +44,6 @@ import App.Logger
     logInfo,
   )
 import App.Database (createConnectionPool)
-import Web.Scotty.Trans
-  ( Options (Options, settings, verbose),
-    scottyOptsT,
-  )
 import WebServer (loggerSettings, webApp)
 
 main :: IO ()
@@ -57,11 +53,10 @@ main = do
   logInfo logger $ "Listening on port " <> port
   let settings =
         setPort (read port) . setOnException exceptionHandler $ defaultSettings
-  let options = Options {verbose = 0, settings = settings}
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getEnv "DB_CONNECTION"
   connectionPool <- createConnectionPool connectionString
-  scottyOptsT options (`runReaderT` Env logger connectionPool) (webApp requestLogger)
+  runSettings settings $ webApp (Env logger connectionPool) requestLogger
 
 exceptionHandler :: Maybe Request -> SomeException -> IO ()
 exceptionHandler request exception = do

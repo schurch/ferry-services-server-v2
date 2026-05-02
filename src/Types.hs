@@ -5,9 +5,6 @@
 
 module Types where
 
-import App.Env (Application, logger)
-import App.Logger (MonadLogger (askLogger))
-import Control.Monad.Reader (asks)
 import Data.Aeson
   ( FromJSON (parseJSON),
     Options (fieldLabelModifier, omitNothingFields),
@@ -23,7 +20,6 @@ import Data.Scientific
   ( Scientific,
     toBoundedInteger,
   )
-import Data.Text.Lazy (Text)
 import Data.Time (LocalTime, TimeOfDay, UTCTime)
 import Data.Typeable (Typeable, typeRep)
 import Data.UUID (UUID)
@@ -39,16 +35,6 @@ import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromField (FromField (..))
 import Database.PostgreSQL.Simple.ToField (ToField (..))
 import GHC.Generics (Generic)
-import Web.Scotty.Trans (ActionT, ScottyT)
-
--- Web server
-type Scotty = ScottyT Application ()
-
-type Action = ActionT Application
-
-instance MonadLogger Types.Action where
-  askLogger = asks logger
-
 -- General
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
 

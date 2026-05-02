@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ea6717f373909c5aa28b878b987e5ca7876ee6cc3d9ef0621fa649aca437633b
+-- hash: 7a2772d20139b0b07cc4f747ce502425383b7d0e662660f0bc3dafc4cbc83123
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -88,7 +88,8 @@ library
     , regex-compat
     , resource-pool
     , scientific
-    , scotty
+    , servant
+    , servant-server
     , tagsoup
     , text
     , time
@@ -146,7 +147,8 @@ executable ferry-services-server-exe
     , postgresql-simple
     , raven-haskell
     , resource-pool
-    , scotty
+    , servant
+    , servant-server
     , text
     , unordered-containers
     , wai
@@ -216,7 +218,8 @@ test-suite ferry-services-server-test
     , mtl
     , postgresql-simple
     , resource-pool
-    , scotty
+    , servant
+    , servant-server
     , time
     , uuid
     , wai

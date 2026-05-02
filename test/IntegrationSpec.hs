@@ -22,7 +22,8 @@ import Data.Pool
   )
 import qualified Database as DB
 import Database.PostgreSQL.Simple (Connection)
-import Network.HTTP.Types.Header (Header)
+import Network.HTTP.Types.Header (Header, hContentType)
+import Network.HTTP.Types.Method (methodPost)
 import Network.Wai (Application)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
 import Scraper
@@ -41,7 +42,7 @@ import Test.Hspec.Wai
     ResponseMatcher (ResponseMatcher),
     delete,
     get,
-    post,
+    request,
     shouldRespondWith,
     with,
   )
@@ -49,7 +50,6 @@ import Types
 import Types.Api
 import Types.Weather
 import VesselFetcher
-import Web.Scotty.Trans (defaultOptions, scottyAppT)
 import WebServer
 
 spec :: Spec
@@ -65,12 +65,12 @@ spec = beforeAll_ setupIntegrationTests $ with app $ do
   describe "POST /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31" $ do
     it "responds with 200" $ do
       let requestBody = CreateInstallationRequest "20f2d2e336a0c62c8c5f3dc1bb3d3f36e830ce14230bc8fa547fd16fb8f917b5" IOS
-      post "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31" (encode requestBody) `shouldRespondWith` emptyServiceList
+      jsonPost "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31" (encode requestBody) `shouldRespondWith` emptyServiceList
 
   describe "POST /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" $ do
     it "responds with 200" $ do
       let requestBody = AddServiceRequest 5
-      post "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" (encode requestBody) `shouldRespondWith` registeredService
+      jsonPost "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" (encode requestBody) `shouldRespondWith` registeredService
 
   describe "GET /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" $ do
     it "responds with 200" $ do
@@ -131,6 +131,9 @@ jsonReponseMatcher jsonChecker = do
       Just decodedBody -> jsonChecker decodedBody
       Nothing -> return "Couldn't decode response"
 
+jsonPost path =
+  request methodPost path [(hContentType, "application/json")]
+
 -- Setup
 setupIntegrationTests :: IO ()
 setupIntegrationTests = do
@@ -171,7 +174,7 @@ app = do
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getDbConnectionString
   connectionPool <- createConnectionPool connectionString
-  scottyAppT defaultOptions (`runReaderT` Env logger connectionPool) (webApp requestLogger)
+  return $ webApp (Env logger connectionPool) requestLogger
 
 getDbConnectionString :: IO String
 getDbConnectionString = do

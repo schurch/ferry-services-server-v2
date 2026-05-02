@@ -1,31 +1,37 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeOperators #-}
 
 module WebServer where
 
-import Control.Monad (forM, void)
+import Control.Monad (forM)
+import Control.Monad.Reader
+  ( ReaderT,
+    ask,
+    runReaderT,
+  )
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans (lift)
-import Data.Aeson (Value (..))
+import qualified App.Env as App
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL
 import Data.Char (ord)
 import qualified Data.Char as Char
 import Data.Default (def)
 import Data.List (find, sortOn)
 import qualified Data.Map as M
 import Data.Maybe
-  ( fromJust,
-    fromMaybe,
+  ( fromMaybe,
   )
-import Data.Pool (withResource)
+import Data.Proxy (Proxy (Proxy))
 import Data.Scientific
   ( Scientific (..),
     fromFloatDigits,
     toRealFloat,
   )
 import qualified Data.Set as S
-import Data.Text.Lazy (Text, toStrict, unpack)
+import Data.Text (Text)
 import Data.Time
   ( LocalTime,
     UTCTime (UTCTime),
@@ -42,8 +48,7 @@ import Database.Postgis
     Point (Point),
     Position (Position),
   )
-import Database.PostgreSQL.Simple (Connection)
-import Network.HTTP.Types.Status (status404)
+import qualified Network.Wai
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.AddHeaders (addHeaders)
 import Network.Wai.Middleware.Cors
@@ -75,89 +80,135 @@ import Types
 import Types.Api
 import Utility (stringToDay)
 import qualified Push
-import Web.Scotty.Trans
-  ( Parsable (parseParam),
-    captureParam,
-    delete,
-    file,
-    get,
-    json,
-    jsonData,
-    middleware,
-    post,
-    queryParamMaybe,
-    redirect,
-    setHeader,
-    status,
+import Servant
+  ( (:>),
+    (:<|>) (..),
+    Accept (contentType),
+    Capture,
+    Delete,
+    Get,
+    Handler,
+    JSON,
+    MimeRender (mimeRender),
+    Post,
+    QueryParam,
+    ReqBody,
+    ServerT,
+    err400,
+    err404,
+    hoistServer,
+    serve,
+    throwError,
   )
 
-webApp :: Middleware -> Scotty
-webApp requestLogger = do
-  middleware requestLogger
-  let corsOrigins = ["https://scottishferryapp.com", "https://www.scottishferryapp.com", "http://localhost:3000"]
-  middleware $ cors (const $ Just simpleCorsResourcePolicy {corsOrigins = Just (corsOrigins, False)})
-  middleware $ gzip def {gzipFiles = GzipCompress}
-  middleware $
-    addHeaders
-      [ ("X-Frame-Options", "DENY"),
-        ("X-Content-Type-Options", "nosniff"),
-        ("Content-Security-Policy", "script-src 'self' https:, object-src 'none'; base-uri 'none';")
-      ]
-  middleware $ staticPolicy (noDots <> isNotAbsolute <> addBase "public")
-  get "/" $ do
-    setHeader "Content-Type" "text/html"
-    file "public/index.html"
-  get "/api/services" $ do
-    services <- getServices
-    json services
-  get "/api/services/:serviceID" $ do
-    serviceID <- captureParam "serviceID"
-    departuresDateParam <- queryParamMaybe "departuresDate"
-    let departuresDate = (departuresDateParam :: Maybe Text) >>= stringToDay . unpack
-    service <- getService serviceID departuresDate
-    json service
-  post "/api/installations/:installationID" $ do
-    installationID <- captureParam "installationID"
-    request <- jsonData
-    services <- createInstallation installationID request
-    json services
-  get "/api/installations/:installationID/push-status" $ do
-    installationID <- captureParam "installationID"
-    pushStatus <- getPushStatus installationID
-    maybe (status status404) json pushStatus
-  post "/api/installations/:installationID/push-status" $ do
-    installationID <- captureParam "installationID"
-    request <- jsonData
-    lift $ DB.updatePushEnabled installationID (pushStatusEnabled request)
-    pushStatus <- getPushStatus installationID
-    maybe (status status404) json pushStatus
-  get "/api/installations/:installationID/services" $ do
-    installationID <- captureParam "installationID"
-    services <- getServicesForInstallation installationID
-    json services
-  post "/api/installations/:installationID/services" $ do
-    installationID <- captureParam "installationID"
-    (AddServiceRequest serviceID) <- jsonData
-    services <- addServiceToInstallation installationID serviceID
-    json services
-  delete "/api/installations/:installationID/services/:serviceID" $ do
-    installationID <- captureParam "installationID"
-    serviceID <- captureParam "serviceID"
-    services <- deleteServiceForInstallation installationID serviceID
-    json services
-  get "/api/vessels" $ do
-    vessels <- getVessels
-    json vessels
+data HTML
 
-instance Parsable UUID where
-  parseParam = maybeToEither "Error parsing UUID" . fromText . toStrict
+instance Accept HTML where
+  contentType _ = "text/html;charset=utf-8"
 
-instance Parsable (Maybe Day) where
-  parseParam = Right . stringToDay . unpack
+instance MimeRender HTML BL.ByteString where
+  mimeRender _ = id
 
-maybeToEither :: Text -> Maybe a -> Either Text a
-maybeToEither errorMessage Nothing = Left errorMessage
-maybeToEither _ (Just value) = Right value
+type API =
+  Get '[HTML] BL.ByteString
+    :<|> "api" :> "services" :> Get '[JSON] [ServiceResponse]
+    :<|> "api" :> "services" :> Capture "serviceID" Int :> QueryParam "departuresDate" String :> Get '[JSON] (Maybe ServiceResponse)
+    :<|> "api" :> "installations" :> Capture "installationID" Text :> ReqBody '[JSON] CreateInstallationRequest :> Post '[JSON] [ServiceResponse]
+    :<|> "api" :> "installations" :> Capture "installationID" Text :> "push-status" :> Get '[JSON] PushStatus
+    :<|> "api" :> "installations" :> Capture "installationID" Text :> "push-status" :> ReqBody '[JSON] PushStatus :> Post '[JSON] PushStatus
+    :<|> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Get '[JSON] [ServiceResponse]
+    :<|> "api" :> "installations" :> Capture "installationID" Text :> "services" :> ReqBody '[JSON] AddServiceRequest :> Post '[JSON] [ServiceResponse]
+    :<|> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Capture "serviceID" Int :> Delete '[JSON] [ServiceResponse]
+    :<|> "api" :> "vessels" :> Get '[JSON] [VesselResponse]
+
+api :: Proxy API
+api = Proxy
+
+type WebHandler = ReaderT App.Env Handler
+
+webApp :: App.Env -> Middleware -> Network.Wai.Application
+webApp env requestLogger =
+  middlewares $ serve api $ hoistServer api (runWebHandler env) server
+  where
+    corsOrigins = ["https://scottishferryapp.com", "https://www.scottishferryapp.com", "http://localhost:3000"]
+
+    middlewares :: Middleware
+    middlewares =
+      requestLogger
+        . cors (const $ Just simpleCorsResourcePolicy {corsOrigins = Just (corsOrigins, False)})
+        . gzip def {gzipFiles = GzipCompress}
+        . addHeaders
+          [ ("X-Frame-Options", "DENY"),
+            ("X-Content-Type-Options", "nosniff"),
+            ("Content-Security-Policy", "script-src 'self' https:, object-src 'none'; base-uri 'none';")
+          ]
+        . staticPolicy (noDots <> isNotAbsolute <> addBase "public")
+
+server :: ServerT API WebHandler
+server =
+  getIndex
+    :<|> getServices
+    :<|> getServiceWithDate
+    :<|> createInstallationEndpoint
+    :<|> getPushStatusEndpoint
+    :<|> updatePushStatusEndpoint
+    :<|> getServicesForInstallationEndpoint
+    :<|> addServiceToInstallationEndpoint
+    :<|> deleteServiceForInstallationEndpoint
+    :<|> getVessels
+
+runWebHandler :: App.Env -> WebHandler a -> Handler a
+runWebHandler env action = runReaderT action env
+
+runApplication :: App.Application a -> WebHandler a
+runApplication action = do
+  env <- ask
+  liftIO $ runReaderT action env
+
+getIndex :: WebHandler BL.ByteString
+getIndex = liftIO $ BL.readFile "public/index.html"
+
+parseUUID :: Text -> WebHandler UUID
+parseUUID value =
+  maybe (throwError err400) return $ fromText value
+
+notFound :: Maybe a -> WebHandler a
+notFound = maybe (throwError err404) return
+
+getServiceWithDate :: Int -> Maybe String -> WebHandler (Maybe ServiceResponse)
+getServiceWithDate serviceID departuresDateParam =
+  getService serviceID (departuresDateParam >>= stringToDay)
+
+createInstallationEndpoint :: Text -> CreateInstallationRequest -> WebHandler [ServiceResponse]
+createInstallationEndpoint installationID request = do
+  uuid <- parseUUID installationID
+  createInstallation uuid request
+
+getPushStatusEndpoint :: Text -> WebHandler PushStatus
+getPushStatusEndpoint installationID = do
+  uuid <- parseUUID installationID
+  getPushStatus uuid >>= notFound
+
+updatePushStatusEndpoint :: Text -> PushStatus -> WebHandler PushStatus
+updatePushStatusEndpoint installationID request = do
+  uuid <- parseUUID installationID
+  runApplication $ DB.updatePushEnabled uuid (pushStatusEnabled request)
+  getPushStatus uuid >>= notFound
+
+getServicesForInstallationEndpoint :: Text -> WebHandler [ServiceResponse]
+getServicesForInstallationEndpoint installationID = do
+  uuid <- parseUUID installationID
+  getServicesForInstallation uuid
+
+addServiceToInstallationEndpoint :: Text -> AddServiceRequest -> WebHandler [ServiceResponse]
+addServiceToInstallationEndpoint installationID (AddServiceRequest serviceID) = do
+  uuid <- parseUUID installationID
+  addServiceToInstallation uuid serviceID
+
+deleteServiceForInstallationEndpoint :: Text -> Int -> WebHandler [ServiceResponse]
+deleteServiceForInstallationEndpoint installationID serviceID = do
+  uuid <- parseUUID installationID
+  deleteServiceForInstallation uuid serviceID
 
 loggerSettings :: Logger -> RequestLoggerSettings
 loggerSettings logger = case level logger of
@@ -194,17 +245,17 @@ type LocationNextDepartureLookup = M.Map Int DepartureResponse
 
 type LocationNextRailDepartureLookup = M.Map Int RailDepartureResponse
 
-getPushStatus :: UUID -> Action (Maybe PushStatus)
+getPushStatus :: UUID -> WebHandler (Maybe PushStatus)
 getPushStatus installationID = do
-  installation <- lift $ DB.getInstallationWithID installationID
+  installation <- runApplication $ DB.getInstallationWithID installationID
   return $ PushStatus . installationPushEnabled <$> installation
 
-getService :: Int -> Maybe Day -> Action (Maybe ServiceResponse)
+getService :: Int -> Maybe Day -> WebHandler (Maybe ServiceResponse)
 getService serviceID departuresDate = do
-  service <- lift $ DB.getService serviceID
+  service <- runApplication $ DB.getService serviceID
   time <- liftIO getCurrentTime
   locationDepartureLookup <- createDeparturesLookup serviceID departuresDate
-  hasScheduledDepartures <- lift $ DB.getServiceHasScheduledDeparturesV2 serviceID
+  hasScheduledDepartures <- runApplication $ DB.getServiceHasScheduledDeparturesV2 serviceID
   nextDepatureLookup <- createNextDepartureLookup serviceID
   nextRailDepartureLookup <- createNextRailDepartureLookup
   locationLookup <- createLocationLookup (Just locationDepartureLookup) (Just nextDepatureLookup) (Just nextRailDepartureLookup)
@@ -216,9 +267,9 @@ getService serviceID departuresDate = do
           else S.empty
   return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup 1 time <$> service
 
-getServices :: Action [ServiceResponse]
+getServices :: WebHandler [ServiceResponse]
 getServices = do
-  services <- lift DB.getServices
+  services <- runApplication DB.getServices
   time <- liftIO getCurrentTime
   scheduledDeparturesLookup <- createServiceScheduledDeparturesLookup
   locationLookup <- createLocationLookup Nothing Nothing Nothing
@@ -228,17 +279,17 @@ getServices = do
     return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup sortOrder time service
 
 createInstallation ::
-  UUID -> CreateInstallationRequest -> Action [ServiceResponse]
+  UUID -> CreateInstallationRequest -> WebHandler [ServiceResponse]
 createInstallation installationID (CreateInstallationRequest deviceToken deviceType) =
   do
     awsSNSEndpointARN <-
-      lift $
+      runApplication $
       Push.registerDeviceToken
         installationID
         deviceToken
         deviceType
     time <- liftIO getCurrentTime
-    lift $
+    runApplication $
       DB.createInstallation
         installationID
         deviceToken
@@ -247,19 +298,19 @@ createInstallation installationID (CreateInstallationRequest deviceToken deviceT
         time
     getServicesForInstallation installationID
 
-addServiceToInstallation :: UUID -> Int -> Action [ServiceResponse]
+addServiceToInstallation :: UUID -> Int -> WebHandler [ServiceResponse]
 addServiceToInstallation installationID serviceID = do
-  lift $ DB.addServiceToInstallation installationID serviceID
+  runApplication $ DB.addServiceToInstallation installationID serviceID
   getServicesForInstallation installationID
 
-deleteServiceForInstallation :: UUID -> Int -> Action [ServiceResponse]
+deleteServiceForInstallation :: UUID -> Int -> WebHandler [ServiceResponse]
 deleteServiceForInstallation installationID serviceID = do
-  lift $ DB.deleteServiceForInstallation installationID serviceID
+  runApplication $ DB.deleteServiceForInstallation installationID serviceID
   getServicesForInstallation installationID
 
-getServicesForInstallation :: UUID -> Action [ServiceResponse]
+getServicesForInstallation :: UUID -> WebHandler [ServiceResponse]
 getServicesForInstallation installationID = do
-  services <- lift $ DB.getServicesForInstallation installationID
+  services <- runApplication $ DB.getServicesForInstallation installationID
   time <- liftIO getCurrentTime
   scheduledDeparturesLookup <- createServiceScheduledDeparturesLookup
   locationLookup <- createLocationLookup Nothing Nothing Nothing
@@ -268,10 +319,10 @@ getServicesForInstallation installationID = do
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
     return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup sortOrder time service
 
-getVessels :: Action [VesselResponse]
+getVessels :: WebHandler [VesselResponse]
 getVessels = do
   time <- liftIO getCurrentTime
-  vessels <- filter (vesselFilter time) <$> lift DB.getVessels
+  vessels <- filter (vesselFilter time) <$> runApplication DB.getVessels
   return $ vesselToVesselResponse <$> vessels
   where
     vesselFilter :: UTCTime -> Vessel -> Bool
@@ -323,7 +374,7 @@ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup o
       let diff = diffUTCTime currentTime serviceUpdated
        in if diff > 1800 then Unknown else serviceStatus
 
-createNextDepartureLookup :: Int -> Action LocationNextDepartureLookup
+createNextDepartureLookup :: Int -> WebHandler LocationNextDepartureLookup
 createNextDepartureLookup serviceID = do
   time <- liftIO getCurrentTime
   departuresLookup <- createDeparturesLookup serviceID (Just $ utctDay time)
@@ -332,10 +383,10 @@ createNextDepartureLookup serviceID = do
     findNextDepature :: UTCTime -> [DepartureResponse] -> Maybe DepartureResponse
     findNextDepature time = find (\d -> departureResponseDeparture d > time) . sortOn departureResponseDeparture
 
-createNextRailDepartureLookup :: Action LocationNextRailDepartureLookup
+createNextRailDepartureLookup :: WebHandler LocationNextRailDepartureLookup
 createNextRailDepartureLookup = do
   time <- liftIO getCurrentTime
-  railDepartures <- lift $ DB.getLocationRailDepartures (utctDay time)
+  railDepartures <- runApplication $ DB.getLocationRailDepartures (utctDay time)
   let departuresLookup =
         M.fromListWith (++) $
           [(locationID, [locationRailDepartureToRailDepartureResponse locationRailDeparture]) | locationRailDeparture@(LocationRailDeparture locationID _ _ _ _ _ _ _ _) <- railDepartures]
@@ -355,11 +406,11 @@ createNextRailDepartureLookup = do
     findNextDepature :: UTCTime -> [RailDepartureResponse] -> Maybe RailDepartureResponse
     findNextDepature time = find (\d -> railDepartureResponseDeparture d > time) . sortOn railDepartureResponseDeparture
 
-createDeparturesLookup :: Int -> Maybe Day -> Action LocationScheduledDeparturesLookup
+createDeparturesLookup :: Int -> Maybe Day -> WebHandler LocationScheduledDeparturesLookup
 createDeparturesLookup serviceID departuresDate = do
   time <- liftIO getCurrentTime
   let date = fromMaybe (utctDay time) departuresDate
-  locationDepartures <- lift $ DB.getLocationDeparturesV2 serviceID date
+  locationDepartures <- runApplication $ DB.getLocationDeparturesV2 serviceID date
   return $
     M.fromListWith (++) $
       [(fromLocationID, [departureResponse locationDeparture]) | locationDeparture@(LocationDeparture fromLocationID _ _ _ _ _ _) <- reverse locationDepartures]
@@ -383,9 +434,9 @@ createDeparturesLookup serviceID departuresDate = do
           departureResponseNotes = locationDepartureNotes
         }
 
-createLocationLookup :: Maybe LocationScheduledDeparturesLookup -> Maybe LocationNextDepartureLookup -> Maybe LocationNextRailDepartureLookup -> Action ServiceLocationLookup
+createLocationLookup :: Maybe LocationScheduledDeparturesLookup -> Maybe LocationNextDepartureLookup -> Maybe LocationNextRailDepartureLookup -> WebHandler ServiceLocationLookup
 createLocationLookup scheduledDeparturesLookup nextDepatureLookup nextRailDepartureLookup = do
-  serviceLocations <- lift DB.getServiceLocations
+  serviceLocations <- runApplication DB.getServiceLocations
   locationWeatherLookup <- createLocationWeatherLookup
   return $
     M.fromListWith (++) $
@@ -414,22 +465,22 @@ createLocationLookup scheduledDeparturesLookup nextDepatureLookup nextRailDepart
     lookupDepartures :: Int -> Maybe [DepartureResponse]
     lookupDepartures locationID = fromMaybe [] . M.lookup locationID <$> scheduledDeparturesLookup
 
-createServiceOrganisationLookup :: Action ServiceOrganisationLookup
+createServiceOrganisationLookup :: WebHandler ServiceOrganisationLookup
 createServiceOrganisationLookup = do
-  serviceOrganisations <- lift DB.getServiceOrganisations
+  serviceOrganisations <- runApplication DB.getServiceOrganisations
   return $
     M.fromList $
       [ (serviceID, OrganisationResponse organisationID name website localNumber internationalNumber email x facebook)
         | (ServiceOrganisation serviceID organisationID name website localNumber internationalNumber email x facebook) <- serviceOrganisations
       ]
 
-createServiceScheduledDeparturesLookup :: Action ServiceScheduledDeparturesLookup
+createServiceScheduledDeparturesLookup :: WebHandler ServiceScheduledDeparturesLookup
 createServiceScheduledDeparturesLookup =
-  S.fromList <$> lift DB.getServicesWithScheduledDeparturesV2
+  S.fromList <$> runApplication DB.getServicesWithScheduledDeparturesV2
 
-createServiceVesselLookup :: Action ServiceVesselLookup
+createServiceVesselLookup :: WebHandler ServiceVesselLookup
 createServiceVesselLookup = do
-  serviceVessels <- lift DB.getServiceVessels
+  serviceVessels <- runApplication DB.getServiceVessels
   time <- liftIO getCurrentTime
   return $
     M.fromListWith (++) $
@@ -442,9 +493,9 @@ createServiceVesselLookup = do
     serviceVesselFilter currentTime ServiceVessel {serviceVesselLastReceived = vesselLastReceived} =
       vesselTimeFilter currentTime vesselLastReceived
 
-createLocationWeatherLookup :: Action (M.Map Int LocationWeatherResponse)
+createLocationWeatherLookup :: WebHandler (M.Map Int LocationWeatherResponse)
 createLocationWeatherLookup = do
-  locationWeathers <- lift DB.getLocationWeathers
+  locationWeathers <- runApplication DB.getLocationWeathers
   return $
     M.fromList $
       [ ( locationID,
