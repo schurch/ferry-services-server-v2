@@ -25,6 +25,8 @@ services:
     restart: always
     env_file:
       - envfile.docker-prod
+    volumes:
+      - offline-snapshots-prod:/opt/ferry-services/offline
     tty: true
     command: /opt/ferry-services/ferry-services-server-exe
   scraper-prod:
@@ -75,6 +77,8 @@ services:
     restart: always
     env_file:
       - envfile.docker-prod
+    volumes:
+      - offline-snapshots-prod:/opt/ferry-services/offline
     tty: true
     command: /opt/ferry-services/ferry-services-transxchange-ingester-v2-exe
   db-prod:
@@ -90,3 +94,4 @@ services:
 
 volumes:
   datavolumeprod:
+  offline-snapshots-prod:

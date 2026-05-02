@@ -30,6 +30,7 @@ import qualified Data.ByteString.Lazy as BL
 import Data.List (nubBy, sortOn)
 import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
+import qualified Data.OpenApi as OpenApi
 import Data.Proxy (Proxy (Proxy))
 import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Time
@@ -68,6 +69,7 @@ import Types
     ServiceOrganisation (..),
     jsonOptions,
   )
+import Types.Api (openApiOptions)
 
 defaultSnapshotPath :: FilePath
 defaultSnapshotPath = "offline/snapshot.json"
@@ -94,6 +96,9 @@ instance ToJSON OfflineSnapshot where
 instance FromJSON OfflineSnapshot where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineSnapshot)
 
+instance OpenApi.ToSchema OfflineSnapshot where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineSnapshot)
+
 data OfflineSnapshotMetadata = OfflineSnapshotMetadata
   { offlineSnapshotMetadataDataVersion :: String,
     offlineSnapshotMetadataEtag :: String,
@@ -108,6 +113,9 @@ instance ToJSON OfflineSnapshotMetadata where
 
 instance FromJSON OfflineSnapshotMetadata where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineSnapshotMetadata)
+
+instance OpenApi.ToSchema OfflineSnapshotMetadata where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineSnapshotMetadata)
 
 data OfflineService = OfflineService
   { offlineServiceId :: Int,
@@ -126,6 +134,9 @@ instance ToJSON OfflineService where
 instance FromJSON OfflineService where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineService)
 
+instance OpenApi.ToSchema OfflineService where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineService)
+
 data OfflineLocation = OfflineLocation
   { offlineLocationId :: Int,
     offlineLocationName :: String,
@@ -139,6 +150,9 @@ instance ToJSON OfflineLocation where
 
 instance FromJSON OfflineLocation where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineLocation)
+
+instance OpenApi.ToSchema OfflineLocation where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineLocation)
 
 data OfflineOrganisation = OfflineOrganisation
   { offlineOrganisationId :: Int,
@@ -158,6 +172,9 @@ instance ToJSON OfflineOrganisation where
 instance FromJSON OfflineOrganisation where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineOrganisation)
 
+instance OpenApi.ToSchema OfflineOrganisation where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineOrganisation)
+
 data OfflineDeparture = OfflineDeparture
   { offlineDepartureServiceId :: Int,
     offlineDepartureFromLocationId :: Int,
@@ -173,6 +190,9 @@ instance ToJSON OfflineDeparture where
 
 instance FromJSON OfflineDeparture where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineDeparture)
+
+instance OpenApi.ToSchema OfflineDeparture where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OfflineDeparture)
 
 generateAndWriteOfflineSnapshot :: Application OfflineSnapshotMetadata
 generateAndWriteOfflineSnapshot = do

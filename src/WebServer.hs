@@ -6,7 +6,7 @@
 
 module WebServer where
 
-import Control.Lens ((&), (.~), (?~))
+import Control.Lens ((&), (.~))
 import Control.Monad (forM)
 import Control.Monad.Reader
   ( ReaderT,
@@ -87,7 +87,8 @@ import Types.Api
 import Utility (stringToDay)
 import qualified Push
 import OfflineSnapshot
-  ( OfflineSnapshotMetadata (offlineSnapshotMetadataEtag),
+  ( OfflineSnapshot,
+    OfflineSnapshotMetadata (offlineSnapshotMetadataEtag),
     defaultSnapshotMetadataPath,
     defaultSnapshotPath,
   )
@@ -147,11 +148,7 @@ instance MimeRender SnapshotJSON SnapshotBody where
   mimeRender _ (SnapshotBody body) = body
 
 instance OpenApi.ToSchema SnapshotBody where
-  declareNamedSchema _ =
-        pure $
-      OpenApi.NamedSchema (Just "OfflineSnapshot") $
-        mempty
-          & OpenApi.type_ ?~ OpenApi.OpenApiObject
+  declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy :: Proxy OfflineSnapshot)
 
 type API =
   DocumentationAPI :<|> AppAPI
