@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.52.0-jammy
+FROM node:22-bookworm-slim
 
 ARG BIN_DIR
 
@@ -19,6 +19,7 @@ COPY $BIN_DIR .
 RUN cd /opt/ferry-services && \
   npm init -y >/dev/null 2>&1 && \
   npm install --omit=dev playwright@1.52.0 && \
+  npx playwright install --with-deps chromium && \
   rm -rf /var/lib/apt/lists/*
 
 CMD ["/opt/ferry-services/ferry-services-scraper-exe"]
