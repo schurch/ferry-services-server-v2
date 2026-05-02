@@ -72,6 +72,10 @@ transxchange-ingester-v2: build dev-env
 .PHONY: transxchange-ingester
 transxchange-ingester: transxchange-ingester-v2
 
+.PHONY: offline-snapshot-generator
+offline-snapshot-generator: build dev-env
+	stack exec ferry-services-offline-snapshot-generator-exe
+
 .PHONY: rail-departure-fetcher
 rail-departure-fetcher: build dev-env
 	stack exec ferry-services-rail-departure-fetcher-exe

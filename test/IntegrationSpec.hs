@@ -15,6 +15,8 @@ import App.Logger
     create,
   )
 import Data.Aeson (FromJSON, decode, encode)
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.Lazy as BL
 import Data.List (find, isPrefixOf)
 import Data.Pool
   ( Pool,
@@ -23,15 +25,17 @@ import Data.Pool
 import qualified Database as DB
 import Database.PostgreSQL.Simple (Connection)
 import Network.HTTP.Types.Header (Header, hContentType)
-import Network.HTTP.Types.Method (methodPost)
+import Network.HTTP.Types.Method (methodGet, methodPost)
 import Network.Wai (Application)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
 import Scraper
 import System.Environment (lookupEnv, setEnv)
+import System.Directory (createDirectoryIfMissing)
 import Test.Hspec
   ( Spec,
     beforeAll,
     beforeAll_,
+    before_,
     describe,
     hspec,
     it,
@@ -92,6 +96,14 @@ spec = beforeAll_ setupIntegrationTests $ with app $ do
     it "responds with 200" $ do
       get "/api/vessels" `shouldRespondWith` vessels
 
+  describe "GET /api/offline/snapshot.json" $ before_ setupOfflineSnapshotFixture $ do
+    it "serves the generated offline snapshot with cache headers" $ do
+      get "/api/offline/snapshot.json" `shouldRespondWith` offlineSnapshot
+
+    it "returns 304 when the client already has the current ETag" $ do
+      request methodGet "/api/offline/snapshot.json" [("If-None-Match", "\"sha256-test\"")] ""
+        `shouldRespondWith` 304
+
 -- Response checks
 vessels :: ResponseMatcher
 vessels = jsonReponseMatcher checkVesselsResponse
@@ -122,6 +134,30 @@ registeredService = jsonReponseMatcher checkRegisteredServiceResponse
 
 arranService :: ResponseMatcher
 arranService = jsonReponseMatcher checkArranServiceResponse
+
+offlineSnapshot :: ResponseMatcher
+offlineSnapshot =
+  ResponseMatcher
+    200
+    []
+    (MatchBody bodyMatcher)
+  where
+    bodyMatcher headers body
+      | lookup "Cache-Control" headers /= Just "public, max-age=900, stale-while-revalidate=86400" =
+          Just $ "Unexpected Cache-Control: " <> show (lookup "Cache-Control" headers)
+      | lookup "ETag" headers /= Just "\"sha256-test\"" =
+          Just $ "Unexpected ETag: " <> show (lookup "ETag" headers)
+      | body /= offlineSnapshotBody =
+          Just $ "Unexpected body: " <> B8.unpack (BL.toStrict body)
+      | otherwise = Nothing
+
+offlineSnapshotBody :: BL.ByteString
+offlineSnapshotBody =
+  "{\"schema_version\":1,\"data_version\":\"sha256-test\",\"generated_at\":\"2026-05-02T00:00:00Z\",\"valid_from\":\"2026-05-02\",\"valid_to\":\"2026-06-30\",\"services\":[],\"locations\":[],\"organisations\":[],\"departures\":[]}"
+
+offlineSnapshotMetadataBody :: BL.ByteString
+offlineSnapshotMetadataBody =
+  "{\"data_version\":\"sha256-test\",\"etag\":\"\\\"sha256-test\\\"\",\"generated_at\":\"2026-05-02T00:00:00Z\",\"valid_from\":\"2026-05-02\",\"valid_to\":\"2026-06-30\"}"
 
 checkArranServiceResponse :: ServiceResponse -> Maybe String
 checkArranServiceResponse response
@@ -199,3 +235,9 @@ getDbConnectionString = do
           setEnv "DB_CONNECTION" value
           return value
         Nothing -> error "DB_CONNECTION missing from env and envfile-test.local"
+
+setupOfflineSnapshotFixture :: IO ()
+setupOfflineSnapshotFixture = do
+  createDirectoryIfMissing True "offline"
+  BL.writeFile "offline/snapshot.json" offlineSnapshotBody
+  BL.writeFile "offline/snapshot.meta.json" offlineSnapshotMetadataBody

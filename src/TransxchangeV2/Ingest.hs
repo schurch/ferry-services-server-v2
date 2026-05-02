@@ -55,7 +55,10 @@ import System.Directory
     removeDirectoryRecursive,
     removeFile,
   )
-import System.Environment (getEnv)
+import System.Environment
+  ( getEnv,
+    lookupEnv,
+  )
 import App.Env (Application, Env, connectionPool, logger)
 import App.Logger
   ( Level (Debug, Info),
@@ -72,6 +75,7 @@ import Database.TransxchangeV2
   ( clearTx2Tables,
     insertTx2Document,
   )
+import OfflineSnapshot (generateAndWriteOfflineSnapshot)
 import TransxchangeV2.Transform (filterFerryDocuments)
 import TransxchangeV2.Types
 import Utility (splitOn, trim)
@@ -121,11 +125,20 @@ ingestDirectoryV2 directory = do
   logInfoM $ "TransXChange V2 files discovered: " <> show (length files)
   pool <- asks connectionPool
   appLogger <- asks logger
-  liftIO $
-    withResource pool $ \connection ->
-      withTransaction connection $ do
-        clearTx2Tables connection
-        go appLogger connection emptySummary 1 (length files) files
+  summary <-
+    liftIO $
+      withResource pool $ \connection ->
+        withTransaction connection $ do
+          clearTx2Tables connection
+          go appLogger connection emptySummary 1 (length files) files
+  shouldSkipOfflineSnapshot <- liftIO $ isTruthy <$> lookupEnv "SKIP_OFFLINE_SNAPSHOT_AFTER_INGEST"
+  if shouldSkipOfflineSnapshot
+    then logInfoM "TransXChange V2 ingest committed; offline snapshot generation skipped."
+    else do
+      logInfoM "TransXChange V2 ingest committed; generating offline snapshot ..."
+      _ <- generateAndWriteOfflineSnapshot
+      pure ()
+  return summary
   where
     emptySummary =
       Tx2IngestSummary
@@ -204,6 +217,14 @@ ingestDirectoryV2 directory = do
     shouldLogProgress :: Int -> Int -> Bool
     shouldLogProgress index totalFiles =
       index == 1 || index == totalFiles || index `mod` 50 == 0
+
+    isTruthy :: Maybe String -> Bool
+    isTruthy (Just "1") = True
+    isTruthy (Just "true") = True
+    isTruthy (Just "TRUE") = True
+    isTruthy (Just "yes") = True
+    isTruthy (Just "YES") = True
+    isTruthy _ = False
 
 downloadFile :: Logger -> FTPConnectionDetails -> FilePath -> IO ()
 downloadFile appLogger (FTPConnectionDetails ftpAddress ftpUsername ftpPassword) filePath = do

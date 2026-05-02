@@ -135,6 +135,7 @@ data ScenarioLocation = ScenarioLocation
 
 setupTx2ApiTests :: IO TestContext
 setupTx2ApiTests = do
+  setEnv "SKIP_OFFLINE_SNAPSHOT_AFTER_INGEST" "1"
   logger <- create StdOut
   requestLogger <- mkRequestLogger $ loggerSettings logger
   connectionString <- getDbConnectionString

@@ -6,7 +6,7 @@
 
 module WebServer where
 
-import Control.Lens ((&), (.~))
+import Control.Lens ((&), (.~), (?~))
 import Control.Monad (forM)
 import Control.Monad.Reader
   ( ReaderT,
@@ -16,9 +16,11 @@ import Control.Monad.Reader
 import Control.Monad.IO.Class (liftIO)
 import qualified App.Env as App
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (ord)
 import qualified Data.Char as Char
+import Data.Aeson (decode)
 import Data.Default (def)
 import Data.List (find, sortOn)
 import qualified Data.Map as M
@@ -41,6 +43,8 @@ import Data.Time
     getCurrentTime,
     localTimeToUTC,
     utctDay,
+    defaultTimeLocale,
+    formatTime,
   )
 import Data.Time.Calendar (Day)
 import Data.UUID (UUID, fromText)
@@ -82,6 +86,11 @@ import Types
 import Types.Api
 import Utility (stringToDay)
 import qualified Push
+import OfflineSnapshot
+  ( OfflineSnapshotMetadata (offlineSnapshotMetadataEtag),
+    defaultSnapshotMetadataPath,
+    defaultSnapshotPath,
+  )
 import Servant
   ( (:>),
     (:<|>) (..),
@@ -90,19 +99,26 @@ import Servant
     Delete,
     Get,
     Handler,
+    Header,
+    Headers,
     JSON,
     MimeRender (mimeRender),
     Post,
     QueryParam,
     ReqBody,
     ServerT,
+    addHeader,
     err400,
+    err304,
     err404,
+    err503,
+    errHeaders,
     hoistServer,
     serve,
     throwError,
   )
 import Servant.OpenApi (toOpenApi)
+import System.Directory (doesFileExist, getModificationTime)
 
 data HTML
 
@@ -119,6 +135,23 @@ instance Accept JavaScript where
 
 instance MimeRender JavaScript BL.ByteString where
   mimeRender _ = id
+
+data SnapshotJSON
+
+instance Accept SnapshotJSON where
+  contentType _ = "application/json;charset=utf-8"
+
+newtype SnapshotBody = SnapshotBody BL.ByteString
+
+instance MimeRender SnapshotJSON SnapshotBody where
+  mimeRender _ (SnapshotBody body) = body
+
+instance OpenApi.ToSchema SnapshotBody where
+  declareNamedSchema _ =
+        pure $
+      OpenApi.NamedSchema (Just "OfflineSnapshot") $
+        mempty
+          & OpenApi.type_ ?~ OpenApi.OpenApiObject
 
 type API =
   DocumentationAPI :<|> AppAPI
@@ -142,6 +175,7 @@ type JsonAPI =
     :<|> "api" :> "installations" :> Capture "installationID" Text :> "services" :> ReqBody '[JSON] AddServiceRequest :> Post '[JSON] [ServiceResponse]
     :<|> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Capture "serviceID" Int :> Delete '[JSON] [ServiceResponse]
     :<|> "api" :> "vessels" :> Get '[JSON] [VesselResponse]
+    :<|> "api" :> "offline" :> "snapshot.json" :> Header "If-None-Match" String :> Get '[SnapshotJSON] (Headers '[Header "Cache-Control" String, Header "ETag" String, Header "Last-Modified" String] SnapshotBody)
 
 api :: Proxy API
 api = Proxy
@@ -193,6 +227,7 @@ jsonServer =
     :<|> addServiceToInstallationEndpoint
     :<|> deleteServiceForInstallationEndpoint
     :<|> getVessels
+    :<|> getOfflineSnapshot
 
 openApiSpec :: OpenApi.OpenApi
 openApiSpec =
@@ -543,6 +578,44 @@ createServiceVesselLookup = do
     serviceVesselFilter :: UTCTime -> ServiceVessel -> Bool
     serviceVesselFilter currentTime ServiceVessel {serviceVesselLastReceived = vesselLastReceived} =
       vesselTimeFilter currentTime vesselLastReceived
+
+getOfflineSnapshot ::
+  Maybe String ->
+  WebHandler (Headers '[Header "Cache-Control" String, Header "ETag" String, Header "Last-Modified" String] SnapshotBody)
+getOfflineSnapshot ifNoneMatch = do
+  snapshotExists <- liftIO $ doesFileExist defaultSnapshotPath
+  metadataExists <- liftIO $ doesFileExist defaultSnapshotMetadataPath
+  if not snapshotExists
+    then throwError err404
+    else
+      if not metadataExists
+        then throwError err503
+        else do
+          metadataBody <- liftIO $ BL.readFile defaultSnapshotMetadataPath
+          metadata <-
+            maybe (throwError err503) pure $
+              decode metadataBody
+          modified <- liftIO $ getModificationTime defaultSnapshotPath
+          let cacheControl = "public, max-age=900, stale-while-revalidate=86400"
+              etag = offlineSnapshotMetadataEtag metadata
+              lastModified = formatHttpDate modified
+              responseHeaders =
+                [ ("Cache-Control", BSC.pack cacheControl),
+                  ("ETag", BSC.pack etag),
+                  ("Last-Modified", BSC.pack lastModified)
+                ]
+          case ifNoneMatch of
+            Just value | value == etag ->
+              throwError err304 {errHeaders = responseHeaders}
+            _ -> do
+              snapshotBody <- liftIO $ BL.readFile defaultSnapshotPath
+              pure $
+                addHeader cacheControl $
+                  addHeader etag $
+                    addHeader lastModified (SnapshotBody snapshotBody)
+  where
+    formatHttpDate =
+      formatTime defaultTimeLocale "%a, %d %b %Y %H:%M:%S GMT"
 
 createLocationWeatherLookup :: WebHandler (M.Map Int LocationWeatherResponse)
 createLocationWeatherLookup = do
