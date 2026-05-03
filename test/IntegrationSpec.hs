@@ -104,12 +104,20 @@ spec = beforeAll_ setupIntegrationTests $ with app $ do
       request methodGet "/api/timetable-documents?serviceID=-1" [("If-None-Match", "\"sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"")] ""
         `shouldRespondWith` 304
 
+    it "returns 304 when Cloudflare has weakened the current ETag" $ do
+      request methodGet "/api/timetable-documents?serviceID=-1" [("If-None-Match", "W/\"sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"")] ""
+        `shouldRespondWith` 304
+
   describe "GET /api/offline/snapshot.json" $ before_ setupOfflineSnapshotFixture $ do
     it "serves the generated offline snapshot with cache headers" $ do
       get "/api/offline/snapshot.json" `shouldRespondWith` offlineSnapshot
 
     it "returns 304 when the client already has the current ETag" $ do
       request methodGet "/api/offline/snapshot.json" [("If-None-Match", "\"sha256-test\"")] ""
+        `shouldRespondWith` 304
+
+    it "returns 304 when Cloudflare has weakened the current ETag" $ do
+      request methodGet "/api/offline/snapshot.json" [("If-None-Match", "W/\"sha256-test\"")] ""
         `shouldRespondWith` 304
 
 -- Response checks

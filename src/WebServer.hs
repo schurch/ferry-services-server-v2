@@ -22,7 +22,7 @@ import Data.Char (ord)
 import qualified Data.Char as Char
 import Data.Aeson (decode, encode)
 import Data.Default (def)
-import Data.List (find, sortOn)
+import Data.List (find, sortOn, stripPrefix)
 import qualified Data.Map as M
 import Data.Maybe
   ( fromMaybe,
@@ -438,7 +438,7 @@ getTimetableDocuments serviceID ifNoneMatch = do
           ("ETag", BSC.pack etag)
         ]
   case ifNoneMatch of
-    Just value | value == etag ->
+    Just value | etagMatches etag value ->
       throwError err304 {errHeaders = responseHeaders}
     _ ->
       pure $
@@ -671,7 +671,7 @@ getOfflineSnapshot ifNoneMatch = do
                   ("Last-Modified", BSC.pack lastModified)
                 ]
           case ifNoneMatch of
-            Just value | value == etag ->
+            Just value | etagMatches etag value ->
               throwError err304 {errHeaders = responseHeaders}
             _ -> do
               snapshotBody <- liftIO $ BL.readFile defaultSnapshotPath
@@ -688,6 +688,31 @@ responseHash response = "sha256-" <> show (Crypto.hashlazy (encode response) :: 
 
 quoteETag :: String -> String
 quoteETag value = "\"" <> value <> "\""
+
+etagMatches :: String -> String -> Bool
+etagMatches current value =
+  any matches (splitETags value)
+  where
+    matches candidate =
+      candidate == "*" || stripWeak candidate == stripWeak current
+
+stripWeak :: String -> String
+stripWeak value =
+  case stripPrefix "W/" (trim value) of
+    Just strongValue -> strongValue
+    Nothing -> trim value
+
+splitETags :: String -> [String]
+splitETags "" = []
+splitETags value =
+  let (candidate, rest) = break (== ',') value
+   in trim candidate :
+        case rest of
+          [] -> []
+          (_ : remaining) -> splitETags remaining
+
+trim :: String -> String
+trim = dropWhile Char.isSpace . reverse . dropWhile Char.isSpace . reverse
 
 createLocationWeatherLookup :: WebHandler (M.Map Int LocationWeatherResponse)
 createLocationWeatherLookup = do
