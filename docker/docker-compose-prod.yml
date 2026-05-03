@@ -39,6 +39,16 @@ services:
       - envfile.docker-prod
     tty: true
     command: /opt/ferry-services/ferry-services-scraper-exe
+  timetable-document-scraper-prod:
+    image: stefanchurch/ferry-services-timetable-document-scraper:latest
+    container_name: ferry-services-timetable-document-scraper-prod
+    depends_on:
+      - "db-prod"
+    restart: always
+    env_file:
+      - envfile.docker-prod
+    tty: true
+    command: /opt/ferry-services/ferry-services-timetable-document-scraper-exe
   weather-fetcher-prod:
     image: stefanchurch/ferry-services-weather-fetcher:latest
     container_name: ferry-services-weather-fetcher-prod

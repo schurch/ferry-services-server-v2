@@ -174,6 +174,7 @@ type JsonAPI =
     :<|> Summary "Add installation service" :> Description "Adds a service to one mobile app installation and returns the updated saved service list." :> "api" :> "installations" :> Capture "installationID" Text :> "services" :> ReqBody '[JSON] AddServiceRequest :> Post '[JSON] [ServiceResponse]
     :<|> Summary "Delete installation service" :> Description "Removes a service from one mobile app installation and returns the updated saved service list." :> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Capture "serviceID" Int :> Delete '[JSON] [ServiceResponse]
     :<|> Summary "List vessels" :> Description "Returns recent vessel positions used by the live service UI." :> "api" :> "vessels" :> Get '[JSON] [VesselResponse]
+    :<|> Summary "List timetable documents" :> Description "Returns current operator timetable documents. Pass serviceID to filter to documents linked to one service; omit it for the global timetable downloads screen." :> "api" :> "timetable-documents" :> QueryParam "serviceID" Int :> Get '[JSON] [TimetableDocumentResponse]
     :<|> Summary "Download offline snapshot" :> Description "Returns the generated offline timetable snapshot. Clients should send If-None-Match with the stored ETag; unchanged snapshots return 304 Not Modified. The response is CDN-cacheable and includes Cache-Control, ETag and Last-Modified headers." :> "api" :> "offline" :> "snapshot.json" :> Header "If-None-Match" String :> Get '[SnapshotJSON] (Headers '[Header "Cache-Control" String, Header "ETag" String, Header "Last-Modified" String] SnapshotBody)
 
 api :: Proxy API
@@ -226,6 +227,7 @@ jsonServer =
     :<|> addServiceToInstallationEndpoint
     :<|> deleteServiceForInstallationEndpoint
     :<|> getVessels
+    :<|> getTimetableDocuments
     :<|> getOfflineSnapshot
 
 openApiSpec :: OpenApi.OpenApi
@@ -325,6 +327,8 @@ type ServiceOrganisationLookup = M.Map Int OrganisationResponse
 
 type ServiceScheduledDeparturesLookup = S.Set Int
 
+type ServiceTimetableDocumentLookup = M.Map Int [TimetableDocumentResponse]
+
 type LocationScheduledDeparturesLookup = M.Map Int [DepartureResponse]
 
 type LocationNextDepartureLookup = M.Map Int DepartureResponse
@@ -347,11 +351,12 @@ getService serviceID departuresDate = do
   locationLookup <- createLocationLookup (Just locationDepartureLookup) (Just nextDepatureLookup) (Just nextRailDepartureLookup)
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
+  timetableDocumentLookup <- createServiceTimetableDocumentLookup
   let scheduledDeparturesLookup =
         if hasScheduledDepartures
           then S.singleton serviceID
           else S.empty
-  return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup 1 time <$> service
+  return $ serviceToServiceResponse scheduledDeparturesLookup (Just timetableDocumentLookup) vesselLookup locationLookup organisationLookup 1 time <$> service
 
 getServices :: WebHandler [ServiceResponse]
 getServices = do
@@ -362,7 +367,7 @@ getServices = do
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup sortOrder time service
+    return $ serviceToServiceResponse scheduledDeparturesLookup Nothing vesselLookup locationLookup organisationLookup sortOrder time service
 
 createInstallation ::
   UUID -> CreateInstallationRequest -> WebHandler [ServiceResponse]
@@ -403,7 +408,7 @@ getServicesForInstallation installationID = do
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
   forM (zip [1 ..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup sortOrder time service
+    return $ serviceToServiceResponse scheduledDeparturesLookup Nothing vesselLookup locationLookup organisationLookup sortOrder time service
 
 getVessels :: WebHandler [VesselResponse]
 getVessels = do
@@ -414,6 +419,14 @@ getVessels = do
     vesselFilter :: UTCTime -> Vessel -> Bool
     vesselFilter currentTime Vessel {vesselLastReceived = vesselLastReceived} =
       vesselTimeFilter currentTime vesselLastReceived
+
+getTimetableDocuments :: Maybe Int -> WebHandler [TimetableDocumentResponse]
+getTimetableDocuments serviceID = do
+  documents <- runApplication $ DB.getTimetableDocuments serviceID
+  serviceLinks <- runApplication DB.getTimetableDocumentServiceLinks
+  let serviceIDsByDocumentID =
+        M.fromListWith (++) [(documentID, [linkedServiceID]) | (documentID, linkedServiceID) <- serviceLinks]
+  return $ timetableDocumentToResponse serviceIDsByDocumentID <$> documents
 
 vesselToVesselResponse :: Vessel -> VesselResponse
 vesselToVesselResponse Vessel {..} =
@@ -428,8 +441,8 @@ vesselToVesselResponse Vessel {..} =
     }
 
 serviceToServiceResponse ::
-  ServiceScheduledDeparturesLookup -> ServiceVesselLookup -> ServiceLocationLookup -> ServiceOrganisationLookup -> Int -> UTCTime -> Service -> ServiceResponse
-serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup organisationLookup sortOrder currentTime Service {..} =
+  ServiceScheduledDeparturesLookup -> Maybe ServiceTimetableDocumentLookup -> ServiceVesselLookup -> ServiceLocationLookup -> ServiceOrganisationLookup -> Int -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponse scheduledDeparturesLookup timetableDocumentLookup vesselLookup locationLookup organisationLookup sortOrder currentTime Service {..} =
   ServiceResponse
     { serviceResponseServiceID = serviceID,
       serviceResponseSortOrder = sortOrder,
@@ -451,9 +464,14 @@ serviceToServiceResponse scheduledDeparturesLookup vesselLookup locationLookup o
           M.lookup serviceID vesselLookup,
       serviceResponseOperator = M.lookup serviceID organisationLookup,
       serviceResponseScheduledDeparturesAvailable = Just $ S.member serviceID scheduledDeparturesLookup,
-      serviceResponseUpdated = serviceUpdated
+      serviceResponseUpdated = serviceUpdated,
+      serviceResponseTimetableDocuments = lookupTimetableDocuments
     }
   where
+    lookupTimetableDocuments :: Maybe [TimetableDocumentResponse]
+    lookupTimetableDocuments =
+      fromMaybe [] . M.lookup serviceID <$> timetableDocumentLookup
+
     -- Unknown status if over 30 mins ago
     serviceStatusForTime :: UTCTime -> UTCTime -> ServiceStatus -> ServiceStatus
     serviceStatusForTime currentTime serviceUpdated serviceStatus =
@@ -563,6 +581,37 @@ createServiceOrganisationLookup = do
 createServiceScheduledDeparturesLookup :: WebHandler ServiceScheduledDeparturesLookup
 createServiceScheduledDeparturesLookup =
   S.fromList <$> runApplication DB.getServicesWithScheduledDeparturesV2
+
+createServiceTimetableDocumentLookup :: WebHandler ServiceTimetableDocumentLookup
+createServiceTimetableDocumentLookup = do
+  documents <- runApplication $ DB.getTimetableDocuments Nothing
+  serviceLinks <- runApplication DB.getTimetableDocumentServiceLinks
+  let serviceIDsByDocumentID =
+        M.fromListWith (++) [(documentID, [serviceID]) | (documentID, serviceID) <- serviceLinks]
+      documentResponses =
+        M.fromList [(timetableDocumentID document, timetableDocumentToResponse serviceIDsByDocumentID document) | document <- documents]
+  return $
+    M.fromListWith (++) $
+      [ (serviceID, [documentResponse])
+        | (documentID, serviceID) <- serviceLinks,
+          Just documentResponse <- [M.lookup documentID documentResponses]
+      ]
+
+timetableDocumentToResponse :: M.Map Int [Int] -> TimetableDocument -> TimetableDocumentResponse
+timetableDocumentToResponse serviceIDsByDocumentID TimetableDocument {..} =
+  TimetableDocumentResponse
+    { timetableDocumentResponseID = timetableDocumentID,
+      timetableDocumentResponseOrganisationID = timetableDocumentOrganisationID,
+      timetableDocumentResponseOrganisationName = timetableDocumentOrganisationName,
+      timetableDocumentResponseServiceIds = sortOn id $ fromMaybe [] $ M.lookup timetableDocumentID serviceIDsByDocumentID,
+      timetableDocumentResponseTitle = timetableDocumentTitle,
+      timetableDocumentResponseSourceURL = timetableDocumentSourceURL,
+      timetableDocumentResponseContentHash = timetableDocumentContentHash,
+      timetableDocumentResponseContentType = timetableDocumentContentType,
+      timetableDocumentResponseContentLength = timetableDocumentContentLength,
+      timetableDocumentResponseLastSeenAt = timetableDocumentLastSeenAt,
+      timetableDocumentResponseUpdated = timetableDocumentUpdated
+    }
 
 createServiceVesselLookup :: WebHandler ServiceVesselLookup
 createServiceVesselLookup = do

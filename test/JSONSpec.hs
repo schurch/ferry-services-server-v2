@@ -186,7 +186,8 @@ spec = do
                 ],
               serviceResponseOperator = Nothing,
               serviceResponseScheduledDeparturesAvailable = Just False,
-              serviceResponseUpdated = UTCTime (fromOrdinalDate 2022 33) 5000
+              serviceResponseUpdated = UTCTime (fromOrdinalDate 2022 33) 5000,
+              serviceResponseTimetableDocuments = Nothing
             }
           `shouldBe` encode
             [aesonQQ|

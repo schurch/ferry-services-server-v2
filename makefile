@@ -34,12 +34,14 @@ build-release:
 	stack --docker build
 	docker build -f docker/server.Dockerfile -t stefanchurch/ferry-services-server:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-server-exe/ferry-services-server-exe" .
 	docker build -f docker/scraper.Dockerfile -t stefanchurch/ferry-services-scraper:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-scraper-exe/ferry-services-scraper-exe" .
+	docker build -f docker/timetable-document-scraper.Dockerfile -t stefanchurch/ferry-services-timetable-document-scraper:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-timetable-document-scraper-exe/ferry-services-timetable-document-scraper-exe" .
 	docker build -f docker/weather-fetcher.Dockerfile -t stefanchurch/ferry-services-weather-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-weather-fetcher-exe/ferry-services-weather-fetcher-exe" .
 	docker build -f docker/vessel-fetcher.Dockerfile -t stefanchurch/ferry-services-vessel-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-vessel-fetcher-exe/ferry-services-vessel-fetcher-exe" .
 	docker build -f docker/transxchange-ingester.Dockerfile -t stefanchurch/ferry-services-transxchange-ingester:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-transxchange-ingester-v2-exe/ferry-services-transxchange-ingester-v2-exe" .
 	docker build -f docker/rail-departure-fetcher.Dockerfile -t stefanchurch/ferry-services-rail-departure-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-rail-departure-fetcher-exe/ferry-services-rail-departure-fetcher-exe" .
 	docker push stefanchurch/ferry-services-server:latest
 	docker push stefanchurch/ferry-services-scraper:latest
+	docker push stefanchurch/ferry-services-timetable-document-scraper:latest
 	docker push stefanchurch/ferry-services-weather-fetcher:latest
 	docker push stefanchurch/ferry-services-vessel-fetcher:latest
 	docker push stefanchurch/ferry-services-transxchange-ingester:latest
@@ -56,6 +58,10 @@ server: build dev-env
 .PHONY: scraper
 scraper: build dev-env
 	stack exec ferry-services-scraper-exe
+
+.PHONY: timetable-document-scraper
+timetable-document-scraper: build dev-env
+	stack exec ferry-services-timetable-document-scraper-exe
 
 .PHONY: weather-fetcher
 weather-fetcher: build dev-env

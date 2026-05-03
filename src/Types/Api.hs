@@ -34,7 +34,8 @@ data ServiceResponse = ServiceResponse
     serviceResponseVessels :: [VesselResponse],
     serviceResponseOperator :: Maybe OrganisationResponse,
     serviceResponseScheduledDeparturesAvailable :: Maybe Bool,
-    serviceResponseUpdated :: UTCTime
+    serviceResponseUpdated :: UTCTime,
+    serviceResponseTimetableDocuments :: Maybe [TimetableDocumentResponse]
   }
   deriving (Generic, Show)
 
@@ -67,6 +68,30 @@ instance ToJSON OrganisationResponse where
 
 instance OpenApi.ToSchema OrganisationResponse where
   declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy OrganisationResponse)
+
+data TimetableDocumentResponse = TimetableDocumentResponse
+  { timetableDocumentResponseID :: Int,
+    timetableDocumentResponseOrganisationID :: Int,
+    timetableDocumentResponseOrganisationName :: String,
+    timetableDocumentResponseServiceIds :: [Int],
+    timetableDocumentResponseTitle :: String,
+    timetableDocumentResponseSourceURL :: String,
+    timetableDocumentResponseContentHash :: Maybe String,
+    timetableDocumentResponseContentType :: Maybe String,
+    timetableDocumentResponseContentLength :: Maybe Int,
+    timetableDocumentResponseLastSeenAt :: UTCTime,
+    timetableDocumentResponseUpdated :: UTCTime
+  }
+  deriving (Generic, Show)
+
+instance FromJSON TimetableDocumentResponse where
+  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy TimetableDocumentResponse)
+
+instance ToJSON TimetableDocumentResponse where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy TimetableDocumentResponse)
+
+instance OpenApi.ToSchema TimetableDocumentResponse where
+  declareNamedSchema = OpenApi.genericDeclareNamedSchema $ openApiOptions (Proxy :: Proxy TimetableDocumentResponse)
 
 data CreateInstallationRequest = CreateInstallationRequest
   { createInstallationRequestDeviceToken :: String,

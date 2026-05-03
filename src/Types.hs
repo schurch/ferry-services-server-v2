@@ -201,6 +201,33 @@ data ServiceOrganisation = ServiceOrganisation
   }
   deriving (Generic, Show, ToRow, FromRow)
 
+data ScrapedTimetableDocument = ScrapedTimetableDocument
+  { scrapedTimetableDocumentOrganisationID :: Int,
+    scrapedTimetableDocumentServiceIDs :: [Int],
+    scrapedTimetableDocumentTitle :: String,
+    scrapedTimetableDocumentSourceURL :: String,
+    scrapedTimetableDocumentContentHash :: Maybe String,
+    scrapedTimetableDocumentContentType :: Maybe String,
+    scrapedTimetableDocumentContentLength :: Maybe Int,
+    scrapedTimetableDocumentLastSeenAt :: UTCTime
+  }
+  deriving (Generic, Show)
+
+data TimetableDocument = TimetableDocument
+  { timetableDocumentID :: Int,
+    timetableDocumentOrganisationID :: Int,
+    timetableDocumentOrganisationName :: String,
+    timetableDocumentTitle :: String,
+    timetableDocumentSourceURL :: String,
+    timetableDocumentContentHash :: Maybe String,
+    timetableDocumentContentType :: Maybe String,
+    timetableDocumentContentLength :: Maybe Int,
+    timetableDocumentLastSeenAt :: UTCTime,
+    timetableDocumentUpdated :: UTCTime,
+    timetableDocumentCreated :: UTCTime
+  }
+  deriving (Generic, Show, ToRow, FromRow)
+
 data LocationRailDeparture = LocationRailDeparture
   { locationRailDepartureFromLocationID :: Int,
     locationRailDepartureDepartureCRS :: String,

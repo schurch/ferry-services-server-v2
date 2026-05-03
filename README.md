@@ -139,6 +139,7 @@ The generated env files set `LOG_LEVEL=Info` by default because an empty value c
 
 - Web server: `DB_CONNECTION`, `SERVER_PORT`, `SERVER_SENTRY_DSN`, `ENVIRONMENT`
 - Scraper: `DB_CONNECTION`, `SCRAPER_SENTRY_DSN`, `ENVIRONMENT`
+- Timetable document scraper: `DB_CONNECTION`, `TIMETABLE_DOCUMENT_SCRAPER_SENTRY_DSN`, `ENVIRONMENT`
 - Weather fetcher: scraper vars plus `OPENWEATHERMAP_APPID`
 - Vessel fetcher: scraper vars
 - TransXChange ingester: scraper vars plus `TRAVELLINE_FTP_ADDRESS`, `TRAVELLINE_FTP_USERNAME`, `TRAVELLINE_FTP_PASSWORD`

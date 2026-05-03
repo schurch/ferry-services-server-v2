@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 171878b2b11db0b18ecaf6413e2a83bb310ad66eb814ed6218d506a3156a2ed2
+-- hash: 8d6b4f20d7a818f499118f2d9418a8ee7d5dc8f2df703899c3d29bae29cc547f
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -36,6 +36,7 @@ library
       Database.Installations
       Database.Rail
       Database.Services
+      Database.TimetableDocuments
       Database.TransxchangeV2
       Database.Vessels
       Database.Weather
@@ -43,6 +44,7 @@ library
       Push
       RailDepartureFetcher
       Scraper
+      TimetableDocumentScraper
       TransxchangeV2.Ingest
       TransxchangeV2.Parser
       TransxchangeV2.Transform
@@ -174,6 +176,18 @@ executable ferry-services-server-exe
     , wai
     , wai-extra
     , warp
+  default-language: Haskell2010
+
+executable ferry-services-timetable-document-scraper-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_ferry_services_server
+  hs-source-dirs:
+      timetable-document-scraper
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , ferry-services-server
   default-language: Haskell2010
 
 executable ferry-services-transxchange-ingester-v2-exe
