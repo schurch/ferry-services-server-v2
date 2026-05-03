@@ -20,13 +20,14 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (ord)
 import qualified Data.Char as Char
-import Data.Aeson (decode)
+import Data.Aeson (decode, encode)
 import Data.Default (def)
 import Data.List (find, sortOn)
 import qualified Data.Map as M
 import Data.Maybe
   ( fromMaybe,
   )
+import qualified Crypto.Hash as Crypto
 import Data.Proxy (Proxy (Proxy))
 import Data.Scientific
   ( Scientific (..),
@@ -174,7 +175,7 @@ type JsonAPI =
     :<|> Summary "Add installation service" :> Description "Adds a service to one mobile app installation and returns the updated saved service list." :> "api" :> "installations" :> Capture "installationID" Text :> "services" :> ReqBody '[JSON] AddServiceRequest :> Post '[JSON] [ServiceResponse]
     :<|> Summary "Delete installation service" :> Description "Removes a service from one mobile app installation and returns the updated saved service list." :> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Capture "serviceID" Int :> Delete '[JSON] [ServiceResponse]
     :<|> Summary "List vessels" :> Description "Returns recent vessel positions used by the live service UI." :> "api" :> "vessels" :> Get '[JSON] [VesselResponse]
-    :<|> Summary "List timetable documents" :> Description "Returns current operator timetable documents. Pass serviceID to filter to documents linked to one service; omit it for the global timetable downloads screen." :> "api" :> "timetable-documents" :> QueryParam "serviceID" Int :> Get '[JSON] [TimetableDocumentResponse]
+    :<|> Summary "List timetable documents" :> Description "Returns current operator timetable documents. Pass serviceID to filter to documents linked to one service; omit it for the global timetable downloads screen. Clients should send If-None-Match with the stored ETag; unchanged lists return 304 Not Modified." :> "api" :> "timetable-documents" :> QueryParam "serviceID" Int :> Header "If-None-Match" String :> Get '[JSON] (Headers '[Header "Cache-Control" String, Header "ETag" String] [TimetableDocumentResponse])
     :<|> Summary "Download offline snapshot" :> Description "Returns the generated offline timetable snapshot. Clients should send If-None-Match with the stored ETag; unchanged snapshots return 304 Not Modified. The response is CDN-cacheable and includes Cache-Control, ETag and Last-Modified headers." :> "api" :> "offline" :> "snapshot.json" :> Header "If-None-Match" String :> Get '[SnapshotJSON] (Headers '[Header "Cache-Control" String, Header "ETag" String, Header "Last-Modified" String] SnapshotBody)
 
 api :: Proxy API
@@ -420,13 +421,29 @@ getVessels = do
     vesselFilter currentTime Vessel {vesselLastReceived = vesselLastReceived} =
       vesselTimeFilter currentTime vesselLastReceived
 
-getTimetableDocuments :: Maybe Int -> WebHandler [TimetableDocumentResponse]
-getTimetableDocuments serviceID = do
+getTimetableDocuments ::
+  Maybe Int ->
+  Maybe String ->
+  WebHandler (Headers '[Header "Cache-Control" String, Header "ETag" String] [TimetableDocumentResponse])
+getTimetableDocuments serviceID ifNoneMatch = do
   documents <- runApplication $ DB.getTimetableDocuments serviceID
   serviceLinks <- runApplication DB.getTimetableDocumentServiceLinks
   let serviceIDsByDocumentID =
         M.fromListWith (++) [(documentID, [linkedServiceID]) | (documentID, linkedServiceID) <- serviceLinks]
-  return $ timetableDocumentToResponse serviceIDsByDocumentID <$> documents
+      response = timetableDocumentToResponse serviceIDsByDocumentID <$> documents
+      cacheControl = "private, no-cache, no-transform"
+      etag = quoteETag $ responseHash response
+      responseHeaders =
+        [ ("Cache-Control", BSC.pack cacheControl),
+          ("ETag", BSC.pack etag)
+        ]
+  case ifNoneMatch of
+    Just value | value == etag ->
+      throwError err304 {errHeaders = responseHeaders}
+    _ ->
+      pure $
+        addHeader cacheControl $
+          addHeader etag response
 
 vesselToVesselResponse :: Vessel -> VesselResponse
 vesselToVesselResponse Vessel {..} =
@@ -665,6 +682,12 @@ getOfflineSnapshot ifNoneMatch = do
   where
     formatHttpDate =
       formatTime defaultTimeLocale "%a, %d %b %Y %H:%M:%S GMT"
+
+responseHash :: [TimetableDocumentResponse] -> String
+responseHash response = "sha256-" <> show (Crypto.hashlazy (encode response) :: Crypto.Digest Crypto.SHA256)
+
+quoteETag :: String -> String
+quoteETag value = "\"" <> value <> "\""
 
 createLocationWeatherLookup :: WebHandler (M.Map Int LocationWeatherResponse)
 createLocationWeatherLookup = do

@@ -96,6 +96,14 @@ spec = beforeAll_ setupIntegrationTests $ with app $ do
     it "responds with 200" $ do
       get "/api/vessels" `shouldRespondWith` vessels
 
+  describe "GET /api/timetable-documents" $ do
+    it "serves the timetable document catalogue with cache headers" $ do
+      get "/api/timetable-documents?serviceID=-1" `shouldRespondWith` timetableDocuments
+
+    it "returns 304 when the client already has the current ETag" $ do
+      request methodGet "/api/timetable-documents?serviceID=-1" [("If-None-Match", "\"sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"")] ""
+        `shouldRespondWith` 304
+
   describe "GET /api/offline/snapshot.json" $ before_ setupOfflineSnapshotFixture $ do
     it "serves the generated offline snapshot with cache headers" $ do
       get "/api/offline/snapshot.json" `shouldRespondWith` offlineSnapshot
@@ -111,6 +119,22 @@ vessels = jsonReponseMatcher checkVesselsResponse
     checkVesselsResponse :: [VesselResponse] -> Maybe String
     checkVesselsResponse [VesselResponse caledonianIslesMMSI "Caledonian Isles" _ _ _ _ _] = Nothing
     checkVesselsResponse response = return $ "Unexpected response: " <> show response
+
+timetableDocuments :: ResponseMatcher
+timetableDocuments =
+  ResponseMatcher
+    200
+    []
+    (MatchBody bodyMatcher)
+  where
+    bodyMatcher headers body
+      | lookup "Cache-Control" headers /= Just "private, no-cache, no-transform" =
+          Just $ "Unexpected Cache-Control: " <> show (lookup "Cache-Control" headers)
+      | lookup "ETag" headers /= Just "\"sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"" =
+          Just $ "Unexpected ETag: " <> show (lookup "ETag" headers)
+      | body /= "[]" =
+          Just $ "Unexpected body: " <> B8.unpack (BL.toStrict body)
+      | otherwise = Nothing
 
 emptyServiceList :: ResponseMatcher
 emptyServiceList = jsonReponseMatcher checkEmptyServicesResponse
@@ -153,7 +177,7 @@ offlineSnapshot =
 
 offlineSnapshotBody :: BL.ByteString
 offlineSnapshotBody =
-  "{\"schema_version\":1,\"data_version\":\"sha256-test\",\"generated_at\":\"2026-05-02T00:00:00Z\",\"valid_from\":\"2026-05-02\",\"valid_to\":\"2026-06-30\",\"services\":[],\"locations\":[],\"organisations\":[],\"departures\":[]}"
+  "{\"schema_version\":1,\"data_version\":\"sha256-test\",\"generated_at\":\"2026-05-02T00:00:00Z\",\"valid_from\":\"2026-05-02\",\"valid_to\":\"2026-06-30\",\"services\":[],\"locations\":[],\"organisations\":[],\"timetable_documents\":[],\"departures\":[]}"
 
 offlineSnapshotMetadataBody :: BL.ByteString
 offlineSnapshotMetadataBody =

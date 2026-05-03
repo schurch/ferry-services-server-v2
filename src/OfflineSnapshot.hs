@@ -74,9 +74,10 @@ import Types
     Service (..),
     ServiceLocation (..),
     ServiceOrganisation (..),
+    TimetableDocument (..),
     jsonOptions,
   )
-import Types.Api (openApiOptions)
+import Types.Api (TimetableDocumentResponse (..), openApiOptions)
 
 defaultSnapshotPath :: FilePath
 defaultSnapshotPath = "offline/snapshot.json"
@@ -93,6 +94,7 @@ data OfflineSnapshot = OfflineSnapshot
     offlineSnapshotServices :: [OfflineService],
     offlineSnapshotLocations :: [OfflineLocation],
     offlineSnapshotOrganisations :: [OfflineOrganisation],
+    offlineSnapshotTimetableDocuments :: [TimetableDocumentResponse],
     offlineSnapshotDepartures :: [OfflineDeparture]
   }
   deriving (Generic, Show)
@@ -115,6 +117,7 @@ instance OpenApi.ToSchema OfflineSnapshot where
         ("services", "Visible ferry services included in the offline cache."),
         ("locations", "Location lookup table. Services and departures reference these rows by id."),
         ("organisations", "Operator lookup table. Services reference these rows by organisation_id."),
+        ("timetable_documents", "Current operator timetable documents available for offline catalogue/bootstrap use."),
         ("departures", "Generated scheduled ferry departures for the snapshot validity window.")
       ]
       ( Just $
@@ -127,6 +130,7 @@ instance OpenApi.ToSchema OfflineSnapshot where
               "services" .= ([] :: [OfflineService]),
               "locations" .= ([] :: [OfflineLocation]),
               "organisations" .= ([] :: [OfflineOrganisation]),
+              "timetable_documents" .= ([] :: [TimetableDocumentResponse]),
               "departures" .= ([] :: [OfflineDeparture])
             ]
       )
@@ -379,6 +383,10 @@ generateOfflineSnapshot = do
   logInfoM $ "Offline snapshot service-location links: " <> show (length serviceLocations)
   serviceOrganisations <- DB.getServiceOrganisations
   logInfoM $ "Offline snapshot service organisations: " <> show (length serviceOrganisations)
+  timetableDocuments <- DB.getTimetableDocuments Nothing
+  logInfoM $ "Offline snapshot timetable documents: " <> show (length timetableDocuments)
+  timetableDocumentServiceLinks <- DB.getTimetableDocumentServiceLinks
+  logInfoM $ "Offline snapshot timetable document service links: " <> show (length timetableDocumentServiceLinks)
   servicesWithDepartures <- DB.getServicesWithScheduledDeparturesV2
   logInfoM $ "Offline snapshot services with scheduled departures: " <> show (length servicesWithDepartures)
   departures <- createDepartures servicesWithDepartures services validFrom validTo
@@ -393,6 +401,7 @@ generateOfflineSnapshot = do
             offlineSnapshotServices = offlineServices servicesWithDepartures serviceLocations services,
             offlineSnapshotLocations = offlineLocations locations,
             offlineSnapshotOrganisations = offlineOrganisations services serviceOrganisations,
+            offlineSnapshotTimetableDocuments = offlineTimetableDocuments timetableDocumentServiceLinks timetableDocuments,
             offlineSnapshotDepartures = departures
           }
       dataVersion = dataVersionFor bodyWithoutVersion
@@ -532,6 +541,29 @@ offlineOrganisations services serviceOrganisations =
 
     sameOrganisation left right =
       offlineOrganisationId left == offlineOrganisationId right
+
+offlineTimetableDocuments :: [(Int, Int)] -> [TimetableDocument] -> [TimetableDocumentResponse]
+offlineTimetableDocuments serviceLinks documents =
+  [ TimetableDocumentResponse
+      { timetableDocumentResponseID = timetableDocumentID document,
+        timetableDocumentResponseOrganisationID = timetableDocumentOrganisationID document,
+        timetableDocumentResponseOrganisationName = timetableDocumentOrganisationName document,
+        timetableDocumentResponseServiceIds = sortOn id $ M.findWithDefault [] (timetableDocumentID document) serviceIDsByDocumentID,
+        timetableDocumentResponseTitle = timetableDocumentTitle document,
+        timetableDocumentResponseSourceURL = timetableDocumentSourceURL document,
+        timetableDocumentResponseContentHash = timetableDocumentContentHash document,
+        timetableDocumentResponseContentType = timetableDocumentContentType document,
+        timetableDocumentResponseContentLength = timetableDocumentContentLength document,
+        timetableDocumentResponseLastSeenAt = timetableDocumentLastSeenAt document,
+        timetableDocumentResponseUpdated = timetableDocumentUpdated document
+      }
+    | document <- documents
+  ]
+  where
+    serviceIDsByDocumentID =
+      M.fromListWith
+        (++)
+        [(documentID, [serviceID]) | (documentID, serviceID) <- serviceLinks]
 
 offlineDeparture :: Int -> LocationDeparture -> OfflineDeparture
 offlineDeparture serviceId LocationDeparture {..} =
