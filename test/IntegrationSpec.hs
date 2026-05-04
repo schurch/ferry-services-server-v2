@@ -15,10 +15,11 @@ import App.Logger
     create,
   )
 import Data.Aeson (FromJSON, Value (..), decode, encode)
+import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
-import Data.List (find, isPrefixOf)
+import Data.List (find, isPrefixOf, sort)
 import qualified Data.OpenApi as OpenApi
 import Data.Pool
   ( Pool,
@@ -69,6 +70,22 @@ spec = beforeAll_ setupIntegrationTests $ do
       ("yyyy-mm-ddThh:MM:ssZ" `notElem` formats) `shouldBe` True
       ("date-time" `elem` formats) `shouldBe` True
       ("date" `elem` formats) `shouldBe` True
+
+    it "defines stable operation IDs for every endpoint" $ do
+      sort (openApiOperationIds openApiSpec)
+        `shouldBe` sort
+          [ "addInstallationService",
+            "createInstallation",
+            "deleteInstallationService",
+            "getOfflineSnapshot",
+            "getPushStatus",
+            "getService",
+            "listInstallationServices",
+            "listServices",
+            "listTimetableDocuments",
+            "listVessels",
+            "updatePushStatus"
+          ]
 
   with app $ do
     describe "GET /openapi.json" $ do
@@ -288,18 +305,24 @@ setupOfflineSnapshotFixture = do
   BL.writeFile "offline/snapshot.meta.json" offlineSnapshotMetadataBody
 
 openApiFormats :: OpenApi.OpenApi -> [Text]
-openApiFormats spec =
+openApiFormats = collectOpenApiTextFields "format"
+
+openApiOperationIds :: OpenApi.OpenApi -> [Text]
+openApiOperationIds = collectOpenApiTextFields "operationId"
+
+collectOpenApiTextFields :: Text -> OpenApi.OpenApi -> [Text]
+collectOpenApiTextFields fieldName spec =
   case decode (encode spec) of
-    Just value -> collectFormats value
+    Just value -> collectTextFields fieldName value
     Nothing -> []
 
-collectFormats :: Value -> [Text]
-collectFormats (Object object) =
-  currentFormat <> concatMap collectFormats (KeyMap.elems object)
+collectTextFields :: Text -> Value -> [Text]
+collectTextFields fieldName (Object object) =
+  currentValue <> concatMap (collectTextFields fieldName) (KeyMap.elems object)
   where
-    currentFormat =
-      case KeyMap.lookup "format" object of
+    currentValue =
+      case KeyMap.lookup (Key.fromText fieldName) object of
         Just (String value) -> [value]
         _ -> []
-collectFormats (Array array) = concatMap collectFormats (Vector.toList array)
-collectFormats _ = []
+collectTextFields fieldName (Array array) = concatMap (collectTextFields fieldName) (Vector.toList array)
+collectTextFields _ _ = []

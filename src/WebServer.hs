@@ -36,7 +36,9 @@ import Data.Scientific
   )
 import qualified Data.Set as S
 import qualified Data.OpenApi as OpenApi
+import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Time
   ( LocalTime,
     UTCTime (UTCTime),
@@ -242,20 +244,39 @@ openApiSpec =
 normalizeOpenApi :: OpenApi.OpenApi -> OpenApi.OpenApi
 normalizeOpenApi =
   (OpenApi.components . OpenApi.schemas . traversed %~ normalizeSchema)
-    . (OpenApi.paths . traversed %~ normalizePathItem)
+    . (OpenApi.paths %~ InsOrdHashMap.mapWithKey normalizePathItem)
 
-normalizePathItem :: OpenApi.PathItem -> OpenApi.PathItem
-normalizePathItem pathItem =
+normalizePathItem :: FilePath -> OpenApi.PathItem -> OpenApi.PathItem
+normalizePathItem path pathItem =
   pathItem
     & OpenApi.parameters . traversed %~ fmap normalizeParam
-    & OpenApi.get . _Just %~ normalizeOperation
-    & OpenApi.post . _Just %~ normalizeOperation
-    & OpenApi.delete . _Just %~ normalizeOperation
+    & OpenApi.get . _Just %~ normalizeOperation (operationIdFor "GET" path)
+    & OpenApi.post . _Just %~ normalizeOperation (operationIdFor "POST" path)
+    & OpenApi.delete . _Just %~ normalizeOperation (operationIdFor "DELETE" path)
 
-normalizeOperation :: OpenApi.Operation -> OpenApi.Operation
-normalizeOperation operation =
+normalizeOperation :: Maybe Text -> OpenApi.Operation -> OpenApi.Operation
+normalizeOperation operationId operation =
   operation
     & OpenApi.parameters . traversed %~ fmap normalizeParam
+    & OpenApi.operationId .~ operationId
+
+operationIdFor :: Text -> FilePath -> Maybe Text
+operationIdFor method path =
+  lookup (method, T.pack path) operationIds
+  where
+    operationIds =
+      [ (("GET", "/api/services"), "listServices"),
+        (("GET", "/api/services/{serviceID}"), "getService"),
+        (("POST", "/api/installations/{installationID}"), "createInstallation"),
+        (("GET", "/api/installations/{installationID}/push-status"), "getPushStatus"),
+        (("POST", "/api/installations/{installationID}/push-status"), "updatePushStatus"),
+        (("GET", "/api/installations/{installationID}/services"), "listInstallationServices"),
+        (("POST", "/api/installations/{installationID}/services"), "addInstallationService"),
+        (("DELETE", "/api/installations/{installationID}/services/{serviceID}"), "deleteInstallationService"),
+        (("GET", "/api/vessels"), "listVessels"),
+        (("GET", "/api/timetable-documents"), "listTimetableDocuments"),
+        (("GET", "/api/offline/snapshot.json"), "getOfflineSnapshot")
+      ]
 
 normalizeParam :: OpenApi.Param -> OpenApi.Param
 normalizeParam param =
