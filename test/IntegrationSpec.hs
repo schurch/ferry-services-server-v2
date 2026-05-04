@@ -14,10 +14,12 @@ import App.Logger
     Output (StdOut),
     create,
   )
-import Data.Aeson (FromJSON, decode, encode)
+import Data.Aeson (FromJSON, Value (..), decode, encode)
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
 import Data.List (find, isPrefixOf)
+import qualified Data.OpenApi as OpenApi
 import Data.Pool
   ( Pool,
     withResource,
@@ -31,6 +33,8 @@ import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
 import Scraper
 import System.Environment (lookupEnv, setEnv)
 import System.Directory (createDirectoryIfMissing)
+import Data.Text (Text)
+import qualified Data.Vector as Vector
 import Test.Hspec
   ( Spec,
     beforeAll,
@@ -39,6 +43,7 @@ import Test.Hspec
     describe,
     hspec,
     it,
+    shouldBe,
   )
 import Test.Hspec.Wai
   ( Body,
@@ -57,68 +62,76 @@ import VesselFetcher
 import WebServer
 
 spec :: Spec
-spec = beforeAll_ setupIntegrationTests $ with app $ do
-  describe "GET /openapi.json" $ do
-    it "responds with 200" $ do
-      get "/openapi.json" `shouldRespondWith` 200
+spec = beforeAll_ setupIntegrationTests $ do
+  describe "OpenAPI schema" $ do
+    it "uses standard OpenAPI date and date-time formats" $ do
+      let formats = openApiFormats openApiSpec
+      ("yyyy-mm-ddThh:MM:ssZ" `notElem` formats) `shouldBe` True
+      ("date-time" `elem` formats) `shouldBe` True
+      ("date" `elem` formats) `shouldBe` True
 
-  describe "GET /swagger" $ do
-    it "responds with 200" $ do
-      get "/swagger" `shouldRespondWith` 200
+  with app $ do
+    describe "GET /openapi.json" $ do
+      it "responds with 200" $ do
+        get "/openapi.json" `shouldRespondWith` 200
 
-  describe "GET /api/services" $ do
-    it "responds with 200" $ do
-      get "/api/services" `shouldRespondWith` serviceList
+    describe "GET /swagger" $ do
+      it "responds with 200" $ do
+        get "/swagger" `shouldRespondWith` 200
 
-  describe "GET /api/services/5" $ do
-    it "responds with 200" $ do
-      get "/api/services/5" `shouldRespondWith` arranService
+    describe "GET /api/services" $ do
+      it "responds with 200" $ do
+        get "/api/services" `shouldRespondWith` serviceList
 
-  describe "POST /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31" $ do
-    it "responds with 200" $ do
-      let requestBody = CreateInstallationRequest "20f2d2e336a0c62c8c5f3dc1bb3d3f36e830ce14230bc8fa547fd16fb8f917b5" IOS
-      jsonPost "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31" (encode requestBody) `shouldRespondWith` emptyServiceList
+    describe "GET /api/services/5" $ do
+      it "responds with 200" $ do
+        get "/api/services/5" `shouldRespondWith` arranService
 
-  describe "POST /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" $ do
-    it "responds with 200" $ do
-      let requestBody = AddServiceRequest 5
-      jsonPost "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" (encode requestBody) `shouldRespondWith` registeredService
+    describe "POST /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31" $ do
+      it "responds with 200" $ do
+        let requestBody = CreateInstallationRequest "20f2d2e336a0c62c8c5f3dc1bb3d3f36e830ce14230bc8fa547fd16fb8f917b5" IOS
+        jsonPost "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31" (encode requestBody) `shouldRespondWith` emptyServiceList
 
-  describe "GET /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" $ do
-    it "responds with 200" $ do
-      get "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" `shouldRespondWith` registeredService
+    describe "POST /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" $ do
+      it "responds with 200" $ do
+        let requestBody = AddServiceRequest 5
+        jsonPost "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" (encode requestBody) `shouldRespondWith` registeredService
 
-  describe "DELETE /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services/5" $ do
-    it "responds with 200" $ do
-      delete "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services/5" `shouldRespondWith` emptyServiceList
+    describe "GET /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" $ do
+      it "responds with 200" $ do
+        get "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services" `shouldRespondWith` registeredService
 
-  describe "GET /api/vessels" $ do
-    it "responds with 200" $ do
-      get "/api/vessels" `shouldRespondWith` vessels
+    describe "DELETE /api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services/5" $ do
+      it "responds with 200" $ do
+        delete "/api/installations/DAA2D656-4824-4137-A4CD-E44FBB135A31/services/5" `shouldRespondWith` emptyServiceList
 
-  describe "GET /api/timetable-documents" $ do
-    it "serves the timetable document catalogue with cache headers" $ do
-      get "/api/timetable-documents?serviceID=-1" `shouldRespondWith` timetableDocuments
+    describe "GET /api/vessels" $ do
+      it "responds with 200" $ do
+        get "/api/vessels" `shouldRespondWith` vessels
 
-    it "returns 304 when the client already has the current ETag" $ do
-      request methodGet "/api/timetable-documents?serviceID=-1" [("If-None-Match", "\"sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"")] ""
-        `shouldRespondWith` 304
+    describe "GET /api/timetable-documents" $ do
+      it "serves the timetable document catalogue with cache headers" $ do
+        get "/api/timetable-documents?serviceID=-1" `shouldRespondWith` timetableDocuments
 
-    it "returns 304 when Cloudflare has weakened the current ETag" $ do
-      request methodGet "/api/timetable-documents?serviceID=-1" [("If-None-Match", "W/\"sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"")] ""
-        `shouldRespondWith` 304
+      it "returns 304 when the client already has the current ETag" $ do
+        request methodGet "/api/timetable-documents?serviceID=-1" [("If-None-Match", "\"sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"")] ""
+          `shouldRespondWith` 304
 
-  describe "GET /api/offline/snapshot.json" $ before_ setupOfflineSnapshotFixture $ do
-    it "serves the generated offline snapshot with cache headers" $ do
-      get "/api/offline/snapshot.json" `shouldRespondWith` offlineSnapshot
+      it "returns 304 when Cloudflare has weakened the current ETag" $ do
+        request methodGet "/api/timetable-documents?serviceID=-1" [("If-None-Match", "W/\"sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"")] ""
+          `shouldRespondWith` 304
 
-    it "returns 304 when the client already has the current ETag" $ do
-      request methodGet "/api/offline/snapshot.json" [("If-None-Match", "\"sha256-test\"")] ""
-        `shouldRespondWith` 304
+    describe "GET /api/offline/snapshot.json" $ before_ setupOfflineSnapshotFixture $ do
+      it "serves the generated offline snapshot with cache headers" $ do
+        get "/api/offline/snapshot.json" `shouldRespondWith` offlineSnapshot
 
-    it "returns 304 when Cloudflare has weakened the current ETag" $ do
-      request methodGet "/api/offline/snapshot.json" [("If-None-Match", "W/\"sha256-test\"")] ""
-        `shouldRespondWith` 304
+      it "returns 304 when the client already has the current ETag" $ do
+        request methodGet "/api/offline/snapshot.json" [("If-None-Match", "\"sha256-test\"")] ""
+          `shouldRespondWith` 304
+
+      it "returns 304 when Cloudflare has weakened the current ETag" $ do
+        request methodGet "/api/offline/snapshot.json" [("If-None-Match", "W/\"sha256-test\"")] ""
+          `shouldRespondWith` 304
 
 -- Response checks
 vessels :: ResponseMatcher
@@ -273,3 +286,20 @@ setupOfflineSnapshotFixture = do
   createDirectoryIfMissing True "offline"
   BL.writeFile "offline/snapshot.json" offlineSnapshotBody
   BL.writeFile "offline/snapshot.meta.json" offlineSnapshotMetadataBody
+
+openApiFormats :: OpenApi.OpenApi -> [Text]
+openApiFormats spec =
+  case decode (encode spec) of
+    Just value -> collectFormats value
+    Nothing -> []
+
+collectFormats :: Value -> [Text]
+collectFormats (Object object) =
+  currentFormat <> concatMap collectFormats (KeyMap.elems object)
+  where
+    currentFormat =
+      case KeyMap.lookup "format" object of
+        Just (String value) -> [value]
+        _ -> []
+collectFormats (Array array) = concatMap collectFormats (Vector.toList array)
+collectFormats _ = []

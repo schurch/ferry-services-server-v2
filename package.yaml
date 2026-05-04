@@ -188,11 +188,14 @@ tests:
     - hspec-wai-json
     - http-types
     - mtl
+    - openapi3
     - postgresql-simple
     - resource-pool
     - servant
     - servant-server
+    - text
     - time
     - uuid
+    - vector
     - wai
     - wai-extra

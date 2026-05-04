@@ -6,7 +6,7 @@
 
 module WebServer where
 
-import Control.Lens ((&), (.~))
+import Control.Lens ((&), (.~), (?~), (%~), (^.), _Just, traversed)
 import Control.Monad (forM)
 import Control.Monad.Reader
   ( ReaderT,
@@ -233,10 +233,62 @@ jsonServer =
 
 openApiSpec :: OpenApi.OpenApi
 openApiSpec =
-  OpenApi.applyTags [OpenApi.Tag "Ferry Services API" (Just "Live ferry service data, mobile installation state, vessel positions and offline timetable downloads.") Nothing] $
-    toOpenApi (Proxy :: Proxy JsonAPI)
-    & OpenApi.info . OpenApi.title .~ "Scottish Ferry Services API"
-    & OpenApi.info . OpenApi.version .~ "1.0"
+  normalizeOpenApi $
+    OpenApi.applyTags [OpenApi.Tag "Ferry Services API" (Just "Live ferry service data, mobile installation state, vessel positions and offline timetable downloads.") Nothing] $
+      toOpenApi (Proxy :: Proxy JsonAPI)
+      & OpenApi.info . OpenApi.title .~ "Scottish Ferry Services API"
+      & OpenApi.info . OpenApi.version .~ "1.0"
+
+normalizeOpenApi :: OpenApi.OpenApi -> OpenApi.OpenApi
+normalizeOpenApi =
+  (OpenApi.components . OpenApi.schemas . traversed %~ normalizeSchema)
+    . (OpenApi.paths . traversed %~ normalizePathItem)
+
+normalizePathItem :: OpenApi.PathItem -> OpenApi.PathItem
+normalizePathItem pathItem =
+  pathItem
+    & OpenApi.parameters . traversed %~ fmap normalizeParam
+    & OpenApi.get . _Just %~ normalizeOperation
+    & OpenApi.post . _Just %~ normalizeOperation
+    & OpenApi.delete . _Just %~ normalizeOperation
+
+normalizeOperation :: OpenApi.Operation -> OpenApi.Operation
+normalizeOperation operation =
+  operation
+    & OpenApi.parameters . traversed %~ fmap normalizeParam
+
+normalizeParam :: OpenApi.Param -> OpenApi.Param
+normalizeParam param =
+  if param ^. OpenApi.name == "departuresDate"
+    then param & OpenApi.schema . _Just %~ fmap dateSchema
+    else param & OpenApi.schema . _Just %~ fmap normalizeSchema
+
+normalizeSchema :: OpenApi.Schema -> OpenApi.Schema
+normalizeSchema schema =
+  schema
+    & OpenApi.format %~ normalizeFormat
+    & OpenApi.properties . traversed %~ fmap normalizeSchema
+    & OpenApi.items . _Just %~ normalizeItems
+    & OpenApi.allOf . _Just . traversed %~ fmap normalizeSchema
+    & OpenApi.oneOf . _Just . traversed %~ fmap normalizeSchema
+    & OpenApi.anyOf . _Just . traversed %~ fmap normalizeSchema
+    & OpenApi.not_ . _Just %~ fmap normalizeSchema
+
+normalizeItems :: OpenApi.OpenApiItems -> OpenApi.OpenApiItems
+normalizeItems (OpenApi.OpenApiItemsObject itemSchema) =
+  OpenApi.OpenApiItemsObject (normalizeSchema <$> itemSchema)
+normalizeItems (OpenApi.OpenApiItemsArray itemSchemas) =
+  OpenApi.OpenApiItemsArray (fmap (fmap normalizeSchema) itemSchemas)
+
+normalizeFormat :: Maybe OpenApi.Format -> Maybe OpenApi.Format
+normalizeFormat (Just "yyyy-mm-ddThh:MM:ssZ") = Just "date-time"
+normalizeFormat value = value
+
+dateSchema :: OpenApi.Schema -> OpenApi.Schema
+dateSchema schema =
+  schema
+    & OpenApi.type_ ?~ OpenApi.OpenApiString
+    & OpenApi.format ?~ "date"
 
 swaggerHtml :: BL.ByteString
 swaggerHtml =
