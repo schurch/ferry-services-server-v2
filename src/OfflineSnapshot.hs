@@ -41,19 +41,14 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Scientific (Scientific, fromFloatDigits)
 import Data.Text (Text)
 import Data.Time
-  ( LocalTime (LocalTime),
-    TimeOfDay (TimeOfDay),
+  ( LocalTime,
     UTCTime (UTCTime),
     addDays,
-    addLocalTime,
-    defaultTimeLocale,
-    formatTime,
     getCurrentTime,
-    localDay,
     localTimeToUTC,
     utctDay,
   )
-import Data.Time.Calendar (Day, fromGregorian, gregorianMonthLength, toGregorian)
+import Data.Time.Calendar (Day)
 import qualified Database as DB
 import Database.Postgis
   ( Geometry (GeoPoint),
@@ -283,8 +278,8 @@ data OfflineDeparture = OfflineDeparture
   { offlineDepartureServiceId :: Int,
     offlineDepartureFromLocationId :: Int,
     offlineDepartureToLocationId :: Int,
-    offlineDepartureDepartureLocal :: LocalTime,
-    offlineDepartureArrivalLocal :: LocalTime,
+    offlineDepartureDeparture :: UTCTime,
+    offlineDepartureArrival :: UTCTime,
     offlineDepartureNotes :: Maybe String
   }
   deriving (Generic, Show)
@@ -298,12 +293,12 @@ instance FromJSON OfflineDeparture where
 instance OpenApi.ToSchema OfflineDeparture where
   declareNamedSchema =
     offlineNamedSchema
-      "Offline scheduled ferry departure. Times are local ferry timetable display times, not UTC instants."
+      "Offline scheduled ferry departure."
       [ ("service_id", "Service id for this departure; resolve via services[].id."),
         ("from_location_id", "Origin location id; resolve via locations[].id."),
         ("to_location_id", "Destination location id; resolve via locations[].id."),
-        ("departure_local", "Local timetable departure time, formatted as an ISO-like local date-time without a timezone."),
-        ("arrival_local", "Local timetable arrival time, formatted as an ISO-like local date-time without a timezone."),
+        ("departure", "Scheduled departure time, encoded consistently with the service API."),
+        ("arrival", "Scheduled arrival time, encoded consistently with the service API."),
         ("notes", "Optional timetable note/check-in text from the source data.")
       ]
       ( Just $
@@ -311,8 +306,8 @@ instance OpenApi.ToSchema OfflineDeparture where
             [ "service_id" .= (5 :: Int),
               "from_location_id" .= (4 :: Int),
               "to_location_id" .= (5 :: Int),
-              "departure_local" .= ("2026-05-02T07:00:00" :: String),
-              "arrival_local" .= ("2026-05-02T07:55:00" :: String),
+              "departure" .= ("2026-05-02T07:00:00Z" :: String),
+              "arrival" .= ("2026-05-02T07:55:00Z" :: String),
               "notes" .= ("Check in 30 minutes before departure" :: String)
             ]
       )
@@ -571,40 +566,13 @@ offlineDeparture serviceId LocationDeparture {..} =
     { offlineDepartureServiceId = serviceId,
       offlineDepartureFromLocationId = locationDepartureFromLocationID,
       offlineDepartureToLocationId = locationDepartureToLocationID,
-      offlineDepartureDepartureLocal = utcClockLocalTimeToEuropeLondon locationDepartureDepartue,
-      offlineDepartureArrivalLocal = utcClockLocalTimeToEuropeLondon locationDepartureArrival,
+      offlineDepartureDeparture = convertLocalTimeToUTC locationDepartureDepartue,
+      offlineDepartureArrival = convertLocalTimeToUTC locationDepartureArrival,
       offlineDepartureNotes = locationDepartureNotes
     }
 
-utcClockLocalTimeToEuropeLondon :: LocalTime -> LocalTime
-utcClockLocalTimeToEuropeLondon utcClockTime =
-  addLocalTime offsetSeconds utcClockTime
-  where
-    offsetSeconds =
-      if isBritishSummerTime utcClockTime
-        then 3600
-        else 0
-
-isBritishSummerTime :: LocalTime -> Bool
-isBritishSummerTime utcClockTime =
-  utcTime >= bstStart && utcTime < bstEnd
-  where
-    utcTime = localTimeToUTC (read "UTC") utcClockTime
-    (year, _, _) = toGregorian (localDay utcClockTime)
-    bstStart = localTimeToUTC (read "UTC") $ LocalTime (lastSundayOfMonth year 3) (TimeOfDay 1 0 0)
-    bstEnd = localTimeToUTC (read "UTC") $ LocalTime (lastSundayOfMonth year 10) (TimeOfDay 1 0 0)
-
-lastSundayOfMonth :: Integer -> Int -> Day
-lastSundayOfMonth year month =
-  last $
-    filter isSunday $
-      [fromGregorian year month day | day <- [1 .. monthLength]]
-  where
-    monthLength =
-      gregorianMonthLength year month
-
-    isSunday day =
-      formatTime defaultTimeLocale "%u" day == "7"
+convertLocalTimeToUTC :: LocalTime -> UTCTime
+convertLocalTimeToUTC = localTimeToUTC (read "UTC")
 
 getLatitude :: Geometry -> Scientific
 getLatitude (GeoPoint _ (Point (Position latitude _ _ _))) = fromFloatDigits latitude
