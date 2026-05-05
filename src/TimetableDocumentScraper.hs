@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
@@ -13,21 +14,36 @@ import Control.Exception (SomeException, try)
 import Control.Monad (forM)
 import Control.Monad.IO.Class (liftIO)
 import qualified Crypto.Hash as Crypto
+import Data.Aeson
+  ( FromJSON (parseJSON),
+    Options (fieldLabelModifier),
+    Value (Object),
+    defaultOptions,
+    eitherDecode,
+    genericParseJSON,
+    object,
+    (.=),
+  )
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char (isAlphaNum, toLower)
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf, nubBy)
-import Data.Maybe (fromMaybe)
+import qualified Data.Map as M
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text.Encoding.Error (lenientDecode)
-import Data.Time.Clock (getCurrentTime)
+import Data.Time.Clock (UTCTime, getCurrentTime)
 import qualified Data.Text.Encoding as TE
 import qualified Database as DB
+import GHC.Generics (Generic)
 import Network.HTTP.Simple
   ( getResponseBody,
     getResponseHeaders,
     httpBS,
     httpLBS,
     parseRequest,
+    setRequestBodyJSON,
     setRequestHeaders,
+    setRequestMethod,
   )
 import Network.HTTP.Types.Header
   ( hAccept,
@@ -36,7 +52,9 @@ import Network.HTTP.Types.Header
     hConnection,
     hContentLength,
     hContentType,
+    hOrigin,
     hUserAgent,
+    RequestHeaders,
   )
 import System.Timeout (timeout)
 import Text.HTML.TagSoup
@@ -66,6 +84,53 @@ data DocumentMetadata = DocumentMetadata
     documentMetadataContentLength :: Maybe Int
   }
 
+data CalMacTimetablesResponse = CalMacTimetablesResponse
+  { calMacTimetablesResponseData :: CalMacTimetablesData
+  }
+  deriving (Generic, Show)
+
+instance FromJSON CalMacTimetablesResponse where
+  parseJSON = genericParseJSON $ calMacTimetableJsonOptions "calMacTimetablesResponse"
+
+data CalMacTimetablesData = CalMacTimetablesData
+  { calMacTimetablesDataTimetables :: [CalMacTimetable]
+  }
+  deriving (Generic, Show)
+
+instance FromJSON CalMacTimetablesData where
+  parseJSON = genericParseJSON $ calMacTimetableJsonOptions "calMacTimetablesData"
+
+data CalMacTimetable = CalMacTimetable
+  { calMacTimetableTimetableType :: Maybe String,
+    calMacTimetableTitle :: String,
+    calMacTimetableRoute :: CalMacTimetableRoute,
+    calMacTimetableReleaseDetail :: Maybe String,
+    calMacTimetablePdfUrl :: Maybe String,
+    calMacTimetableValidFrom :: Maybe String,
+    calMacTimetableValidUntil :: Maybe String,
+    calMacTimetableLastUpdated :: Maybe String
+  }
+  deriving (Generic, Show)
+
+instance FromJSON CalMacTimetable where
+  parseJSON = genericParseJSON $ calMacTimetableJsonOptions "calMacTimetable"
+
+data CalMacTimetableRoute = CalMacTimetableRoute
+  { calMacTimetableRouteName :: String
+  }
+  deriving (Generic, Show)
+
+instance FromJSON CalMacTimetableRoute where
+  parseJSON = genericParseJSON $ calMacTimetableJsonOptions "calMacTimetableRoute"
+
+calMacTimetableJsonOptions :: String -> Options
+calMacTimetableJsonOptions prefix =
+  jsonOptions
+    { fieldLabelModifier = toLowerFirstLetter . drop (length prefix)
+    }
+  where
+    jsonOptions = defaultOptions
+
 fetchTimetableDocuments :: Application ()
 fetchTimetableDocuments = do
   documents <- scrapeTimetableDocuments
@@ -75,6 +140,7 @@ fetchTimetableDocuments = do
 scrapeTimetableDocuments :: Application [ScrapedTimetableDocument]
 scrapeTimetableDocuments = do
   now <- liftIO getCurrentTime
+  calMacDocuments <- scrapeCalMacTimetableDocuments now
   nestedDocuments <- forM timetableDocumentSources $ \source -> do
     let sourceLabel = timetableDocumentSourceLabel source
     logInfoM $ "Fetching timetable document source: " <> sourceLabel
@@ -102,12 +168,150 @@ scrapeTimetableDocuments = do
                 scrapedTimetableDocumentContentLength = documentMetadataContentLength metadata,
                 scrapedTimetableDocumentLastSeenAt = now
               }
-  let documents = nubBy sameSourceURL $ concat nestedDocuments
+  let documents = nubBy sameSourceURL $ calMacDocuments <> concat nestedDocuments
   logInfoM $ "Found " <> show (length documents) <> " unique timetable documents"
   pure documents
   where
     sameSourceURL a b =
       scrapedTimetableDocumentSourceURL a == scrapedTimetableDocumentSourceURL b
+
+scrapeCalMacTimetableDocuments :: UTCTime -> Application [ScrapedTimetableDocument]
+scrapeCalMacTimetableDocuments now = do
+  logInfoM "Fetching CalMac timetable documents from GraphQL"
+  result <- liftIO $ try @SomeException fetchCalMacTimetables
+  case result of
+    Left exception -> do
+      logErrorM $ "Failed to fetch CalMac timetable documents from GraphQL - " <> show exception
+      pure []
+    Right timetables -> do
+      documents <- fmap catMaybes $
+        forM timetables $ \timetable@CalMacTimetable {..} ->
+          case calMacTimetablePdfUrl of
+            Nothing -> pure Nothing
+            Just pdfUrl -> case calMacTimetableServiceIDs timetable of
+              [] -> do
+                logErrorM $ "Skipping unmapped CalMac timetable route: " <> calMacTimetableRouteName calMacTimetableRoute <> " - " <> pdfUrl
+                pure Nothing
+              serviceIDs -> do
+                metadata <- fetchDocumentMetadata "CalMac GraphQL" pdfUrl
+                pure $
+                  Just
+                    ScrapedTimetableDocument
+                      { scrapedTimetableDocumentOrganisationID = 1,
+                        scrapedTimetableDocumentServiceIDs = serviceIDs,
+                        scrapedTimetableDocumentTitle = calMacTimetableDocumentTitle timetable,
+                        scrapedTimetableDocumentSourceURL = pdfUrl,
+                        scrapedTimetableDocumentContentHash = documentMetadataContentHash metadata,
+                        scrapedTimetableDocumentContentType = documentMetadataContentType metadata,
+                        scrapedTimetableDocumentContentLength = documentMetadataContentLength metadata,
+                        scrapedTimetableDocumentLastSeenAt = now
+                      }
+      logInfoM $ "Found " <> show (length documents) <> " CalMac timetable documents from GraphQL"
+      pure documents
+
+fetchCalMacTimetables :: IO [CalMacTimetable]
+fetchCalMacTimetables = do
+  request <- setRequestBodyJSON calMacTimetablesRequestBody . setRequestMethod "POST" . setRequestHeaders calMacGraphQLHeaders <$> parseRequest "https://apim.calmac.co.uk/graphql"
+  responseBody <-
+    checkResponseBody
+      <$> timeout requestTimeoutMicros (C.fromStrict . getResponseBody <$> httpBS request)
+  case responseBody >>= eitherDecode of
+    Left errorMessage -> error errorMessage
+    Right response -> pure $ calMacTimetablesDataTimetables . calMacTimetablesResponseData $ response
+  where
+    checkResponseBody =
+      maybe (Left "Timed out fetching CalMac timetable documents") Right
+
+calMacTimetablesRequestBody :: Value
+calMacTimetablesRequestBody =
+  object
+    [ "variables" .= Object mempty,
+      "query" .= calMacTimetablesQuery
+    ]
+
+calMacTimetablesQuery :: String
+calMacTimetablesQuery =
+  "{\n  timetables {\n    timetableType\n    title\n    route {\n      name\n      id\n      originPort {\n        name\n        __typename\n      }\n      destinationPort {\n        name\n        __typename\n      }\n      __typename\n    }\n    releaseDetail\n    pdfUrl\n    imageUrl\n    key\n    validFrom\n    validUntil\n    lastUpdated\n    __typename\n  }\n}"
+
+calMacGraphQLHeaders :: RequestHeaders
+calMacGraphQLHeaders =
+  [ (hContentType, "application/json"),
+    (hAccept, "*/*"),
+    ("Sec-Fetch-Site", "cross-site"),
+    (hAcceptEncoding, "gzip, deflate, br"),
+    (hAcceptLanguage, "en-GB,en;q=0.9"),
+    ("Sec-Fetch-Mode", "cors"),
+    (hOrigin, "capacitor://localhost"),
+    (hUserAgent, "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"),
+    (hConnection, "keep-alive"),
+    ("Sec-Fetch-Dest", "empty")
+  ]
+
+calMacTimetableServiceIDs :: CalMacTimetable -> [Int]
+calMacTimetableServiceIDs CalMacTimetable {..} =
+  fromMaybe [] $ M.lookup (normalizeCalMacRouteName $ calMacTimetableRouteName calMacTimetableRoute) calMacTimetableServiceIDLookup
+
+calMacTimetableDocumentTitle :: CalMacTimetable -> String
+calMacTimetableDocumentTitle CalMacTimetable {..} =
+  calMacTimetableRouteName calMacTimetableRoute
+    <> ": "
+    <> calMacTimetableTitle
+    <> validRange
+  where
+    validRange =
+      case (calMacTimetableValidFrom, calMacTimetableValidUntil) of
+        (Just validFrom, Just validUntil) -> " (" <> dateOnly validFrom <> " to " <> dateOnly validUntil <> ")"
+        _ -> ""
+
+calMacTimetableServiceIDLookup :: M.Map String [Int]
+calMacTimetableServiceIDLookup =
+  M.fromList $
+    fmap
+      (\(routeName, serviceIDs) -> (normalizeCalMacRouteName routeName, serviceIDs))
+      [ ("Ardrossan - Brodick", [5]),
+        ("Troon - Brodick", [41]),
+        ("Claonaig - Lochranza", [6]),
+        ("Tarbert (Loch Fyne) - Lochranza (Seasonal Winter)", [6]),
+        ("Colintraive - Rhubodach", [4]),
+        ("Wemyss Bay - Rothesay", [3]),
+        ("Gourock - Dunoon", [1]),
+        ("Tarbert (Loch Fyne) - Portavadie", [2]),
+        ("Largs - Cumbrae Slip (Millport)", [7]),
+        ("Gourock - Kilcreggan", [39]),
+        ("Ardrossan - Campbeltown", [36]),
+        ("Kennacraig - Port Askaig (Islay) / Port Ellen (Islay)", [9]),
+        ("Kennacraig - Islay/C'say/Oban", [9, 10]),
+        ("Tayinloan - Gigha", [8]),
+        ("Oban - Colonsay - Port Askaig - Kennacraig", [10]),
+        ("Tobermory - Kilchoan", [14]),
+        ("Fionnphort - Iona", [13]),
+        ("Gallanach-Kerrera", [38]),
+        ("Oban - Coll/Tiree", [16]),
+        ("Oban - Craignure", [11]),
+        ("Lochaline - Fishnish", [12]),
+        ("Oban - Lismore", [15]),
+        ("Mallaig - Eigg/Muck/Rum/Canna", [19]),
+        ("Mallaig - Armadale", [18]),
+        ("Sconser - Raasay", [17]),
+        ("Ardmhor (Barra) - Eriskay", [21]),
+        ("Oban - Castlebay", [20]),
+        ("Berneray - Leverburgh", [23]),
+        ("Uig - Lochmaddy", [22]),
+        ("Uig - Tarbert", [24]),
+        ("Ullapool - Stornoway", [25]),
+        ("Mallaig / Oban - Lochboisdale", [37])
+      ]
+
+normalizeCalMacRouteName :: String -> String
+normalizeCalMacRouteName =
+  unwords . words . lower . replaceAll "–" "-" . replaceAll "\160" " "
+
+dateOnly :: String -> String
+dateOnly = takeWhile (/= 'T')
+
+toLowerFirstLetter :: String -> String
+toLowerFirstLetter [] = []
+toLowerFirstLetter (x : xs) = toLower x : xs
 
 timetableDocumentSourceLabel :: TimetableDocumentSource -> String
 timetableDocumentSourceLabel TimetableDocumentSource {..} =
@@ -115,54 +319,12 @@ timetableDocumentSourceLabel TimetableDocumentSource {..} =
 
 timetableDocumentSources :: [TimetableDocumentSource]
 timetableDocumentSources =
-  calMacSources
-    <> [ TimetableDocumentSource 2 [1000] "https://www.northlinkferries.co.uk/timetables/" (Just "NorthLink"),
-         TimetableDocumentSource 3 [2000] "https://western-ferries.co.uk/timetables/" (Just "Western Ferries"),
-         TimetableDocumentSource 5 [4000, 4001, 4002, 4003, 4004, 4005, 4006, 4007, 4008] "https://www.orkneyferries.co.uk/timetables" (Just "Orkney Ferries"),
-         TimetableDocumentSource 4 [3000, 3001, 3002, 3003, 3004] "https://www.shetland.gov.uk/ferries/timetable" (Just "Shetland Ferries"),
-         TimetableDocumentSource 7 [6000] "https://www.highland.gov.uk/downloads/download/4/corran-ferry-timetable-and-fares" (Just "Corran Ferry")
-       ]
-
-calMacSources :: [TimetableDocumentSource]
-calMacSources =
-  [ calMac 5 "ardrossan-brodick" "Ardrossan - Brodick",
-    calMac 41 "troon-brodick" "Troon - Brodick",
-    calMac 6 "claonaig-tarbert-loch-fyne-lochranza" "Claonaig/Tarbert - Lochranza",
-    calMac 4 "colintraive-rhubodach" "Colintraive - Rhubodach",
-    calMac 3 "wemyss-bay-rothesay" "Wemyss Bay - Rothesay",
-    calMac 1 "gourock-dunoon" "Gourock - Dunoon",
-    calMac 2 "tarbert-loch-fyne-portavadie" "Tarbert - Portavadie",
-    calMac 7 "largs-cumbrae" "Largs - Cumbrae",
-    calMac 39 "gourock-kilcreggan" "Gourock - Kilcreggan",
-    calMac 36 "ardrossan-campbeltown" "Ardrossan - Campbeltown",
-    calMac 9 "kennacraig-islay" "Kennacraig - Islay",
-    calMac 8 "tayinloan-gigha" "Tayinloan - Gigha",
-    calMac 10 "oban-colonsay-port-askaig-kennacraig" "Oban - Colonsay",
-    calMac 14 "tobermory-kilchoan" "Tobermory - Kilchoan",
-    calMac 13 "fionnphort-iona" "Fionnphort - Iona",
-    calMac 38 "gallanach-kerrera" "Gallanach - Kerrera",
-    calMac 16 "oban-coll-tiree" "Oban - Coll - Tiree",
-    calMac 11 "oban-craignure" "Oban - Craignure",
-    calMac 12 "lochaline-fishnish" "Lochaline - Fishnish",
-    calMac 15 "oban-lismore" "Oban - Lismore",
-    calMac 19 "mallaig-small-isles" "Mallaig - Small Isles",
-    calMac 18 "mallaig-armadale" "Mallaig - Armadale",
-    calMac 17 "sconser-raasay" "Sconser - Raasay",
-    calMac 21 "ardmhor-barra-eriskay" "Ardmhor - Eriskay",
-    calMac 20 "oban-castlebay" "Oban - Castlebay",
-    calMac 23 "berneray-leverburgh" "Berneray - Leverburgh",
-    calMac 22 "uig-lochmaddy" "Uig - Lochmaddy",
-    calMac 24 "uig-tarbert-harris" "Uig - Tarbert",
-    calMac 25 "stornoway-ullapool" "Stornoway - Ullapool",
-    calMac 37 "mallaigoban-lochboisdale" "Mallaig/Oban - Lochboisdale"
+  [ TimetableDocumentSource 2 [1000] "https://www.northlinkferries.co.uk/timetables/" (Just "NorthLink"),
+    TimetableDocumentSource 3 [2000] "https://western-ferries.co.uk/timetables/" (Just "Western Ferries"),
+    TimetableDocumentSource 5 [4000, 4001, 4002, 4003, 4004, 4005, 4006, 4007, 4008] "https://www.orkneyferries.co.uk/timetables" (Just "Orkney Ferries"),
+    TimetableDocumentSource 4 [3000, 3001, 3002, 3003, 3004] "https://www.shetland.gov.uk/ferries/timetable" (Just "Shetland Ferries"),
+    TimetableDocumentSource 7 [6000] "https://www.highland.gov.uk/downloads/download/4/corran-ferry-timetable-and-fares" (Just "Corran Ferry")
   ]
-  where
-    calMac serviceID slug title =
-      TimetableDocumentSource
-        1
-        [serviceID]
-        ("https://www.calmac.co.uk/en-gb/route-information/" <> slug <> "/")
-        (Just title)
 
 fetchPage :: String -> IO String
 fetchPage url = do
