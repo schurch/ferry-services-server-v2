@@ -430,7 +430,7 @@ getService serviceID departuresDate = do
         if hasScheduledDepartures
           then S.singleton serviceID
           else S.empty
-  return $ serviceToServiceResponse scheduledDeparturesLookup (Just timetableDocumentLookup) vesselLookup locationLookup organisationLookup 1 time <$> service
+  return $ serviceToServiceResponse scheduledDeparturesLookup (Just timetableDocumentLookup) vesselLookup locationLookup organisationLookup time <$> service
 
 getServices :: WebHandler [ServiceResponse]
 getServices = do
@@ -440,8 +440,8 @@ getServices = do
   locationLookup <- createLocationLookup Nothing Nothing Nothing
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
-  forM (zip [1 ..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponse scheduledDeparturesLookup Nothing vesselLookup locationLookup organisationLookup sortOrder time service
+  forM services $ \service ->
+    return $ serviceToServiceResponse scheduledDeparturesLookup Nothing vesselLookup locationLookup organisationLookup time service
 
 createInstallation ::
   UUID -> CreateInstallationRequest -> WebHandler [ServiceResponse]
@@ -481,8 +481,8 @@ getServicesForInstallation installationID = do
   locationLookup <- createLocationLookup Nothing Nothing Nothing
   vesselLookup <- createServiceVesselLookup
   organisationLookup <- createServiceOrganisationLookup
-  forM (zip [1 ..] services) $ \(sortOrder, service) ->
-    return $ serviceToServiceResponse scheduledDeparturesLookup Nothing vesselLookup locationLookup organisationLookup sortOrder time service
+  forM services $ \service ->
+    return $ serviceToServiceResponse scheduledDeparturesLookup Nothing vesselLookup locationLookup organisationLookup time service
 
 getVessels :: WebHandler [VesselResponse]
 getVessels = do
@@ -531,11 +531,10 @@ vesselToVesselResponse Vessel {..} =
     }
 
 serviceToServiceResponse ::
-  ServiceScheduledDeparturesLookup -> Maybe ServiceTimetableDocumentLookup -> ServiceVesselLookup -> ServiceLocationLookup -> ServiceOrganisationLookup -> Int -> UTCTime -> Service -> ServiceResponse
-serviceToServiceResponse scheduledDeparturesLookup timetableDocumentLookup vesselLookup locationLookup organisationLookup sortOrder currentTime Service {..} =
+  ServiceScheduledDeparturesLookup -> Maybe ServiceTimetableDocumentLookup -> ServiceVesselLookup -> ServiceLocationLookup -> ServiceOrganisationLookup -> UTCTime -> Service -> ServiceResponse
+serviceToServiceResponse scheduledDeparturesLookup timetableDocumentLookup vesselLookup locationLookup organisationLookup currentTime Service {..} =
   ServiceResponse
     { serviceResponseServiceID = serviceID,
-      serviceResponseSortOrder = sortOrder,
       serviceResponseArea = serviceArea,
       serviceResponseRoute = serviceRoute,
       serviceResponseStatus =

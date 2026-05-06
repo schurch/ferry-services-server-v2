@@ -145,7 +145,6 @@ spec = do
         encode
           ServiceResponse
             { serviceResponseServiceID = 5,
-              serviceResponseSortOrder = 1,
               serviceResponseArea = "ARRAN",
               serviceResponseRoute = "Ardrossan (ARD) - Brodick (BRO)",
               serviceResponseStatus = Disrupted,
@@ -193,7 +192,6 @@ spec = do
             [aesonQQ|
           {
             "service_id": 5,
-            "sort_order": 1,
             "area": "ARRAN",
             "route": "Ardrossan (ARD) - Brodick (BRO)",
             "status": 1,

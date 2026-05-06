@@ -23,7 +23,6 @@ import Types
 
 data ServiceResponse = ServiceResponse
   { serviceResponseServiceID :: Int,
-    serviceResponseSortOrder :: Int,
     serviceResponseArea :: String,
     serviceResponseRoute :: String,
     serviceResponseStatus :: ServiceStatus,

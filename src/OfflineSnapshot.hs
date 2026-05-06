@@ -161,7 +161,6 @@ instance OpenApi.ToSchema OfflineSnapshotMetadata where
 
 data OfflineService = OfflineService
   { offlineServiceId :: Int,
-    offlineServiceSortOrder :: Int,
     offlineServiceArea :: String,
     offlineServiceRoute :: String,
     offlineServiceOrganisationId :: Int,
@@ -181,7 +180,6 @@ instance OpenApi.ToSchema OfflineService where
     offlineNamedSchema
       "Offline service row. This is deliberately normalized for compact storage."
       [ ("id", "Service id used by existing live API responses."),
-        ("sort_order", "Display ordering from the service list."),
         ("area", "Geographic service grouping shown in the app."),
         ("route", "Human-readable route name."),
         ("organisation_id", "Operator id; resolve via organisations[].id."),
@@ -191,7 +189,6 @@ instance OpenApi.ToSchema OfflineService where
       ( Just $
           object
             [ "id" .= (5 :: Int),
-              "sort_order" .= (1 :: Int),
               "area" .= ("Arran" :: String),
               "route" .= ("Ardrossan - Brodick" :: String),
               "organisation_id" .= (1 :: Int),
@@ -483,14 +480,13 @@ offlineServices :: [Int] -> [ServiceLocation] -> [Service] -> [OfflineService]
 offlineServices servicesWithDepartures serviceLocations services =
   [ OfflineService
       { offlineServiceId = serviceID service,
-        offlineServiceSortOrder = sortOrder,
         offlineServiceArea = serviceArea service,
         offlineServiceRoute = serviceRoute service,
         offlineServiceOrganisationId = serviceOrganisationID service,
         offlineServiceLocationIds = sortOn id $ M.findWithDefault [] (serviceID service) serviceLocationLookup,
         offlineServiceScheduledDeparturesAvailable = serviceID service `elem` servicesWithDepartures
       }
-    | (sortOrder, service) <- zip [1 ..] services
+    | service <- services
   ]
   where
     serviceLocationLookup =
