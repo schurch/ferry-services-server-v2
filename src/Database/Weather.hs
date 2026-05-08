@@ -10,11 +10,11 @@ where
 import App.Env (Application)
 import Control.Monad (void)
 import Database.Connection (withConnection)
-import Database.PostgreSQL.Simple
+import Database.SQLite.Simple
   ( execute,
     query_,
   )
-import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Database.SQLite.Simple.QQ (sql)
 import Types (LocationWeather)
 import Types.Weather
 

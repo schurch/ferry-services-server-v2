@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 18c23d8f483543b61d6407de87638b881a9c53b11c030f67b4c931a5972f120b
+-- hash: 497af580bebdc82111252742a6022979aaf7c36c4b0c7b66a35877e6ae919af0
 
 name:           ferry-services-server
 version:        0.1.0.0
@@ -81,7 +81,6 @@ library
     , directory
     , fast-logger
     , filepath
-    , haskell-postgis
     , http-conduit
     , http-types
     , insert-ordered-containers
@@ -89,7 +88,6 @@ library
     , mtl
     , network
     , openapi3
-    , postgresql-simple
     , process
     , raven-haskell
     , regex-compat
@@ -98,6 +96,7 @@ library
     , servant
     , servant-openapi3
     , servant-server
+    , sqlite-simple
     , tagsoup
     , text
     , time
@@ -166,11 +165,11 @@ executable ferry-services-server-exe
     , directory
     , ferry-services-server
     , mtl
-    , postgresql-simple
     , raven-haskell
     , resource-pool
     , servant
     , servant-server
+    , sqlite-simple
     , text
     , unordered-containers
     , wai
@@ -235,6 +234,7 @@ test-suite ferry-services-server-test
       JSONSpec
       PushSpec
       TransxchangeApiSpec
+      UtilitySpec
       Paths_ferry_services_server
   hs-source-dirs:
       test
@@ -252,10 +252,10 @@ test-suite ferry-services-server-test
     , http-types
     , mtl
     , openapi3
-    , postgresql-simple
     , resource-pool
     , servant
     , servant-server
+    , sqlite-simple
     , text
     , time
     , uuid

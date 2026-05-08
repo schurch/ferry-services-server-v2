@@ -37,7 +37,6 @@ library:
     - directory
     - fast-logger
     - filepath
-    - haskell-postgis
     - http-types
     - http-conduit
     - crypton
@@ -47,7 +46,6 @@ library:
     - network
     - mtl
     - openapi3
-    - postgresql-simple
     - process
     - raven-haskell
     - regex-compat
@@ -56,6 +54,7 @@ library:
     - servant
     - servant-openapi3
     - servant-server
+    - sqlite-simple
     - tagsoup
     - time
     - text
@@ -86,11 +85,11 @@ executables:
     - directory
     - ferry-services-server
     - mtl
-    - postgresql-simple
     - raven-haskell
     - resource-pool
     - servant
     - servant-server
+    - sqlite-simple
     - text
     - unordered-containers
     - wai
@@ -189,10 +188,10 @@ tests:
     - http-types
     - mtl
     - openapi3
-    - postgresql-simple
     - resource-pool
     - servant
     - servant-server
+    - sqlite-simple
     - text
     - time
     - uuid

@@ -38,23 +38,17 @@ import Data.Maybe (mapMaybe)
 import qualified Data.OpenApi as OpenApi
 import Data.OpenApi.Declare (Declare)
 import Data.Proxy (Proxy (Proxy))
-import Data.Scientific (Scientific, fromFloatDigits)
+import Data.Scientific (Scientific)
 import Data.Text (Text)
 import Data.Time
   ( LocalTime,
     UTCTime (UTCTime),
     addDays,
     getCurrentTime,
-    localTimeToUTC,
     utctDay,
   )
 import Data.Time.Calendar (Day)
 import qualified Database as DB
-import Database.Postgis
-  ( Geometry (GeoPoint),
-    Point (Point),
-    Position (Position),
-  )
 import GHC.Generics (Generic)
 import System.Directory
   ( createDirectoryIfMissing,
@@ -64,7 +58,8 @@ import System.Directory
 import System.FilePath (takeDirectory)
 import System.IO (IOMode (WriteMode), withFile)
 import Types
-  ( Location (..),
+  ( Coordinate (..),
+    Location (..),
     LocationDeparture (..),
     Service (..),
     ServiceLocation (..),
@@ -73,6 +68,7 @@ import Types
     jsonOptions,
   )
 import Types.Api (TimetableDocumentResponse (..), openApiOptions)
+import Utility (convertScottishLocalTimeToUTC)
 
 defaultSnapshotPath :: FilePath
 defaultSnapshotPath = "offline/snapshot.json"
@@ -568,15 +564,13 @@ offlineDeparture serviceId LocationDeparture {..} =
     }
 
 convertLocalTimeToUTC :: LocalTime -> UTCTime
-convertLocalTimeToUTC = localTimeToUTC (read "UTC")
+convertLocalTimeToUTC = convertScottishLocalTimeToUTC
 
-getLatitude :: Geometry -> Scientific
-getLatitude (GeoPoint _ (Point (Position latitude _ _ _))) = fromFloatDigits latitude
-getLatitude _ = error "Expected point"
+getLatitude :: Coordinate -> Scientific
+getLatitude = coordinateLatitude
 
-getLongitude :: Geometry -> Scientific
-getLongitude (GeoPoint _ (Point (Position _ longitude _ _))) = fromFloatDigits longitude
-getLongitude _ = error "Expected point"
+getLongitude :: Coordinate -> Scientific
+getLongitude = coordinateLongitude
 
 readExisting :: FilePath -> IO (Maybe BL.ByteString)
 readExisting path = do

@@ -8,18 +8,23 @@ module Database.TransxchangeV2
 where
 
 import Control.Monad (void)
+import Data.Char (digitToInt, isDigit)
 import Data.Int (Int64)
 import Data.List (nub)
-import Database.PostgreSQL.Simple
+import Database.SQLite.Simple
   ( Connection,
     Only (Only),
+    execute,
     executeMany,
     execute_,
     query,
+    query_,
     withTransaction,
   )
-import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Database.SQLite.Simple.QQ (sql)
+import Database.SQLite.Simple.ToField (toField)
 import TransxchangeV2.Types
+import Types ()
 
 replaceTx2Data :: Connection -> [Tx2Document] -> IO ()
 replaceTx2Data connection documents =
@@ -33,24 +38,7 @@ clearTx2Tables connection =
     execute_
       connection
       [sql|
-        TRUNCATE TABLE
-          tx2_vehicle_journey_timing_links,
-          tx2_vehicle_journey_week_of_month_rules,
-          tx2_vehicle_journey_serviced_organisation_days_of_non_operation,
-          tx2_vehicle_journey_serviced_organisation_days_of_operation,
-          tx2_vehicle_journey_bank_holiday_non_operation_rules,
-          tx2_vehicle_journey_bank_holiday_operation_rules,
-          tx2_vehicle_journey_days_of_non_operation,
-          tx2_vehicle_journey_days_of_operation,
-          tx2_vehicle_journey_days,
-          tx2_vehicle_journeys,
-          tx2_journey_pattern_timing_links,
-          tx2_journey_pattern_sections,
-          tx2_journey_patterns,
-          tx2_lines,
-          tx2_stop_points,
-          tx2_services,
-          tx2_documents
+        DELETE FROM tx2_documents
       |]
 
 insertTx2Document :: Connection -> Tx2Document -> IO ()
@@ -77,8 +65,8 @@ insertTx2Document connection document = do
 
 insertDocument :: Connection -> Tx2Document -> IO Int64
 insertDocument connection document = do
-  [Only documentId] <-
-    query
+  void $
+    execute
       connection
       [sql|
         INSERT INTO tx2_documents (
@@ -89,7 +77,6 @@ insertDocument connection document = do
           source_modification_datetime
         )
         VALUES (?, ?, ?, ?, ?)
-        RETURNING document_id
       |]
       ( tx2SourcePath document,
         tx2SourceFileName document,
@@ -97,6 +84,7 @@ insertDocument connection document = do
         tx2SourceCreationDateTime document,
         tx2SourceModificationDateTime document
       )
+  [Only documentId] <- query_ connection [sql|SELECT last_insert_rowid()|]
   return documentId
 
 insertServices :: Connection -> Int64 -> [Tx2Service] -> IO ()
@@ -519,9 +507,11 @@ insertJourneyPatternTimingLinks connection documentId timingLinks = do
             route_link_ref,
             direction,
             run_time,
-            from_wait_time
+            from_wait_time,
+            run_seconds,
+            from_wait_seconds
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT (document_id, journey_pattern_timing_link_id) DO UPDATE
             SET journey_pattern_section_ref = excluded.journey_pattern_section_ref,
                 sort_order = excluded.sort_order,
@@ -534,29 +524,50 @@ insertJourneyPatternTimingLinks connection documentId timingLinks = do
                 route_link_ref = excluded.route_link_ref,
                 direction = excluded.direction,
                 run_time = excluded.run_time,
-                from_wait_time = excluded.from_wait_time
+                from_wait_time = excluded.from_wait_time,
+                run_seconds = excluded.run_seconds,
+                from_wait_seconds = excluded.from_wait_seconds
         |]
   let values =
         fmap
           ( \timingLink ->
-              ( documentId,
-                tx2JourneyPatternTimingLinkId timingLink,
-                tx2JourneyPatternTimingLinkSectionRef timingLink,
-                tx2JourneyPatternTimingLinkSortOrder timingLink,
-                tx2JourneyPatternTimingLinkFromStopPointRef timingLink,
-                tx2JourneyPatternTimingLinkFromActivity timingLink,
-                tx2JourneyPatternTimingLinkFromTimingStatus timingLink,
-                tx2JourneyPatternTimingLinkToStopPointRef timingLink,
-                tx2JourneyPatternTimingLinkToActivity timingLink,
-                tx2JourneyPatternTimingLinkToTimingStatus timingLink,
-                tx2JourneyPatternTimingLinkRouteLinkRef timingLink,
-                tx2JourneyPatternTimingLinkDirection timingLink,
-                tx2JourneyPatternTimingLinkRunTime timingLink,
-                tx2JourneyPatternTimingLinkFromWaitTime timingLink
-              )
+              [ toField documentId,
+                toField $ tx2JourneyPatternTimingLinkId timingLink,
+                toField $ tx2JourneyPatternTimingLinkSectionRef timingLink,
+                toField $ tx2JourneyPatternTimingLinkSortOrder timingLink,
+                toField $ tx2JourneyPatternTimingLinkFromStopPointRef timingLink,
+                toField $ tx2JourneyPatternTimingLinkFromActivity timingLink,
+                toField $ tx2JourneyPatternTimingLinkFromTimingStatus timingLink,
+                toField $ tx2JourneyPatternTimingLinkToStopPointRef timingLink,
+                toField $ tx2JourneyPatternTimingLinkToActivity timingLink,
+                toField $ tx2JourneyPatternTimingLinkToTimingStatus timingLink,
+                toField $ tx2JourneyPatternTimingLinkRouteLinkRef timingLink,
+                toField $ tx2JourneyPatternTimingLinkDirection timingLink,
+                toField $ tx2JourneyPatternTimingLinkRunTime timingLink,
+                toField $ tx2JourneyPatternTimingLinkFromWaitTime timingLink,
+                toField $ tx2DurationSeconds (tx2JourneyPatternTimingLinkRunTime timingLink),
+                toField $ tx2DurationSeconds (tx2JourneyPatternTimingLinkFromWaitTime timingLink)
+              ]
           )
           timingLinks
   void $ executeMany connection statement values
+
+tx2DurationSeconds :: String -> Int
+tx2DurationSeconds "" = 0
+tx2DurationSeconds value =
+  parseUnits 0 0 (dropPT value)
+  where
+    dropPT ('P' : 'T' : rest) = rest
+    dropPT ('T' : rest) = rest
+    dropPT rest = rest
+
+    parseUnits total current [] = total + current
+    parseUnits total current (char : rest)
+      | isDigit char = parseUnits total ((current * 10) + digitToInt char) rest
+      | char == 'H' = parseUnits (total + (current * 3600)) 0 rest
+      | char == 'M' = parseUnits (total + (current * 60)) 0 rest
+      | char == 'S' = parseUnits (total + current) 0 rest
+      | otherwise = parseUnits total current rest
 
 dayRuleToText :: Tx2DayRule -> String
 dayRuleToText value =

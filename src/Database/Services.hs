@@ -28,15 +28,16 @@ import Data.Time.Calendar
   )
 import Data.Time.Calendar.WeekDate (toWeekDate)
 import Database.Connection (withConnection)
-import Database.PostgreSQL.Simple
-  ( In (In),
-    Only (Only),
+import Database.SQLite.Simple
+  ( Only (Only),
     execute,
     executeMany,
     query,
     query_,
   )
-import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Database.SQLite.Simple.QQ (sql)
+import Database.SQLite.Simple.ToField (toField)
+import Database.SQLite.Simple.Time ()
 import App.Env (Application)
 import Types
 
@@ -79,12 +80,12 @@ getServicesForOrganisation organisationID = withConnection $ \connection ->
 hideServicesWithIDs :: [Int] -> Application ()
 hideServicesWithIDs serviceIDs = withConnection $ \connection ->
   void $
-    execute
+    executeMany
       connection
       [sql|
-        UPDATE services SET visible = FALSE WHERE service_id IN ?
+        UPDATE services SET visible = FALSE WHERE service_id = ?
       |]
-      (Only $ In serviceIDs)
+      (Only <$> serviceIDs)
 
 saveServices :: [Types.Service] -> Application ()
 saveServices services = withConnection $ \connection -> void $ do
@@ -106,19 +107,19 @@ saveServices services = withConnection $ \connection -> void $ do
     |]
     services
   let serviceIDs = serviceID <$> services
-  execute
+  executeMany
     connection
     [sql|
-      UPDATE services SET visible = TRUE WHERE service_id IN ?
+      UPDATE services SET visible = TRUE WHERE service_id = ?
     |]
-    (Only $ In serviceIDs)
+    (Only <$> serviceIDs)
 
 getServiceLocations :: Application [ServiceLocation]
 getServiceLocations = withConnection $ \connection ->
   query_
     connection
     [sql|
-      SELECT sl.service_id, l.location_id, l.name, l.coordinate
+      SELECT sl.service_id, l.location_id, l.name, l.latitude, l.longitude
       FROM service_locations sl
       JOIN locations l ON l.location_id = sl.location_id
     |]
@@ -128,7 +129,7 @@ getLocations = withConnection $ \connection ->
   query_
     connection
     [sql|
-      SELECT location_id, name, coordinate, created
+      SELECT location_id, name, latitude, longitude, created
       FROM locations
     |]
 
@@ -143,18 +144,18 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
     connection
     [sql|
       WITH constants(query_date) AS (
-          VALUES (date ?)
+          SELECT ? AS query_date
       ),
       day_of_week(derived_day_of_week) AS (
           SELECT
-              CASE
-                  WHEN extract(dow from query_date) = 0 THEN 'sunday'
-                  WHEN extract(dow from query_date) = 1 THEN 'monday'
-                  WHEN extract(dow from query_date) = 2 THEN 'tuesday'
-                  WHEN extract(dow from query_date) = 3 THEN 'wednesday'
-                  WHEN extract(dow from query_date) = 4 THEN 'thursday'
-                  WHEN extract(dow from query_date) = 5 THEN 'friday'
-                  WHEN extract(dow from query_date) = 6 THEN 'saturday'
+              CASE strftime('%w', query_date)
+                  WHEN '0' THEN 'sunday'
+                  WHEN '1' THEN 'monday'
+                  WHEN '2' THEN 'tuesday'
+                  WHEN '3' THEN 'wednesday'
+                  WHEN '4' THEN 'thursday'
+                  WHEN '5' THEN 'friday'
+                  WHEN '6' THEN 'saturday'
               END
           FROM constants
       ),
@@ -169,7 +170,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
           WHERE service_id = ?
       ),
       service_stop_points AS (
-          SELECT l.location_id, l.name, l.coordinate, l.stop_point_id
+          SELECT l.location_id, l.name, l.latitude, l.longitude, l.stop_point_id
           FROM service_locations sl
           JOIN locations l ON l.location_id = sl.location_id
           WHERE sl.service_id = ?
@@ -241,22 +242,8 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
             to_stop_point_ref,
             to_activity,
             to_timing_status,
-            CASE from_wait_time WHEN ''
-                THEN make_interval()
-                ELSE make_interval(
-                        hours := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[1], '') :: Int, 0),
-                        mins := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[2], '') :: Int, 0),
-                        secs := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(from_wait_time, 'PT', ''), 'H|M|S'))[3], '') :: Int, 0)
-                    )
-            END AS wait_time,
-            CASE run_time WHEN ''
-                THEN make_interval()
-                ELSE make_interval(
-                        hours := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[1], '') :: Int, 0),
-                        mins := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[2], '') :: Int, 0),
-                        secs := COALESCE(NULLIF((REGEXP_SPLIT_TO_ARRAY(replace(run_time, 'PT', ''), 'H|M|S'))[3], '') :: Int, 0)
-                    )
-            END AS run_time
+            from_wait_seconds AS wait_seconds,
+            run_seconds AS run_seconds
           FROM
               tx2_journey_pattern_timing_links
           WHERE document_id IN (
@@ -277,8 +264,8 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               jptl.to_stop_point_ref,
               t.to_activity,
               t.to_timing_status,
-              t.wait_time,
-              t.run_time
+              t.wait_seconds,
+              t.run_seconds
           FROM tx2_journey_pattern_sections jps
           JOIN relevant_journey_patterns rjp
             ON rjp.document_id = jps.document_id
@@ -302,8 +289,8 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               t.to_stop_point_ref,
               t.to_activity,
               t.to_timing_status,
-              t.wait_time,
-              t.run_time
+              t.wait_seconds,
+              t.run_seconds
           FROM tx2_vehicle_journey_timing_links vjtl
           JOIN relevant_vehicle_journeys vj
             ON vj.document_id = vjtl.document_id
@@ -324,8 +311,8 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               vjl.to_stop_point_ref,
               vjl.to_activity,
               vjl.to_timing_status,
-              vjl.wait_time,
-              vjl.run_time
+              vjl.wait_seconds,
+              vjl.run_seconds
           FROM vehicle_journey_links vjl
           UNION ALL
           SELECT
@@ -339,8 +326,8 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               pl.to_stop_point_ref,
               pl.to_activity,
               pl.to_timing_status,
-              pl.wait_time,
-              pl.run_time
+              pl.wait_seconds,
+              pl.run_seconds
           FROM relevant_vehicle_journeys vj
           JOIN pattern_links pl
             ON pl.document_id = vj.document_id
@@ -357,10 +344,10 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               ejl.document_id,
               ejl.vehicle_journey_code,
               ejl.global_sort_order,
-              LAG(ejl.run_time) OVER (
+              LAG(ejl.run_seconds) OVER (
                   PARTITION BY ejl.document_id, ejl.vehicle_journey_code
                   ORDER BY ejl.global_sort_order
-              ) + ejl.wait_time AS time
+              ) + ejl.wait_seconds AS seconds
           FROM effective_journey_links ejl
       ),
       journey_legs AS (
@@ -373,30 +360,28 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               ejl.from_activity,
               ejl.to_stop_point_ref,
               ejl.to_activity,
-              (
-                  (
-                      query_date +
+              datetime(
+                  query_date || ' ' || vj.departure_time,
+                  '+' || COALESCE(
+                      SUM(mjt.seconds) OVER (
+                          PARTITION BY vj.document_id, vj.vehicle_journey_code
+                          ORDER BY ejl.global_sort_order
+                      ),
+                      0
+                  ) || ' seconds'
+              ) AS departure,
+              datetime(
+                  query_date || ' ' || vj.departure_time,
+                  '+' || (
                       COALESCE(
-                          SUM(mjt.time) OVER (
+                          SUM(mjt.seconds) OVER (
                               PARTITION BY vj.document_id, vj.vehicle_journey_code
                               ORDER BY ejl.global_sort_order
-                          ) + vj.departure_time,
-                          vj.departure_time
-                      )
-                  ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
-              ) :: TIMESTAMP AS departure,
-              (
-                  (
-                      query_date +
-                      COALESCE(
-                          SUM(mjt.time) OVER (
-                              PARTITION BY vj.document_id, vj.vehicle_journey_code
-                              ORDER BY ejl.global_sort_order
-                          ) + vj.departure_time,
-                          vj.departure_time
-                      ) + ejl.run_time
-                  ) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
-              ) :: TIMESTAMP AS arrival,
+                          ),
+                          0
+                      ) + ejl.run_seconds
+                  ) || ' seconds'
+              ) AS arrival,
               NULLIF(vj.note, '') AS notes,
               d.source_modification_datetime
           FROM relevant_vehicle_journeys vj
@@ -425,7 +410,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
                     FROM tx2_vehicle_journey_week_of_month_rules vjwmr
                     WHERE vjwmr.document_id = vj.document_id
                       AND vjwmr.vehicle_journey_code = vj.vehicle_journey_code
-                      AND vjwmr.week_of_month_rule IN ?
+                      AND vjwmr.week_of_month_rule IN (?, ?, ?, ?)
                 )
             )
             AND (
@@ -474,7 +459,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
                     FROM tx2_vehicle_journey_bank_holiday_operation_rules vjbhor
                     WHERE vjbhor.document_id = vj.document_id
                       AND vjbhor.vehicle_journey_code = vj.vehicle_journey_code
-                      AND vjbhor.bank_holiday_rule IN ?
+                      AND vjbhor.bank_holiday_rule IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 )
             )
             AND NOT EXISTS (
@@ -496,7 +481,7 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
                 FROM tx2_vehicle_journey_bank_holiday_non_operation_rules vjbhnor
                 WHERE vjbhnor.document_id = vj.document_id
                   AND vjbhnor.vehicle_journey_code = vj.vehicle_journey_code
-                  AND vjbhnor.bank_holiday_rule IN ?
+                  AND vjbhnor.bank_holiday_rule IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             )
       ),
       candidate_departures AS (
@@ -504,11 +489,16 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               fl.location_id AS from_location_id,
               tl.location_id AS to_location_id,
               tl.name AS to_location_name,
-              tl.coordinate AS to_location_coordinate,
+              tl.latitude AS to_location_latitude,
+              tl.longitude AS to_location_longitude,
               jl.departure,
               jl.arrival,
               jl.notes,
-              jl.source_modification_datetime
+              jl.source_modification_datetime,
+              ROW_NUMBER() OVER (
+                  PARTITION BY fl.location_id, tl.location_id, jl.departure, jl.arrival, jl.notes
+                  ORDER BY jl.source_modification_datetime DESC
+              ) AS candidate_rank
           FROM journey_legs jl
           INNER JOIN service_stop_points fl
               ON fl.stop_point_id = jl.from_stop_point_ref
@@ -516,24 +506,37 @@ getLocationDeparturesV2 serviceID date = withConnection $ \connection ->
               ON tl.stop_point_id = jl.to_stop_point_ref
           WHERE fl.location_id <> tl.location_id
       )
-      SELECT DISTINCT ON (from_location_id, to_location_id, departure, arrival, notes)
+      SELECT
           from_location_id,
           to_location_id,
           to_location_name,
-          to_location_coordinate,
+          to_location_latitude,
+          to_location_longitude,
           departure,
           arrival,
           notes
       FROM candidate_departures
+      WHERE candidate_rank = 1
       ORDER BY
           from_location_id,
           to_location_id,
           departure,
           arrival,
-          notes,
-          source_modification_datetime DESC NULLS LAST
+          notes
     |]
-    (date, serviceID, serviceID, serviceID, In matchedWeekOfMonthRulesParam, isBankHoliday, In matchedBankHolidayRulesParam, In matchedBankHolidayRulesParam)
+    (departureQueryParams date serviceID matchedWeekOfMonthRulesParam isBankHoliday matchedBankHolidayRulesParam)
+
+departureQueryParams date serviceID matchedWeekOfMonthRules isBankHoliday matchedBankHolidayRules =
+  [toField date, toField serviceID, toField serviceID, toField serviceID]
+    <> fmap toField (padTo 4 "__no_matching_week_of_month__" matchedWeekOfMonthRules)
+    <> [toField isBankHoliday]
+    <> fmap toField bankHolidayRules
+    <> fmap toField bankHolidayRules
+  where
+    bankHolidayRules = padTo 12 "__no_matching_bank_holiday__" matchedBankHolidayRules
+
+padTo :: Int -> a -> [a] -> [a]
+padTo size filler values = take size (values <> repeat filler)
 
 getServiceHasScheduledDeparturesV2 :: Int -> Application Bool
 getServiceHasScheduledDeparturesV2 serviceID = withConnection $ \connection -> do
@@ -558,6 +561,20 @@ getServiceHasScheduledDeparturesV2 serviceID = withConnection $ \connection -> d
             FROM tx2_service_mappings sm
             JOIN tx2_services s
               ON s.service_code = sm.service_code
+            JOIN service_stop_points sp_from ON TRUE
+            JOIN service_stop_points sp_to
+              ON sp_to.stop_point_id <> sp_from.stop_point_id
+            JOIN tx2_journey_pattern_timing_links jptl
+              ON jptl.document_id = s.document_id
+             AND jptl.from_stop_point_ref = sp_from.stop_point_id
+             AND jptl.to_stop_point_ref = sp_to.stop_point_id
+            JOIN tx2_journey_pattern_sections jps
+              ON jps.document_id = jptl.document_id
+             AND jps.section_ref = jptl.journey_pattern_section_ref
+            JOIN tx2_journey_patterns jp
+              ON jp.document_id = jps.document_id
+             AND jp.journey_pattern_id = jps.journey_pattern_id
+             AND jp.service_code = s.service_code
             WHERE sm.service_id = ?
               AND s.mode = 'ferry'
             LIMIT 1
@@ -609,6 +626,22 @@ getServicesWithScheduledDeparturesV2 = withConnection $ \connection ->
             FROM tx2_service_mappings sm
             JOIN tx2_services s
               ON s.service_code = sm.service_code
+            JOIN service_stop_points sp_from
+              ON sp_from.service_id = sm.service_id
+            JOIN service_stop_points sp_to
+              ON sp_to.service_id = sm.service_id
+             AND sp_to.stop_point_id <> sp_from.stop_point_id
+            JOIN tx2_journey_pattern_timing_links jptl
+              ON jptl.document_id = s.document_id
+             AND jptl.from_stop_point_ref = sp_from.stop_point_id
+             AND jptl.to_stop_point_ref = sp_to.stop_point_id
+            JOIN tx2_journey_pattern_sections jps
+              ON jps.document_id = jptl.document_id
+             AND jps.section_ref = jptl.journey_pattern_section_ref
+            JOIN tx2_journey_patterns jp
+              ON jp.document_id = jps.document_id
+             AND jp.journey_pattern_id = jps.journey_pattern_id
+             AND jp.service_code = s.service_code
             WHERE s.mode = 'ferry'
         ),
         service_stop_points AS (

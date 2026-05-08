@@ -14,7 +14,7 @@ import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Time.Calendar (Day)
 import Data.Time.LocalTime (TimeOfDay (..))
 import Database.Connection (withConnection)
-import Database.PostgreSQL.Simple
+import Database.SQLite.Simple
   ( Connection,
     Only (Only),
     execute,
@@ -22,7 +22,7 @@ import Database.PostgreSQL.Simple
     query,
     withTransaction,
   )
-import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Database.SQLite.Simple.QQ (sql)
 import Types (LocationRailDeparture)
 import Types.Rail
 import Utility (splitOn)
@@ -85,26 +85,20 @@ getLocationRailDepartures date = withConnection $ \connection ->
   query
     connection
     [sql|
-      WITH constants(query_date) AS (
-          VALUES (date ?)
-      )
       SELECT
         location_id,
         departure_crs,
         departure_name,
         destination_crs,
         destination_name,
-        (
-          (query_date + scheduled_departure_time) AT TIME ZONE 'Europe/London' AT TIME ZONE 'UTC'
-        ) :: TIMESTAMP AS scheduled_departure_time,
+        (? || ' ' || scheduled_departure_time) AS scheduled_departure_time,
         estimated_departure_time,
         cancelled,
         platform
       FROM
-        rail_departures,
-        constants
+        rail_departures
       WHERE
-        (current_timestamp - created) < '5 minutes'
+        datetime(created) > datetime('now', '-5 minutes')
     |]
     (Only date)
 

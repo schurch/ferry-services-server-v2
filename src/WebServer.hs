@@ -31,7 +31,6 @@ import qualified Crypto.Hash as Crypto
 import Data.Proxy (Proxy (Proxy))
 import Data.Scientific
   ( Scientific (..),
-    fromFloatDigits,
     toRealFloat,
   )
 import qualified Data.Set as S
@@ -44,7 +43,6 @@ import Data.Time
     UTCTime (UTCTime),
     diffUTCTime,
     getCurrentTime,
-    localTimeToUTC,
     utctDay,
     defaultTimeLocale,
     formatTime,
@@ -52,11 +50,6 @@ import Data.Time
 import Data.Time.Calendar (Day)
 import Data.UUID (UUID, fromText)
 import qualified Database as DB
-import Database.Postgis
-  ( Geometry (GeoPoint),
-    Point (Point),
-    Position (Position),
-  )
 import qualified Network.Wai
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.AddHeaders (addHeaders)
@@ -87,7 +80,7 @@ import App.Logger
   )
 import Types
 import Types.Api
-import Utility (stringToDay)
+import Utility (convertScottishLocalTimeToUTC, stringToDay)
 import qualified Push
 import OfflineSnapshot
   ( OfflineSnapshot,
@@ -814,13 +807,11 @@ createLocationWeatherLookup = do
     capitalized (x : xs) = Char.toUpper x : map Char.toLower xs
     capitalized [] = []
 
-getLatitude :: Geometry -> Scientific
-getLatitude (GeoPoint _ (Point (Position latitude _ _ _))) = fromFloatDigits latitude
-getLatitude _ = error "Expected point"
+getLatitude :: Coordinate -> Scientific
+getLatitude = coordinateLatitude
 
-getLongitude :: Geometry -> Scientific
-getLongitude (GeoPoint _ (Point (Position _ longitude _ _))) = fromFloatDigits longitude
-getLongitude _ = error "Expected point"
+getLongitude :: Coordinate -> Scientific
+getLongitude = coordinateLongitude
 
 vesselTimeFilter :: UTCTime -> UTCTime -> Bool
 vesselTimeFilter currentTime lastReceived =
@@ -828,4 +819,4 @@ vesselTimeFilter currentTime lastReceived =
    in diff < 1800
 
 convertLocalTimeToUTC :: LocalTime -> UTCTime
-convertLocalTimeToUTC = localTimeToUTC (read "UTC")
+convertLocalTimeToUTC = convertScottishLocalTimeToUTC

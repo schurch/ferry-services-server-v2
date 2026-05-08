@@ -6,6 +6,7 @@ import Control.Monad.Reader
   ( ReaderT (runReaderT),
     asks,
   )
+import Control.Monad.IO.Class (liftIO)
 import App.Database (createConnectionPool)
 import App.Env (Env (Env))
 import qualified App.Env
@@ -25,8 +26,9 @@ import Data.Pool
   ( Pool,
     withResource,
   )
+import Data.Time.Clock (getCurrentTime)
 import qualified Database as DB
-import Database.PostgreSQL.Simple (Connection)
+import Database.SQLite.Simple (Connection, execute_)
 import Network.HTTP.Types.Header (Header, hContentType)
 import Network.HTTP.Types.Method (methodGet, methodPost)
 import Network.Wai (Application)
@@ -59,7 +61,6 @@ import Test.Hspec.Wai
 import Types
 import Types.Api
 import Types.Weather
-import VesselFetcher
 import WebServer
 
 spec :: Spec
@@ -247,6 +248,7 @@ setupIntegrationTests = do
   logger <- create StdOut
   connectionString <- getDbConnectionString
   connectionPool <- createConnectionPool connectionString
+  seedIntegrationBaseline connectionPool
   let env = Env logger connectionPool
   runReaderT (runScraper >> seedBrodickWeather >> fetchCaledonianIslesVessel) env
   where
@@ -266,7 +268,38 @@ setupIntegrationTests = do
         )
 
     fetchCaledonianIslesVessel :: App.Env.Application ()
-    fetchCaledonianIslesVessel = fetchVessels [(calMacOrganisationID, [caledonianIslesMMSI])]
+    fetchCaledonianIslesVessel = do
+      time <- liftIO getCurrentTime
+      DB.saveVessel
+        Vessel
+          { vesselMmsi = caledonianIslesMMSI,
+            vesselName = "Caledonian Isles",
+            vesselSpeed = Nothing,
+            vesselCourse = Nothing,
+            vesselCoordinate = Coordinate 55.640373 (-4.8239965),
+            vesselLastReceived = time,
+            vesselUpdated = time,
+            vesselOrganisationID = calMacOrganisationID
+          }
+
+seedIntegrationBaseline :: Pool Connection -> IO ()
+seedIntegrationBaseline connectionPool =
+  withResource connectionPool $ \connection -> do
+    execute_
+      connection
+      "INSERT INTO organisations (organisation_id, name) VALUES (1, 'CalMac') ON CONFLICT (organisation_id) DO NOTHING"
+    execute_
+      connection
+      "INSERT INTO organisations (organisation_id, name) VALUES (2, 'NorthLink') ON CONFLICT (organisation_id) DO NOTHING"
+    execute_
+      connection
+      "INSERT INTO services (service_id, area, route, status, organisation_id, updated) VALUES (5, 'Arran', 'Ardrossan - Brodick', -99, 1, CURRENT_TIMESTAMP) ON CONFLICT (service_id) DO NOTHING"
+    execute_
+      connection
+      "INSERT INTO locations (location_id, name, latitude, longitude) VALUES (4, 'Brodick', 55.575, -5.138) ON CONFLICT (location_id) DO NOTHING"
+    execute_
+      connection
+      "INSERT INTO service_locations (service_id, location_id) VALUES (5, 4) ON CONFLICT DO NOTHING"
 
 calMacOrganisationID :: Int
 calMacOrganisationID = 1

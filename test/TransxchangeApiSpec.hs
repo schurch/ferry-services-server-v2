@@ -23,14 +23,14 @@ import Data.Pool
   )
 import Data.Time.Calendar (Day, fromGregorian)
 import Data.Time.Clock (UTCTime)
-import Database.PostgreSQL.Simple
+import Database.SQLite.Simple
   ( Connection,
-    In (In),
     Only (Only),
     execute,
+    executeMany,
     execute_,
   )
-import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Database.SQLite.Simple.QQ (sql)
 import Network.Wai (Application, queryString, rawPathInfo, rawQueryString, requestMethod)
 import Network.Wai.Test (SResponse (simpleBody), defaultRequest, request, runSession, setPath)
 import Network.Wai.Middleware.RequestLogger (mkRequestLogger)
@@ -101,6 +101,21 @@ spec = do
           (scenarioServiceId $ tx2ScenarioSeed multiFileSameServiceRealScenario)
           (fromGregorian 2026 3 15)
       assertCalmacCm21BoundaryDepartures saturdayResponse sundayResponse
+
+    it "does not advertise scheduled departures when a mapped service code has no legs between the service locations" $ do
+      context <- setupTx2ApiTests
+      resetTx2ApiState context mappedServiceWithNoVisibleLegScenario
+      seedScenarioService context mappedServiceWithNoVisibleLegScenario
+      ingestScenarioFixture context mappedServiceWithNoVisibleLegScenario
+      detailResponse <- getServiceResponseForDate context mappedServiceWithNoVisibleLegScenario
+      listResponse <- getServicesResponse context
+      let listedService =
+            fromMaybe
+              (error "Expected service in list response")
+              (find ((== scenarioServiceId (tx2ScenarioSeed mappedServiceWithNoVisibleLegScenario)) . serviceResponseServiceID) listResponse)
+      serviceResponseScheduledDeparturesAvailable detailResponse `shouldBe` Just False
+      serviceResponseScheduledDeparturesAvailable listedService `shouldBe` Just False
+      scheduledDepartureCounts detailResponse `shouldBe` [0, 0]
 
 data TestContext = TestContext
   { testContextApp :: Application,
@@ -178,10 +193,10 @@ resetTx2ApiState context scenario =
         "DELETE FROM service_locations WHERE service_id BETWEEN 9100 AND 9799"
         ()
     void $
-      execute
+      executeMany
         connection
-        "DELETE FROM service_locations WHERE location_id IN (SELECT location_id FROM locations WHERE stop_point_id IN ?)"
-        (Only $ In $ scenarioStopPointId <$> scenarioLocations (tx2ScenarioSeed scenario))
+        "DELETE FROM service_locations WHERE location_id IN (SELECT location_id FROM locations WHERE stop_point_id = ?)"
+        (Only <$> (scenarioStopPointId <$> scenarioLocations (tx2ScenarioSeed scenario)))
     void $
       execute
         connection
@@ -193,10 +208,10 @@ resetTx2ApiState context scenario =
         "DELETE FROM locations WHERE location_id BETWEEN 9100 AND 9799"
         ()
     void $
-      execute
+      executeMany
         connection
-        "DELETE FROM locations WHERE stop_point_id IN ?"
-        (Only $ In $ scenarioStopPointId <$> scenarioLocations (tx2ScenarioSeed scenario))
+        "DELETE FROM locations WHERE stop_point_id = ?"
+        (Only <$> (scenarioStopPointId <$> scenarioLocations (tx2ScenarioSeed scenario)))
 
 seedScenarioService :: TestContext -> Tx2ApiScenario -> IO ()
 seedScenarioService context scenario =
@@ -215,7 +230,7 @@ seedScenarioService context scenario =
         connection
         [sql|
           INSERT INTO services (service_id, area, route, organisation_id, status, updated)
-          VALUES (?, ?, ?, ?, ?, now())
+          VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         |]
         (scenarioServiceId seed, scenarioArea seed, scenarioRoute seed, scenarioOrganisationId seed, Unknown)
     mapM_ (insertScenarioLocation connection) (scenarioLocations seed)
@@ -259,6 +274,22 @@ getServiceResponseForDay context serviceId queryDate = do
     Just (Just serviceResponse) -> pure serviceResponse
     Just Nothing -> error "Expected API service response but got null"
     Nothing -> error ("Failed to decode service response JSON: " <> show body)
+
+getServicesResponse :: TestContext -> IO [ServiceResponse]
+getServicesResponse context = do
+  response <-
+    runSession
+      ( request
+          (setPath defaultRequest "/api/services")
+            { rawPathInfo = "/api/services",
+              requestMethod = "GET"
+            }
+      )
+      (testContextApp context)
+  let body = simpleBody response
+  case decode body of
+    Just services -> pure services
+    Nothing -> error ("Failed to decode services response JSON: " <> show body)
 
 assertBasicRealPentlandDepartures :: ServiceResponse -> Expectation
 assertBasicRealPentlandDepartures response = do
@@ -339,8 +370,8 @@ insertScenarioLocation connection ScenarioLocation {..} =
     execute
       connection
       [sql|
-        INSERT INTO locations (location_id, name, coordinate, stop_point_id)
-        VALUES (?, ?, ST_SetSRID(ST_Point(?, ?), 4326), ?)
+        INSERT INTO locations (location_id, name, latitude, longitude, stop_point_id)
+        VALUES (?, ?, ?, ?, ?)
       |]
       (scenarioLocationId, scenarioLocationName, scenarioLatitude, scenarioLongitude, scenarioStopPointId)
 
@@ -468,5 +499,29 @@ multiFileSameServiceRealScenario =
         [ "Uses two real consecutive CalMac CM21 files for the same service code in one fixture directory",
           "Queries adjacent dates on either side of the file-boundary transition",
           "Asserts the API returns the Saturday timetable from the earlier file and the Sunday timetable from the later file"
+        ]
+    }
+
+mappedServiceWithNoVisibleLegScenario :: Tx2ApiScenario
+mappedServiceWithNoVisibleLegScenario =
+  Tx2ApiScenario
+    { tx2ScenarioName = "08-mapped-service-with-no-visible-leg",
+      tx2ScenarioFixtureDir = "test/fixtures/transxchange-api/01-basic-real",
+      tx2ScenarioQueryDate = fromGregorian 2026 3 16,
+      tx2ScenarioSeed =
+        ScenarioSeed
+          { scenarioServiceId = 9600,
+            scenarioArea = "PENTLAND FIRTH",
+            scenarioRoute = "Mapped service with unmatched stops",
+            scenarioOrganisationId = 999,
+            scenarioServiceCode = "PENT_PF1",
+            scenarioLocations =
+              [ ScenarioLocation 9601 "Unmatched Origin" "9300UNMATCHED1" 58.0 (-3.0),
+                ScenarioLocation 9602 "Unmatched Destination" "9300UNMATCHED2" 58.1 (-3.1)
+              ]
+          },
+      tx2ScenarioExpectationSummary =
+        [ "Uses a real mapped ferry service code but app locations that do not appear in that service's timing links",
+          "Asserts schedule availability follows visible app legs, not mapping presence alone"
         ]
     }

@@ -15,28 +15,24 @@ import Data.Aeson
     withScientific,
   )
 import Control.Lens ((&), (?~))
-import qualified Data.ByteString.Lazy as B
 import Data.Maybe (fromMaybe)
 import qualified Data.OpenApi as OpenApi
 import Data.Proxy
 import Data.Scientific
   ( Scientific,
+    fromFloatDigits,
     toBoundedInteger,
+    toRealFloat,
   )
 import Data.Time (LocalTime, TimeOfDay, UTCTime)
+import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import Data.Typeable (Typeable, typeRep)
 import Data.UUID (UUID)
-import Database.Postgis
-  ( Geometry,
-    readGeometry,
-    writeGeometry,
-  )
-import Database.PostgreSQL.Simple
-  ( FromRow,
-    ToRow,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField (..))
-import Database.PostgreSQL.Simple.ToField (ToField (..))
+import qualified Data.UUID as UUID
+import Database.SQLite.Simple.FromField (Field, FieldParser, FromField (..), ResultError (ConversionFailed), returnError)
+import Database.SQLite.Simple.FromRow (FromRow (..), field)
+import Database.SQLite.Simple.ToField (ToField (..))
+import Database.SQLite.Simple.ToRow (ToRow)
 import GHC.Generics (Generic)
 -- General
 data ServiceStatus = Normal | Disrupted | Cancelled | Unknown deriving (Show, Eq)
@@ -70,7 +66,7 @@ instance ToField ServiceStatus where
   toField = toField . fromEnum
 
 instance FromField ServiceStatus where
-  fromField field byteString = toEnum <$> fromField field byteString
+  fromField field = toEnum <$> fromField field
 
 data DeviceType = IOS | Android deriving (Eq, Show, Generic, Bounded, Enum)
 
@@ -90,16 +86,52 @@ instance ToField DeviceType where
   toField = toField . fromEnum
 
 instance FromField DeviceType where
-  fromField field byteString = toEnum <$> fromField field byteString
+  fromField field = toEnum <$> fromField field
+
+instance ToField UUID where
+  toField = toField . UUID.toString
+
+instance FromField UUID where
+  fromField field = do
+    value <- fromField field
+    case UUID.fromString value of
+      Just uuid -> pure uuid
+      Nothing -> returnError ConversionFailed field "Invalid UUID"
+
+instance ToField Scientific where
+  toField = toField . (toRealFloat :: Scientific -> Double)
+
+instance FromField Scientific where
+  fromField field = fromFloatDigits <$> (fromField :: FieldParser Double) field
+
+instance ToField TimeOfDay where
+  toField = toField . formatTime defaultTimeLocale "%H:%M:%S"
+
+instance FromField TimeOfDay where
+  fromField field = do
+    value <- fromField field
+    parseTimeValue field "%H:%M:%S" value
+
+instance ToField LocalTime where
+  toField = toField . formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S"
+
+instance FromField LocalTime where
+  fromField field = do
+    value <- fromField field
+    parseTimeValue field "%Y-%m-%d %H:%M:%S" value
+
+parseTimeValue field format value =
+  maybe
+    (returnError ConversionFailed field ("Could not parse time: " <> value))
+    pure
+    (parseTimeM True defaultTimeLocale format value)
 
 -- Database Types
-instance ToField Geometry where
-  toField = toField . writeGeometry
-
-instance FromField Geometry where
-  fromField f m = case m of
-    Just bs -> return $ readGeometry . B.fromStrict $ bs
-    Nothing -> error "Invalid Field"
+data Coordinate = Coordinate
+  { coordinateLatitude :: Scientific,
+    coordinateLongitude :: Scientific
+  }
+  deriving (Generic, Show, Eq)
 
 data Service = Service
   { serviceID :: Int,
@@ -128,17 +160,33 @@ data ServiceLocation = ServiceLocation
   { serviceLocationServiceID :: Int,
     serviceLocationLocationID :: Int,
     serviceLocationName :: String,
-    serviceLocationCoordinate :: Geometry
+    serviceLocationCoordinate :: Coordinate
   }
-  deriving (Generic, Show, ToRow, FromRow)
+  deriving (Generic, Show)
+
+instance FromRow ServiceLocation where
+  fromRow =
+    ServiceLocation
+      <$> field
+      <*> field
+      <*> field
+      <*> (Coordinate <$> field <*> field)
 
 data Location = Location
   { locationLocationID :: Int,
     locationName :: String,
-    locationCoordinate :: Geometry,
+    locationCoordinate :: Coordinate,
     locationCreated :: UTCTime
   }
-  deriving (Generic, Show, ToRow, FromRow)
+  deriving (Generic, Show)
+
+instance FromRow Location where
+  fromRow =
+    Location
+      <$> field
+      <*> field
+      <*> (Coordinate <$> field <*> field)
+      <*> field
 
 data LocationWeather = LocationWeather
   { locationWeatherLocationID :: Int,
@@ -157,12 +205,24 @@ data Vessel = Vessel
     vesselName :: String,
     vesselSpeed :: Maybe Scientific,
     vesselCourse :: Maybe Scientific,
-    vesselCoordinate :: Geometry,
+    vesselCoordinate :: Coordinate,
     vesselLastReceived :: UTCTime,
     vesselUpdated :: UTCTime,
     vesselOrganisationID :: Int
   }
-  deriving (Generic, Show, ToRow, FromRow)
+  deriving (Generic, Show)
+
+instance FromRow Vessel where
+  fromRow =
+    Vessel
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> (Coordinate <$> field <*> field)
+      <*> field
+      <*> field
+      <*> field
 
 data ServiceVessel = ServiceVessel
   { serviceVesselSeviceID :: Int,
@@ -170,23 +230,47 @@ data ServiceVessel = ServiceVessel
     serviceVesselName :: String,
     serviceVesselSpeed :: Maybe Scientific,
     serviceVesselCourse :: Maybe Scientific,
-    serviceVesselCoordinate :: Geometry,
+    serviceVesselCoordinate :: Coordinate,
     serviceVesselLastReceived :: UTCTime,
     serviceVesselUpdated :: UTCTime,
     serviceVesselOrganisationID :: Int
   }
-  deriving (Generic, Show, ToRow, FromRow)
+  deriving (Generic, Show)
+
+instance FromRow ServiceVessel where
+  fromRow =
+    ServiceVessel
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> (Coordinate <$> field <*> field)
+      <*> field
+      <*> field
+      <*> field
 
 data LocationDeparture = LocationDeparture
   { locationDepartureFromLocationID :: Int,
     locationDepartureToLocationID :: Int,
     locationDepartureToLocationName :: String,
-    locationDepartureToLocationCoordinate :: Geometry,
+    locationDepartureToLocationCoordinate :: Coordinate,
     locationDepartureDepartue :: LocalTime,
     locationDepartureArrival :: LocalTime,
     locationDepartureNotes :: Maybe String
   }
-  deriving (Generic, Show, ToRow, FromRow)
+  deriving (Generic, Show)
+
+instance FromRow LocationDeparture where
+  fromRow =
+    LocationDeparture
+      <$> field
+      <*> field
+      <*> field
+      <*> (Coordinate <$> field <*> field)
+      <*> field
+      <*> field
+      <*> field
 
 data ServiceOrganisation = ServiceOrganisation
   { serviceOrganisationServiceID :: Int,

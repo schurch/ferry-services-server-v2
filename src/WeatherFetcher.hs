@@ -5,59 +5,67 @@ module WeatherFetcher where
 import Control.Concurrent (threadDelay)
 import Control.Monad (forM_)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (asks)
 import Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Lazy.Char8 as C
-import Data.Maybe (fromJust)
-import Data.Pool (Pool, withResource)
 import qualified Database as DB
 import App.Env (Application)
-import Database.Postgis
-  ( Geometry (GeoPoint),
-    Point (Point),
-    Position (Position),
-  )
-import Database.PostgreSQL.Simple (Connection)
 import Network.HTTP.Simple
   ( getResponseBody,
-    httpBS,
+    getResponseStatusCode,
     parseRequest,
-    setRequestHeaders,
+    httpBS,
   )
-import System.Environment (getEnv)
-import App.Logger (logDebugM)
+import System.Environment (lookupEnv)
+import App.Logger (logDebugM, logErrorM)
 import System.Timeout (timeout)
 import Types
 import Types.Weather
 
 fetchWeather :: Application ()
 fetchWeather = do
-  locations <- DB.getLocations
-  fetchWeatherForLocations locations
+  appID <- liftIO $ lookupEnv "OPENWEATHERMAP_APPID"
+  case appID of
+    Nothing -> logErrorM "OPENWEATHERMAP_APPID is not set; skipping weather fetch"
+    Just "" -> logErrorM "OPENWEATHERMAP_APPID is empty; skipping weather fetch"
+    Just configuredAppID -> do
+      locations <- DB.getLocations
+      fetchWeatherForLocations configuredAppID locations
 
-fetchWeatherForLocations :: [Location] -> Application ()
-fetchWeatherForLocations locations = do
+fetchWeatherForLocations :: String -> [Location] -> Application ()
+fetchWeatherForLocations appID locations = do
   forM_ locations $ \location -> do
-    weather <- fetchWeatherForLocation location
-    DB.insertLocationWeather (locationLocationID location) weather
+    maybeWeather <- fetchWeatherForLocation appID location
+    case maybeWeather of
+      Nothing -> return ()
+      Just weather -> DB.insertLocationWeather (locationLocationID location) weather
     liftIO $ threadDelay (2 * 1000 * 1000) -- 2 second delay
 
-fetchWeatherForLocation :: Location -> Application WeatherFetcherResult
-fetchWeatherForLocation (Location locationID name (GeoPoint _ (Point (Position latitude longitude _ _))) created) = do
-  appID <- liftIO $ getEnv "OPENWEATHERMAP_APPID"
+fetchWeatherForLocation :: String -> Location -> Application (Maybe WeatherFetcherResult)
+fetchWeatherForLocation appID (Location locationID name (Coordinate latitude longitude) _created) = do
   let url = "http://api.openweathermap.org/data/2.5/weather?lat=" <> show latitude <> "&lon=" <> show longitude <> "&APPID=" <> appID
   logDebugM $ "Fetching " <> name
   request <- parseRequest url
-  responseBody <-
+  responseResult <-
     liftIO $
-      checkResponseBody
-        <$> timeout (20 * 1000 * 1000) (C.fromStrict . getResponseBody <$> httpBS request)
-  let result = responseBody >>= eitherDecode
-  case result of
-    Left errorMessage -> error errorMessage
-    Right weather -> return weather
-fetchWeatherForLocation _ = error "Expected point"
+      checkResponse
+        <$> timeout (20 * 1000 * 1000) (httpBS request)
+  case responseResult of
+    Left errorMessage -> do
+      logErrorM $ "Skipping weather for " <> name <> " (" <> show locationID <> "): " <> errorMessage
+      return Nothing
+    Right response -> do
+      let statusCode = getResponseStatusCode response
+          responseBody = C.fromStrict $ getResponseBody response
+      if statusCode < 200 || statusCode >= 300
+        then do
+          logErrorM $ "Skipping weather for " <> name <> " (" <> show locationID <> "): OpenWeather returned HTTP " <> show statusCode <> " - " <> C.unpack (C.take 500 responseBody)
+          return Nothing
+        else case eitherDecode responseBody of
+          Left errorMessage -> do
+            logErrorM $ "Skipping weather for " <> name <> " (" <> show locationID <> "): could not parse OpenWeather response - " <> errorMessage <> " - " <> C.unpack (C.take 500 responseBody)
+            return Nothing
+          Right weather -> return $ Just weather
 
-checkResponseBody :: Maybe a -> Either String a
-checkResponseBody =
+checkResponse :: Maybe a -> Either String a
+checkResponse =
   maybe (Left "Timeout while waiting for weather response") Right

@@ -83,17 +83,6 @@ packages:
       size: 349
   original:
     hackage: hspec-wai-json-0.11.0
-- completed:
-    name: haskell-postgis
-    pantry-tree:
-      sha256: 4241bdc80dab652befa68a15adedfdf45bf5551ffcb594da259034eeda429281
-      size: 823
-    sha256: 279cb9e318abf1dea9ae34da207764466ae8624ff27d0ea9c89d920009024469
-    size: 9404
-    url: https://github.com/transportapi/haskell-postgis/archive/fc0cbcdb49b35d18cfca01c1b8a9bb501e053377.tar.gz
-    version: 0.2.0
-  original:
-    url: https://github.com/transportapi/haskell-postgis/archive/fc0cbcdb49b35d18cfca01c1b8a9bb501e053377.tar.gz
 snapshots:
 - completed:
     sha256: abc790b571e0c70e929db74b329e3c18d7e76a6e173e8bdf94f1ba20770d4c24

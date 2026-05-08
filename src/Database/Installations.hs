@@ -19,12 +19,12 @@ import Data.Maybe (listToMaybe)
 import Data.Time.Clock (UTCTime)
 import Data.UUID (UUID)
 import Database.Connection (withConnection)
-import Database.PostgreSQL.Simple
+import Database.SQLite.Simple
   ( Only (Only),
     execute,
     query,
   )
-import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Database.SQLite.Simple.QQ (sql)
 import qualified Types
 import Types
   ( DeviceType,

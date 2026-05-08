@@ -9,9 +9,8 @@ jobs:
       DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
     steps:
       - uses: actions/checkout@v2
-      - uses: haskell/actions/setup@v1
+      - uses: haskell/actions/setup@v2
         with:
-          ghc-version: '8.10.6' # Exact version of ghc to use
           stack-version: 'latest'
       - name: Cache stack data
         uses: actions/cache@v3
@@ -49,15 +48,15 @@ jobs:
           source: "scripts/deploy-prod.sh"
           target: "~/ferry-services-server"
           strip_components: 1
-      - name: Copy migrations to server
+      - name: Copy SQLite maintenance script to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
-          source: "migrations/*"
-          target: "~/ferry-services-server/migrations"
+          source: "scripts/sqlite-maintenance.sh"
+          target: "~/ferry-services-server"
           strip_components: 1
       - name: Deploy containers on server
         uses: appleboy/ssh-action@v1.0.3

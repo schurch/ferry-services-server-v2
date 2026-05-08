@@ -9,10 +9,9 @@ import Control.Monad (forM_, forever)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (asks)
 import Data.Aeson (eitherDecode)
-import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char (toLower, toUpper)
-import Data.Pool (Pool, withResource)
+import Data.Scientific (fromFloatDigits)
 import Data.Time
   ( UTCTime,
     defaultTimeLocale,
@@ -20,15 +19,8 @@ import Data.Time
     parseTimeOrError,
   )
 import Data.Time.Clock (UTCTime (..), getCurrentTime)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Database as DB
 import App.Env (Application)
-import Database.Postgis
-  ( Geometry (GeoPoint),
-    Point (Point),
-    Position (Position),
-  )
-import Database.PostgreSQL.Simple (Connection)
 import Network.HTTP.Simple
   ( getResponseBody,
     httpBS,
@@ -38,12 +30,9 @@ import Network.HTTP.Simple
 import Network.HTTP.Types.Header
   ( hAccept,
     hAcceptLanguage,
-    hCookie,
-    hHost,
     hReferer,
     hUserAgent,
   )
-import System.Environment (getEnv)
 import App.Logger (logDebugM, logErrorM)
 import System.Timeout (timeout)
 import Types
@@ -99,7 +88,7 @@ fetchVessel organisationID mmsi = do
               vesselName = capitaliseWords ajaxVesselShipname,
               vesselSpeed = read <$> ajaxVesselSpeed,
               vesselCourse = read <$> ajaxVesselCourse,
-              vesselCoordinate = GeoPoint (Just 4326) (Point (Position latitude longitude Nothing Nothing)),
+              vesselCoordinate = Coordinate (fromFloatDigits latitude) (fromFloatDigits longitude),
               vesselLastReceived = toUTC ajaxVesselTimestamp,
               vesselUpdated = time,
               vesselOrganisationID = organisationID

@@ -25,7 +25,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (ask, asks, runReaderT)
 import qualified Data.ByteString.Char8 as C
 import Data.Pool (withResource)
-import Database.PostgreSQL.Simple (withTransaction)
+import Database.SQLite.Simple (withTransaction)
 import Network.Socket
   ( AddrInfo
       ( addrAddress,

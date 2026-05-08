@@ -14,16 +14,10 @@ require_command() {
 install_macos() {
   require_command brew
 
-  brew install libpq postgresql@16 postgis libffi pkg-config zlib bzip2
-
-  if command -v brew >/dev/null 2>&1; then
-    brew services start postgresql@16
-  fi
+  brew install sqlite libffi pkg-config zlib bzip2
 
   cat <<'EOF'
 macOS dependencies installed.
-If PostgreSQL tools are not on your PATH, add:
-  export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"
 EOF
 }
 
@@ -32,11 +26,10 @@ install_debian() {
   require_command apt-get
 
   sudo apt-get update
-  sudo apt-get install -y build-essential curl libffi-dev libffi8 libgmp-dev libgmp10 libncurses-dev pkg-config zlib1g-dev libbz2-dev postgresql postgresql-contrib postgis libpq-dev
+  sudo apt-get install -y build-essential curl libffi-dev libffi8 libgmp-dev libgmp10 libncurses-dev pkg-config zlib1g-dev libbz2-dev sqlite3 libsqlite3-dev
 
   cat <<'EOF'
 Debian/Ubuntu dependencies installed.
-If PostgreSQL is not running yet, start it with your service manager.
 EOF
 }
 

@@ -1,3 +1,0 @@
-UPDATE locations
-SET coordinate = ST_SetSRID(ST_Point(56.72269921964747, -5.243313948783956), 4326)
-WHERE location_id = 101;

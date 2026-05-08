@@ -10,7 +10,7 @@ SDK_PATH := $(shell command -v xcrun >/dev/null 2>&1 && xcrun --show-sdk-path 2>
 STACK_ENV_PREFIX :=
 
 ifneq ($(SDK_PATH),)
-STACK_ENV_PREFIX = C_INCLUDE_PATH="$(SDK_PATH)/usr/include/ffi"
+STACK_ENV_PREFIX += C_INCLUDE_PATH="$(SDK_PATH)/usr/include/ffi"
 endif
 
 default: server
@@ -32,20 +32,18 @@ build-release:
 	echo ${DOCKER_HUB_PASSWORD} | docker login -u ${DOCKER_HUB_USERNAME} --password-stdin
 	stack docker pull
 	stack --docker build
-	docker build -f docker/server.Dockerfile -t stefanchurch/ferry-services-server:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-server-exe/ferry-services-server-exe" .
-	docker build -f docker/scraper.Dockerfile -t stefanchurch/ferry-services-scraper:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-scraper-exe/ferry-services-scraper-exe" .
-	docker build -f docker/timetable-document-scraper.Dockerfile -t stefanchurch/ferry-services-timetable-document-scraper:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-timetable-document-scraper-exe/ferry-services-timetable-document-scraper-exe" .
-	docker build -f docker/weather-fetcher.Dockerfile -t stefanchurch/ferry-services-weather-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-weather-fetcher-exe/ferry-services-weather-fetcher-exe" .
-	docker build -f docker/vessel-fetcher.Dockerfile -t stefanchurch/ferry-services-vessel-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-vessel-fetcher-exe/ferry-services-vessel-fetcher-exe" .
-	docker build -f docker/transxchange-ingester.Dockerfile -t stefanchurch/ferry-services-transxchange-ingester:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-transxchange-ingester-v2-exe/ferry-services-transxchange-ingester-v2-exe" .
-	docker build -f docker/rail-departure-fetcher.Dockerfile -t stefanchurch/ferry-services-rail-departure-fetcher:latest --build-arg BIN_DIR="$(shell stack --docker path --dist-dir)/build/ferry-services-rail-departure-fetcher-exe/ferry-services-rail-departure-fetcher-exe" .
-	docker push stefanchurch/ferry-services-server:latest
-	docker push stefanchurch/ferry-services-scraper:latest
-	docker push stefanchurch/ferry-services-timetable-document-scraper:latest
-	docker push stefanchurch/ferry-services-weather-fetcher:latest
-	docker push stefanchurch/ferry-services-vessel-fetcher:latest
-	docker push stefanchurch/ferry-services-transxchange-ingester:latest
-	docker push stefanchurch/ferry-services-rail-departure-fetcher:latest
+	docker_dist_dir="$$(stack --docker path --dist-dir)"; \
+	docker build -f docker/ferry-services.Dockerfile -t stefanchurch/ferry-services:latest \
+		--build-arg SERVER_BIN="$$docker_dist_dir/build/ferry-services-server-exe/ferry-services-server-exe" \
+		--build-arg SCRAPER_BIN="$$docker_dist_dir/build/ferry-services-scraper-exe/ferry-services-scraper-exe" \
+		--build-arg TIMETABLE_DOCUMENT_SCRAPER_BIN="$$docker_dist_dir/build/ferry-services-timetable-document-scraper-exe/ferry-services-timetable-document-scraper-exe" \
+		--build-arg WEATHER_FETCHER_BIN="$$docker_dist_dir/build/ferry-services-weather-fetcher-exe/ferry-services-weather-fetcher-exe" \
+		--build-arg VESSEL_FETCHER_BIN="$$docker_dist_dir/build/ferry-services-vessel-fetcher-exe/ferry-services-vessel-fetcher-exe" \
+		--build-arg TRANSXCHANGE_INGESTER_BIN="$$docker_dist_dir/build/ferry-services-transxchange-ingester-v2-exe/ferry-services-transxchange-ingester-v2-exe" \
+		--build-arg RAIL_DEPARTURE_FETCHER_BIN="$$docker_dist_dir/build/ferry-services-rail-departure-fetcher-exe/ferry-services-rail-departure-fetcher-exe" \
+		--build-arg OFFLINE_SNAPSHOT_GENERATOR_BIN="$$docker_dist_dir/build/ferry-services-offline-snapshot-generator-exe/ferry-services-offline-snapshot-generator-exe" \
+		.
+	docker push stefanchurch/ferry-services:latest
 
 .PHONY: watch
 watch:
@@ -88,21 +86,36 @@ rail-departure-fetcher: build dev-env
 
 .PHONY: tests
 tests: test-env
-	psql "$(DB_CONNECTION)" -v ON_ERROR_STOP=1 -c 'DO $$$$ DECLARE app_table record; BEGIN FOR app_table IN SELECT schemaname, tablename FROM pg_tables WHERE schemaname = '"'"'public'"'"' AND tablename <> '"'"'spatial_ref_sys'"'"' LOOP EXECUTE format('"'"'DROP TABLE IF EXISTS %I.%I CASCADE'"'"', app_table.schemaname, app_table.tablename); END LOOP; END $$$$; DROP TYPE IF EXISTS day_of_week;'
-	migrate -source file://migrations -database "$(DB_CONNECTION)" up
+	case "$(DB_CONNECTION)" in *.sqlite|*.sqlite3|*.db) rm -f "$(DB_CONNECTION)" "$(DB_CONNECTION)-wal" "$(DB_CONNECTION)-shm" ;; *) echo "Refusing to reset non-SQLite DB_CONNECTION: $(DB_CONNECTION)" >&2; exit 1 ;; esac
+	sqlite3 "$(DB_CONNECTION)" ".read sqlite/schema.sql"
+	sqlite3 "$(DB_CONNECTION)" ".read sqlite/seed.sql"
 	$(STACK_ENV_PREFIX) stack test
 
 .PHONY: tests-json
 tests-json:
 	$(STACK_ENV_PREFIX) stack test --test-arguments '--match "JSON Tests"'
 
+.PHONY: db-reset
+db-reset: dev-env
+	case "$(DB_CONNECTION)" in *.sqlite|*.sqlite3|*.db) rm -f "$(DB_CONNECTION)" "$(DB_CONNECTION)-wal" "$(DB_CONNECTION)-shm" ;; *) echo "Refusing to reset non-SQLite DB_CONNECTION: $(DB_CONNECTION)" >&2; exit 1 ;; esac
+	sqlite3 "$(DB_CONNECTION)" ".read sqlite/schema.sql"
+	sqlite3 "$(DB_CONNECTION)" ".read sqlite/seed.sql"
+
+.PHONY: db-shell
+db-shell: dev-env
+	sqlite3 "$(DB_CONNECTION)"
+
+.PHONY: db-backup
+db-backup:
+	./scripts/backup.sh
+
+.PHONY: doctor
+doctor:
+	./scripts/doctor.sh
+
 .PHONY: bootstrap-dev
 bootstrap-dev:
 	./scripts/bootstrap-dev.sh
-
-.PHONY: install-migrate
-install-migrate:
-	./scripts/install-migrate.sh
 
 .PHONY: install-system-deps
 install-system-deps:

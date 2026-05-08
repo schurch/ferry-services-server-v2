@@ -13,7 +13,7 @@ import App.Logger
   )
 import Control.Monad.Reader (ReaderT, asks)
 import Data.Pool (Pool)
-import Database.PostgreSQL.Simple (Connection)
+import Database.SQLite.Simple (Connection)
 
 data Env = Env
   { logger :: Logger,

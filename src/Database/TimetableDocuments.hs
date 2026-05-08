@@ -13,14 +13,14 @@ import App.Env (Application)
 import Control.Monad (forM_, void)
 import Data.Maybe (listToMaybe)
 import Database.Connection (withConnection)
-import Database.PostgreSQL.Simple
+import Database.SQLite.Simple
   ( Only (Only),
     execute,
     executeMany,
     query,
     query_,
   )
-import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Database.SQLite.Simple.QQ (sql)
 import Types
   ( ScrapedTimetableDocument (..),
     TimetableDocument,

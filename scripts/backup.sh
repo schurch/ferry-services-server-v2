@@ -1,8 +1,14 @@
 #!/bin/bash
 
-DB_CONNECTION=''
-BACKUP_DIR='/home/stefanchurch/ferry-services-server/backups'
-DB_CONTAINER_NAME='ferry-services-db-prod'
-BACKUP_NAME=`date +%y-%m-%d-%H%M%S`
+set -euo pipefail
 
-docker run --rm --user $(id -u):$(id -g) --network container:"$DB_CONTAINER_NAME" -v "$BACKUP_DIR:/tmp" postgres:alpine bash -c "pg_dump $DB_CONNECTION --clean | gzip > /tmp/$BACKUP_NAME-backup.gz"
+db_file="${DB_FILE:-/home/stefanchurch/ferry-services-server/data/ferry-services.sqlite3}"
+backup_dir="${BACKUP_DIR:-/home/stefanchurch/ferry-services-server/backups}"
+backup_name="$(date +%y-%m-%d-%H%M%S)-ferry-services.sqlite3"
+
+mkdir -p "$backup_dir"
+
+sqlite3 "$db_file" ".backup '${backup_dir}/${backup_name}'"
+gzip "${backup_dir}/${backup_name}"
+
+echo "Created backup: ${backup_dir}/${backup_name}.gz"

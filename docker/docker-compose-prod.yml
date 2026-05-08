@@ -1,107 +1,56 @@
 version: '3'
+
+x-ferry-common: &ferry-common
+  env_file:
+    - envfile.docker-prod
+  environment:
+    DB_CONNECTION: /opt/ferry-services/data/ferry-services.sqlite3
+  image: stefanchurch/ferry-services:latest
+  volumes:
+    - ./data:/opt/ferry-services/data
+  restart: always
+  tty: true
+
 services:
-  cadvisor-prod:
-    image: gcr.io/cadvisor/cadvisor:latest
-    container_name: cadvisor-prod
-    restart: always
-    ports:
-      - "127.0.0.1:8080:8080"
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-      - /etc/machine-id:/etc/machine-id:ro
-    command:
-      - '-housekeeping_interval=10s'
-      - '-docker_only=true'
   server-prod:
-    image: stefanchurch/ferry-services-server:latest
+    <<: *ferry-common
     container_name: ferry-services-server-prod
     ports:
       - "127.0.0.1:3009:3009"
-    depends_on:
-      - "db-prod"
-    restart: always
-    env_file:
-      - envfile.docker-prod
     volumes:
-      - offline-snapshots-prod:/opt/ferry-services/offline
-    tty: true
+      - ./data:/opt/ferry-services/data
+      - ./offline:/opt/ferry-services/offline
     command: /opt/ferry-services/ferry-services-server-exe
-  scraper-prod:
-    image: stefanchurch/ferry-services-scraper:latest
-    container_name: ferry-services-scraper-prod
-    depends_on:
-      - "db-prod"
-    restart: always
-    env_file:
-      - envfile.docker-prod
-    tty: true
-    command: /opt/ferry-services/ferry-services-scraper-exe
-  timetable-document-scraper-prod:
-    image: stefanchurch/ferry-services-timetable-document-scraper:latest
-    container_name: ferry-services-timetable-document-scraper-prod
-    depends_on:
-      - "db-prod"
-    restart: always
-    env_file:
-      - envfile.docker-prod
-    tty: true
-    command: /opt/ferry-services/ferry-services-timetable-document-scraper-exe
-  weather-fetcher-prod:
-    image: stefanchurch/ferry-services-weather-fetcher:latest
-    container_name: ferry-services-weather-fetcher-prod
-    depends_on:
-      - "db-prod"
-    restart: always
-    env_file:
-      - envfile.docker-prod
-    tty: true
-    command: /opt/ferry-services/ferry-services-weather-fetcher-exe
-  vessel-fetcher-prod:
-    image: stefanchurch/ferry-services-vessel-fetcher:latest
-    container_name: ferry-services-vessel-fetcher-prod
-    depends_on:
-      - "db-prod"
-    restart: always
-    env_file:
-      - envfile.docker-prod
-    tty: true
-    command: /opt/ferry-services/ferry-services-vessel-fetcher-exe
-  rail-departure-fetcher-prod:
-    image: stefanchurch/ferry-services-rail-departure-fetcher:latest
-    container_name: ferry-services-rail-departure-fetcher-prod
-    depends_on:
-      - "db-prod"
-    restart: always
-    env_file:
-      - envfile.docker-prod
-    tty: true
-    command: /opt/ferry-services/ferry-services-rail-departure-fetcher-exe
-  transxchange-ingester-prod:
-    image: stefanchurch/ferry-services-transxchange-ingester:latest
-    container_name: ferry-services-transxchange-ingester-prod
-    depends_on:
-      - "db-prod"
-    restart: always
-    env_file:
-      - envfile.docker-prod
-    volumes:
-      - offline-snapshots-prod:/opt/ferry-services/offline
-    tty: true
-    command: /opt/ferry-services/ferry-services-transxchange-ingester-v2-exe
-  db-prod:
-    image: "mdillon/postgis"
-    container_name: ferry-services-db-prod
-    environment:
-      POSTGRES_DB: ferry-services-prod
-    restart: always
-    volumes:
-      - datavolumeprod:/var/lib/postgresql/data
-    env_file:
-      - envfile.docker-prod
 
-volumes:
-  datavolumeprod:
-  offline-snapshots-prod:
+  scraper-prod:
+    <<: *ferry-common
+    container_name: ferry-services-scraper-prod
+    command: /opt/ferry-services/ferry-services-scraper-exe
+
+  timetable-document-scraper-prod:
+    <<: *ferry-common
+    container_name: ferry-services-timetable-document-scraper-prod
+    command: /opt/ferry-services/ferry-services-timetable-document-scraper-exe
+
+  weather-fetcher-prod:
+    <<: *ferry-common
+    container_name: ferry-services-weather-fetcher-prod
+    command: /opt/ferry-services/ferry-services-weather-fetcher-exe
+
+  vessel-fetcher-prod:
+    <<: *ferry-common
+    container_name: ferry-services-vessel-fetcher-prod
+    command: /opt/ferry-services/ferry-services-vessel-fetcher-exe
+
+  rail-departure-fetcher-prod:
+    <<: *ferry-common
+    container_name: ferry-services-rail-departure-fetcher-prod
+    command: /opt/ferry-services/ferry-services-rail-departure-fetcher-exe
+
+  transxchange-ingester-prod:
+    <<: *ferry-common
+    container_name: ferry-services-transxchange-ingester-prod
+    volumes:
+      - ./data:/opt/ferry-services/data
+      - ./offline:/opt/ferry-services/offline
+    command: /opt/ferry-services/ferry-services-transxchange-ingester-v2-exe

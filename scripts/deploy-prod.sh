@@ -2,24 +2,30 @@
 
 set -euo pipefail
 
-# Deploy
-docker-compose -f docker-compose-prod.yml stop
-docker-compose -f docker-compose-prod.yml rm -vf
-docker-compose -f docker-compose-prod.yml pull
-docker-compose -f docker-compose-prod.yml up -d
+compose_file="docker-compose-prod.yml"
+db_dir="./data"
+db_file="${db_dir}/ferry-services.sqlite3"
+maintenance_script="./scripts/sqlite-maintenance.sh"
 
-# Migrate
-set -a
-source ./envfile.docker-prod
-set +a
+if [ ! -f "$maintenance_script" ]; then
+  maintenance_script="./sqlite-maintenance.sh"
+fi
 
-docker run --rm \
-  -v "$(pwd)"/migrations:/migrations \
-  --network container:ferry-services-db-prod \
-  migrate/migrate \
-  -path=/migrations/ \
-  -database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?sslmode=disable" \
-  up
+compose() {
+  if command -v docker-compose >/dev/null 2>&1; then
+    docker-compose "$@"
+  else
+    docker compose "$@"
+  fi
+}
 
-# Cleanup
+mkdir -p "$db_dir" ./offline
+
+compose -f "$compose_file" pull
+
+DB_FILE="$db_file" sh "$maintenance_script" init
+DB_FILE="$db_file" sh "$maintenance_script" migrate
+
+compose -f "$compose_file" up -d --remove-orphans
+
 docker image prune -f >/dev/null 2>&1 || true
