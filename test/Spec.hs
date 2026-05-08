@@ -2,6 +2,7 @@
 
 import qualified IntegrationSpec
 import qualified JSONSpec
+import qualified OfflineSnapshotSpec
 import qualified PushSpec
 import qualified TransxchangeApiSpec
 import qualified UtilitySpec
@@ -15,5 +16,6 @@ spec = do
   describe "Integration Tests" IntegrationSpec.spec
   describe "Push Tests" PushSpec.spec
   describe "TransXChange API Tests" TransxchangeApiSpec.spec
+  describe "Offline Snapshot Tests" OfflineSnapshotSpec.spec
   describe "Utility Tests" UtilitySpec.spec
   describe "JSON Tests" JSONSpec.spec

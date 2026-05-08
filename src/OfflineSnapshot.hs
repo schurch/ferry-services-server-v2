@@ -1,10 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module OfflineSnapshot
-  ( OfflineSnapshot (..),
-    OfflineSnapshotMetadata (..),
+  ( OfflineSnapshotMetadata (..),
     defaultSnapshotPath,
     defaultSnapshotMetadataPath,
     generateOfflineSnapshot,
@@ -13,50 +13,53 @@ module OfflineSnapshot
   )
 where
 
-import Control.Monad (forM)
-import Control.Monad.IO.Class (liftIO)
-import Control.Lens ((&), (%~), (.~), (?~))
 import App.Env (Application)
 import App.Logger (logInfoM)
+import Control.Monad (forM, when)
+import Control.Monad.IO.Class (liftIO)
 import qualified Crypto.Hash as Crypto
 import Data.Aeson
   ( FromJSON (parseJSON),
     ToJSON (toJSON),
-    Value,
     decode,
     encode,
     genericParseJSON,
     genericToJSON,
-    object,
-    (.=),
   )
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
 import Data.List (nubBy, sortOn)
 import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
-import qualified Data.OpenApi as OpenApi
-import Data.OpenApi.Declare (Declare)
 import Data.Proxy (Proxy (Proxy))
-import Data.Scientific (Scientific)
-import Data.Text (Text)
+import Data.Scientific (Scientific, toRealFloat)
 import Data.Time
   ( LocalTime,
     UTCTime (UTCTime),
     addDays,
+    defaultTimeLocale,
+    formatTime,
     getCurrentTime,
     utctDay,
   )
 import Data.Time.Calendar (Day)
 import qualified Database as DB
+import Database.SQLite.Simple
+  ( Connection,
+    close,
+    executeMany,
+    execute_,
+    open,
+    withTransaction,
+  )
+import Database.SQLite.Simple.QQ (sql)
 import GHC.Generics (Generic)
 import System.Directory
   ( createDirectoryIfMissing,
     doesFileExist,
+    removeFile,
     renameFile,
   )
 import System.FilePath (takeDirectory)
-import System.IO (IOMode (WriteMode), withFile)
 import Types
   ( Coordinate (..),
     Location (..),
@@ -64,14 +67,12 @@ import Types
     Service (..),
     ServiceLocation (..),
     ServiceOrganisation (..),
-    TimetableDocument (..),
     jsonOptions,
   )
-import Types.Api (TimetableDocumentResponse (..), openApiOptions)
 import Utility (convertScottishLocalTimeToUTC)
 
 defaultSnapshotPath :: FilePath
-defaultSnapshotPath = "offline/snapshot.json"
+defaultSnapshotPath = "offline/snapshot.sqlite3"
 
 defaultSnapshotMetadataPath :: FilePath
 defaultSnapshotMetadataPath = "offline/snapshot.meta.json"
@@ -85,47 +86,13 @@ data OfflineSnapshot = OfflineSnapshot
     offlineSnapshotServices :: [OfflineService],
     offlineSnapshotLocations :: [OfflineLocation],
     offlineSnapshotOrganisations :: [OfflineOrganisation],
-    offlineSnapshotTimetableDocuments :: [TimetableDocumentResponse],
+    offlineSnapshotServiceLocations :: [OfflineServiceLocation],
     offlineSnapshotDepartures :: [OfflineDeparture]
   }
   deriving (Generic, Show)
 
 instance ToJSON OfflineSnapshot where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy OfflineSnapshot)
-
-instance FromJSON OfflineSnapshot where
-  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineSnapshot)
-
-instance OpenApi.ToSchema OfflineSnapshot where
-  declareNamedSchema =
-    offlineNamedSchema
-      "Generated offline timetable snapshot. This is static timetable/reference data for local device caching; live status, disruptions, vessels, weather and push installation state are intentionally excluded."
-      [ ("schema_version", "Snapshot schema version. Increment this when clients need a migration path."),
-        ("data_version", "Stable SHA-256 version for the snapshot content. Also used as the ETag value without surrounding quotes."),
-        ("generated_at", "UTC time when this artifact was generated."),
-        ("valid_from", "First local timetable date covered by departures."),
-        ("valid_to", "Last local timetable date covered by departures."),
-        ("services", "Visible ferry services included in the offline cache."),
-        ("locations", "Location lookup table. Services and departures reference these rows by id."),
-        ("organisations", "Operator lookup table. Services reference these rows by organisation_id."),
-        ("timetable_documents", "Current operator timetable documents available for offline catalogue/bootstrap use."),
-        ("departures", "Generated scheduled ferry departures for the snapshot validity window.")
-      ]
-      ( Just $
-          object
-            [ "schema_version" .= (1 :: Int),
-              "data_version" .= ("sha256-abc123" :: String),
-              "generated_at" .= ("2026-05-02T10:00:00Z" :: String),
-              "valid_from" .= ("2026-05-02" :: String),
-              "valid_to" .= ("2026-06-30" :: String),
-              "services" .= ([] :: [OfflineService]),
-              "locations" .= ([] :: [OfflineLocation]),
-              "organisations" .= ([] :: [OfflineOrganisation]),
-              "timetable_documents" .= ([] :: [TimetableDocumentResponse]),
-              "departures" .= ([] :: [OfflineDeparture])
-            ]
-      )
-      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineSnapshot)) (Proxy :: Proxy OfflineSnapshot))
 
 data OfflineSnapshotMetadata = OfflineSnapshotMetadata
   { offlineSnapshotMetadataDataVersion :: String,
@@ -142,57 +109,17 @@ instance ToJSON OfflineSnapshotMetadata where
 instance FromJSON OfflineSnapshotMetadata where
   parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineSnapshotMetadata)
 
-instance OpenApi.ToSchema OfflineSnapshotMetadata where
-  declareNamedSchema =
-    offlineNamedSchema
-      "Small sidecar metadata file used by the web server to serve cache validators for the offline snapshot."
-      [ ("data_version", "Stable SHA-256 version for the snapshot content."),
-        ("etag", "HTTP ETag header value, including quotes."),
-        ("generated_at", "UTC time when this artifact was generated."),
-        ("valid_from", "First local timetable date covered by departures."),
-        ("valid_to", "Last local timetable date covered by departures.")
-      ]
-      Nothing
-      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineSnapshotMetadata)) (Proxy :: Proxy OfflineSnapshotMetadata))
-
 data OfflineService = OfflineService
   { offlineServiceId :: Int,
     offlineServiceArea :: String,
     offlineServiceRoute :: String,
     offlineServiceOrganisationId :: Int,
-    offlineServiceLocationIds :: [Int],
     offlineServiceScheduledDeparturesAvailable :: Bool
   }
   deriving (Generic, Show)
 
 instance ToJSON OfflineService where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy OfflineService)
-
-instance FromJSON OfflineService where
-  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineService)
-
-instance OpenApi.ToSchema OfflineService where
-  declareNamedSchema =
-    offlineNamedSchema
-      "Offline service row. This is deliberately normalized for compact storage."
-      [ ("id", "Service id used by existing live API responses."),
-        ("area", "Geographic service grouping shown in the app."),
-        ("route", "Human-readable route name."),
-        ("organisation_id", "Operator id; resolve via organisations[].id."),
-        ("location_ids", "Ordered location ids served by this service; resolve via locations[].id."),
-        ("scheduled_departures_available", "Whether scheduled TransXChange departures are available for this service.")
-      ]
-      ( Just $
-          object
-            [ "id" .= (5 :: Int),
-              "area" .= ("Arran" :: String),
-              "route" .= ("Ardrossan - Brodick" :: String),
-              "organisation_id" .= (1 :: Int),
-              "location_ids" .= ([4, 5] :: [Int]),
-              "scheduled_departures_available" .= True
-            ]
-      )
-      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineService)) (Proxy :: Proxy OfflineService))
 
 data OfflineLocation = OfflineLocation
   { offlineLocationId :: Int,
@@ -204,28 +131,6 @@ data OfflineLocation = OfflineLocation
 
 instance ToJSON OfflineLocation where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy OfflineLocation)
-
-instance FromJSON OfflineLocation where
-  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineLocation)
-
-instance OpenApi.ToSchema OfflineLocation where
-  declareNamedSchema =
-    offlineNamedSchema
-      "Offline location lookup row."
-      [ ("id", "Location id used by service location_ids and departure location references."),
-        ("name", "Display name for the port/location."),
-        ("latitude", "Latitude in decimal degrees."),
-        ("longitude", "Longitude in decimal degrees.")
-      ]
-      ( Just $
-          object
-            [ "id" .= (4 :: Int),
-              "name" .= ("Brodick" :: String),
-              "latitude" .= (55.576 :: Double),
-              "longitude" .= (-5.138 :: Double)
-            ]
-      )
-      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineLocation)) (Proxy :: Proxy OfflineLocation))
 
 data OfflineOrganisation = OfflineOrganisation
   { offlineOrganisationId :: Int,
@@ -242,99 +147,29 @@ data OfflineOrganisation = OfflineOrganisation
 instance ToJSON OfflineOrganisation where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy OfflineOrganisation)
 
-instance FromJSON OfflineOrganisation where
-  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineOrganisation)
+data OfflineServiceLocation = OfflineServiceLocation
+  { offlineServiceLocationServiceId :: Int,
+    offlineServiceLocationLocationId :: Int,
+    offlineServiceLocationDisplayOrder :: Int
+  }
+  deriving (Generic, Show)
 
-instance OpenApi.ToSchema OfflineOrganisation where
-  declareNamedSchema =
-    offlineNamedSchema
-      "Offline ferry operator lookup row."
-      [ ("id", "Organisation/operator id used by services[].organisation_id."),
-        ("name", "Operator display name."),
-        ("website", "Operator website."),
-        ("local_number", "Local contact telephone number."),
-        ("international_number", "International contact telephone number."),
-        ("email", "Operator contact email address."),
-        ("x", "Operator X/Twitter URL or handle."),
-        ("facebook", "Operator Facebook URL.")
-      ]
-      ( Just $
-          object
-            [ "id" .= (1 :: Int),
-              "name" .= ("CalMac Ferries" :: String),
-              "website" .= ("https://www.calmac.co.uk" :: String)
-            ]
-      )
-      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineOrganisation)) (Proxy :: Proxy OfflineOrganisation))
+instance ToJSON OfflineServiceLocation where
+  toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy OfflineServiceLocation)
 
 data OfflineDeparture = OfflineDeparture
   { offlineDepartureServiceId :: Int,
+    offlineDepartureServiceDate :: Day,
     offlineDepartureFromLocationId :: Int,
     offlineDepartureToLocationId :: Int,
-    offlineDepartureDeparture :: UTCTime,
-    offlineDepartureArrival :: UTCTime,
+    offlineDepartureDepartureTimeUtc :: UTCTime,
+    offlineDepartureArrivalTimeUtc :: UTCTime,
     offlineDepartureNotes :: Maybe String
   }
   deriving (Generic, Show)
 
 instance ToJSON OfflineDeparture where
   toJSON = genericToJSON $ jsonOptions (Proxy :: Proxy OfflineDeparture)
-
-instance FromJSON OfflineDeparture where
-  parseJSON = genericParseJSON $ jsonOptions (Proxy :: Proxy OfflineDeparture)
-
-instance OpenApi.ToSchema OfflineDeparture where
-  declareNamedSchema =
-    offlineNamedSchema
-      "Offline scheduled ferry departure."
-      [ ("service_id", "Service id for this departure; resolve via services[].id."),
-        ("from_location_id", "Origin location id; resolve via locations[].id."),
-        ("to_location_id", "Destination location id; resolve via locations[].id."),
-        ("departure", "Scheduled departure time, encoded consistently with the service API."),
-        ("arrival", "Scheduled arrival time, encoded consistently with the service API."),
-        ("notes", "Optional timetable note/check-in text from the source data.")
-      ]
-      ( Just $
-          object
-            [ "service_id" .= (5 :: Int),
-              "from_location_id" .= (4 :: Int),
-              "to_location_id" .= (5 :: Int),
-              "departure" .= ("2026-05-02T07:00:00Z" :: String),
-              "arrival" .= ("2026-05-02T07:55:00Z" :: String),
-              "notes" .= ("Check in 30 minutes before departure" :: String)
-            ]
-      )
-      (OpenApi.genericDeclareNamedSchema (openApiOptions (Proxy :: Proxy OfflineDeparture)) (Proxy :: Proxy OfflineDeparture))
-
-offlineNamedSchema ::
-  Text ->
-  [(Text, Text)] ->
-  Maybe Value ->
-  Declare (OpenApi.Definitions OpenApi.Schema) OpenApi.NamedSchema
-  ->
-  Proxy a ->
-  Declare (OpenApi.Definitions OpenApi.Schema) OpenApi.NamedSchema
-offlineNamedSchema schemaDescription fieldDescriptions schemaExample declareNamedSchema _ = do
-  namedSchema <- declareNamedSchema
-  pure $
-    namedSchema
-      & OpenApi.schema . OpenApi.description ?~ schemaDescription
-      & OpenApi.schema . OpenApi.example .~ schemaExample
-      & OpenApi.schema . OpenApi.properties %~ describeProperties fieldDescriptions
-
-describeProperties ::
-  [(Text, Text)] ->
-  OpenApi.Definitions (OpenApi.Referenced OpenApi.Schema) ->
-  OpenApi.Definitions (OpenApi.Referenced OpenApi.Schema)
-describeProperties descriptions properties =
-  foldr describeProperty properties descriptions
-  where
-    describeProperty ::
-      (Text, Text) ->
-      OpenApi.Definitions (OpenApi.Referenced OpenApi.Schema) ->
-      OpenApi.Definitions (OpenApi.Referenced OpenApi.Schema)
-    describeProperty (propertyName, propertyDescription) =
-      InsOrdHashMap.adjust (fmap (OpenApi.description ?~ propertyDescription)) propertyName
 
 generateAndWriteOfflineSnapshot :: Application OfflineSnapshotMetadata
 generateAndWriteOfflineSnapshot = do
@@ -358,7 +193,7 @@ generateOfflineSnapshot = do
   let validFrom = utctDay now
       validTo = addDays 59 validFrom
   logInfoM $
-    "Generating offline snapshot for "
+    "Generating offline SQLite snapshot for "
       <> show validFrom
       <> " to "
       <> show validTo
@@ -371,10 +206,6 @@ generateOfflineSnapshot = do
   logInfoM $ "Offline snapshot service-location links: " <> show (length serviceLocations)
   serviceOrganisations <- DB.getServiceOrganisations
   logInfoM $ "Offline snapshot service organisations: " <> show (length serviceOrganisations)
-  timetableDocuments <- DB.getTimetableDocuments Nothing
-  logInfoM $ "Offline snapshot timetable documents: " <> show (length timetableDocuments)
-  timetableDocumentServiceLinks <- DB.getTimetableDocumentServiceLinks
-  logInfoM $ "Offline snapshot timetable document service links: " <> show (length timetableDocumentServiceLinks)
   servicesWithDepartures <- DB.getServicesWithScheduledDeparturesV2
   logInfoM $ "Offline snapshot services with scheduled departures: " <> show (length servicesWithDepartures)
   departures <- createDepartures servicesWithDepartures services validFrom validTo
@@ -386,10 +217,10 @@ generateOfflineSnapshot = do
             offlineSnapshotGeneratedAt = now,
             offlineSnapshotValidFrom = validFrom,
             offlineSnapshotValidTo = validTo,
-            offlineSnapshotServices = offlineServices servicesWithDepartures serviceLocations services,
+            offlineSnapshotServices = offlineServices servicesWithDepartures services,
             offlineSnapshotLocations = offlineLocations locations,
             offlineSnapshotOrganisations = offlineOrganisations services serviceOrganisations,
-            offlineSnapshotTimetableDocuments = offlineTimetableDocuments timetableDocumentServiceLinks timetableDocuments,
+            offlineSnapshotServiceLocations = offlineServiceLocations services serviceLocations,
             offlineSnapshotDepartures = departures
           }
       dataVersion = dataVersionFor bodyWithoutVersion
@@ -407,8 +238,7 @@ writeOfflineSnapshot :: FilePath -> FilePath -> OfflineSnapshot -> IO OfflineSna
 writeOfflineSnapshot snapshotPath metadataPath snapshot = do
   createDirectoryIfMissing True (takeDirectory snapshotPath)
   createDirectoryIfMissing True (takeDirectory metadataPath)
-  let body = encode snapshot
-      dataVersion = offlineSnapshotDataVersion snapshot
+  let dataVersion = offlineSnapshotDataVersion snapshot
       etag = quoteETag dataVersion
       metadata =
         OfflineSnapshotMetadata
@@ -418,15 +248,188 @@ writeOfflineSnapshot snapshotPath metadataPath snapshot = do
             offlineSnapshotMetadataValidFrom = offlineSnapshotValidFrom snapshot,
             offlineSnapshotMetadataValidTo = offlineSnapshotValidTo snapshot
           }
-  existingSnapshot <- readExisting snapshotPath
   existingMetadata <- readExistingMetadata metadataPath
-  case (existingSnapshot, existingMetadata) of
-    (Just _, Just current) | offlineSnapshotMetadataDataVersion current == dataVersion ->
+  snapshotExists <- doesFileExist snapshotPath
+  case existingMetadata of
+    Just current | snapshotExists && offlineSnapshotMetadataDataVersion current == dataVersion ->
       pure current
     _ -> do
-      atomicWrite snapshotPath body
+      writeSnapshotDatabase snapshotPath snapshot
       atomicWrite metadataPath (encode metadata)
       pure metadata
+
+writeSnapshotDatabase :: FilePath -> OfflineSnapshot -> IO ()
+writeSnapshotDatabase snapshotPath snapshot = do
+  let tempPath = snapshotPath <> ".tmp"
+  removeIfExists tempPath
+  removeIfExists (tempPath <> "-wal")
+  removeIfExists (tempPath <> "-shm")
+  connection <- open tempPath
+  execute_ connection "PRAGMA foreign_keys = ON"
+  execute_ connection "PRAGMA journal_mode = DELETE"
+  execute_ connection "PRAGMA synchronous = OFF"
+  createSnapshotSchema connection
+  insertSnapshotRows connection snapshot
+  close connection
+  renameFile tempPath snapshotPath
+
+createSnapshotSchema :: Connection -> IO ()
+createSnapshotSchema connection = do
+  execute_
+    connection
+    [sql|
+      CREATE TABLE metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    |]
+  execute_
+    connection
+    [sql|
+      CREATE TABLE organisations (
+        organisation_id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        website TEXT NULL,
+        local_number TEXT NULL,
+        international_number TEXT NULL,
+        email TEXT NULL,
+        x TEXT NULL,
+        facebook TEXT NULL
+      )
+    |]
+  execute_
+    connection
+    [sql|
+      CREATE TABLE services (
+        service_id INTEGER PRIMARY KEY,
+        area TEXT NOT NULL,
+        route TEXT NOT NULL,
+        organisation_id INTEGER NOT NULL REFERENCES organisations (organisation_id),
+        scheduled_departures_available INTEGER NOT NULL
+      )
+    |]
+  execute_
+    connection
+    [sql|
+      CREATE TABLE locations (
+        location_id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL
+      )
+    |]
+  execute_
+    connection
+    [sql|
+      CREATE TABLE service_locations (
+        service_id INTEGER NOT NULL REFERENCES services (service_id),
+        location_id INTEGER NOT NULL REFERENCES locations (location_id),
+        display_order INTEGER NOT NULL,
+        PRIMARY KEY (service_id, location_id)
+      )
+    |]
+  execute_
+    connection
+    [sql|
+      CREATE TABLE departures (
+        service_id INTEGER NOT NULL REFERENCES services (service_id),
+        service_date TEXT NOT NULL,
+        from_location_id INTEGER NOT NULL REFERENCES locations (location_id),
+        to_location_id INTEGER NOT NULL REFERENCES locations (location_id),
+        departure_time_utc TEXT NOT NULL,
+        arrival_time_utc TEXT NOT NULL,
+        notes TEXT NULL
+      )
+    |]
+  execute_
+    connection
+    [sql|
+      CREATE INDEX departures_service_date_idx
+      ON departures (service_id, service_date, departure_time_utc)
+    |]
+  execute_
+    connection
+    [sql|
+      CREATE VIEW client_services AS
+      SELECT
+        s.service_id,
+        s.area,
+        s.route,
+        s.organisation_id,
+        o.name AS organisation_name,
+        s.scheduled_departures_available
+      FROM services s
+      JOIN organisations o ON o.organisation_id = s.organisation_id
+    |]
+  execute_
+    connection
+    [sql|
+      CREATE VIEW client_service_locations AS
+      SELECT
+        sl.service_id,
+        sl.location_id,
+        l.name,
+        l.latitude,
+        l.longitude,
+        sl.display_order
+      FROM service_locations sl
+      JOIN locations l ON l.location_id = sl.location_id
+    |]
+  execute_
+    connection
+    [sql|
+      CREATE VIEW client_departures AS
+      SELECT
+        d.service_id,
+        d.service_date,
+        d.from_location_id,
+        from_location.name AS from_location_name,
+        d.to_location_id,
+        to_location.name AS to_location_name,
+        d.departure_time_utc,
+        d.arrival_time_utc,
+        d.notes
+      FROM departures d
+      JOIN locations from_location ON from_location.location_id = d.from_location_id
+      JOIN locations to_location ON to_location.location_id = d.to_location_id
+    |]
+
+insertSnapshotRows :: Connection -> OfflineSnapshot -> IO ()
+insertSnapshotRows connection snapshot =
+  withTransaction connection $ do
+    executeMany
+      connection
+      "INSERT INTO metadata (key, value) VALUES (?, ?)"
+      (metadataRows snapshot)
+    executeMany
+      connection
+      "INSERT INTO organisations (organisation_id, name, website, local_number, international_number, email, x, facebook) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      (organisationRow <$> offlineSnapshotOrganisations snapshot)
+    executeMany
+      connection
+      "INSERT INTO services (service_id, area, route, organisation_id, scheduled_departures_available) VALUES (?, ?, ?, ?, ?)"
+      (serviceRow <$> offlineSnapshotServices snapshot)
+    executeMany
+      connection
+      "INSERT INTO locations (location_id, name, latitude, longitude) VALUES (?, ?, ?, ?)"
+      (locationRow <$> offlineSnapshotLocations snapshot)
+    executeMany
+      connection
+      "INSERT INTO service_locations (service_id, location_id, display_order) VALUES (?, ?, ?)"
+      (serviceLocationRow <$> offlineSnapshotServiceLocations snapshot)
+    executeMany
+      connection
+      "INSERT INTO departures (service_id, service_date, from_location_id, to_location_id, departure_time_utc, arrival_time_utc, notes) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      (departureRow <$> offlineSnapshotDepartures snapshot)
+
+metadataRows :: OfflineSnapshot -> [(String, String)]
+metadataRows snapshot =
+  [ ("schema_version", show (offlineSnapshotSchemaVersion snapshot)),
+    ("data_version", offlineSnapshotDataVersion snapshot),
+    ("generated_at_utc", utcText (offlineSnapshotGeneratedAt snapshot)),
+    ("valid_from", show (offlineSnapshotValidFrom snapshot)),
+    ("valid_to", show (offlineSnapshotValidTo snapshot))
+  ]
 
 createDepartures :: [Int] -> [Service] -> Day -> Day -> Application [OfflineDeparture]
 createDepartures servicesWithDepartures services validFrom validTo = do
@@ -441,7 +444,7 @@ createDepartures servicesWithDepartures services validFrom validTo = do
       serviceDepartures <-
         fmap concat $
           forM snapshotDays $ \day ->
-            fmap (offlineDeparture serviceId) <$> DB.getLocationDeparturesV2 serviceId day
+            fmap (offlineDeparture serviceId day) <$> DB.getLocationDeparturesV2 serviceId day
       logInfoM $
         "Offline snapshot departures for service "
           <> show serviceId
@@ -472,25 +475,17 @@ createDepartures servicesWithDepartures services validFrom validTo = do
     shouldLogProgress index =
       index == 1 || index == length serviceIds || index `mod` 10 == 0
 
-offlineServices :: [Int] -> [ServiceLocation] -> [Service] -> [OfflineService]
-offlineServices servicesWithDepartures serviceLocations services =
+offlineServices :: [Int] -> [Service] -> [OfflineService]
+offlineServices servicesWithDepartures services =
   [ OfflineService
       { offlineServiceId = serviceID service,
         offlineServiceArea = serviceArea service,
         offlineServiceRoute = serviceRoute service,
         offlineServiceOrganisationId = serviceOrganisationID service,
-        offlineServiceLocationIds = sortOn id $ M.findWithDefault [] (serviceID service) serviceLocationLookup,
         offlineServiceScheduledDeparturesAvailable = serviceID service `elem` servicesWithDepartures
       }
     | service <- services
   ]
-  where
-    serviceLocationLookup =
-      M.fromListWith
-        (++)
-        [ (serviceLocationServiceID serviceLocation, [serviceLocationLocationID serviceLocation])
-          | serviceLocation <- serviceLocations
-        ]
 
 offlineLocations :: [Location] -> [OfflineLocation]
 offlineLocations locations =
@@ -529,39 +524,88 @@ offlineOrganisations services serviceOrganisations =
     sameOrganisation left right =
       offlineOrganisationId left == offlineOrganisationId right
 
-offlineTimetableDocuments :: [(Int, Int)] -> [TimetableDocument] -> [TimetableDocumentResponse]
-offlineTimetableDocuments serviceLinks documents =
-  [ TimetableDocumentResponse
-      { timetableDocumentResponseID = timetableDocumentID document,
-        timetableDocumentResponseOrganisationID = timetableDocumentOrganisationID document,
-        timetableDocumentResponseOrganisationName = timetableDocumentOrganisationName document,
-        timetableDocumentResponseServiceIds = sortOn id $ M.findWithDefault [] (timetableDocumentID document) serviceIDsByDocumentID,
-        timetableDocumentResponseTitle = timetableDocumentTitle document,
-        timetableDocumentResponseSourceURL = timetableDocumentSourceURL document,
-        timetableDocumentResponseContentHash = timetableDocumentContentHash document,
-        timetableDocumentResponseContentType = timetableDocumentContentType document,
-        timetableDocumentResponseContentLength = timetableDocumentContentLength document,
-        timetableDocumentResponseLastSeenAt = timetableDocumentLastSeenAt document,
-        timetableDocumentResponseUpdated = timetableDocumentUpdated document
-      }
-    | document <- documents
-  ]
+offlineServiceLocations :: [Service] -> [ServiceLocation] -> [OfflineServiceLocation]
+offlineServiceLocations services serviceLocations =
+  concatMap orderedServiceLocations $
+    M.toAscList serviceLocationLookup
   where
-    serviceIDsByDocumentID =
+    visibleServiceIds = serviceID <$> services
+
+    serviceLocationLookup =
       M.fromListWith
         (++)
-        [(documentID, [serviceID]) | (documentID, serviceID) <- serviceLinks]
+        [ (serviceLocationServiceID serviceLocation, [serviceLocationLocationID serviceLocation])
+          | serviceLocation <- serviceLocations
+          , serviceLocationServiceID serviceLocation `elem` visibleServiceIds
+        ]
 
-offlineDeparture :: Int -> LocationDeparture -> OfflineDeparture
-offlineDeparture serviceId LocationDeparture {..} =
+    orderedServiceLocations (serviceId, locationIds) =
+      [ OfflineServiceLocation
+          { offlineServiceLocationServiceId = serviceId,
+            offlineServiceLocationLocationId = locationId,
+            offlineServiceLocationDisplayOrder = displayOrder
+          }
+        | (displayOrder, locationId) <- zip [0 ..] (sortOn id locationIds)
+      ]
+
+offlineDeparture :: Int -> Day -> LocationDeparture -> OfflineDeparture
+offlineDeparture serviceId serviceDate LocationDeparture {..} =
   OfflineDeparture
     { offlineDepartureServiceId = serviceId,
+      offlineDepartureServiceDate = serviceDate,
       offlineDepartureFromLocationId = locationDepartureFromLocationID,
       offlineDepartureToLocationId = locationDepartureToLocationID,
-      offlineDepartureDeparture = convertLocalTimeToUTC locationDepartureDepartue,
-      offlineDepartureArrival = convertLocalTimeToUTC locationDepartureArrival,
+      offlineDepartureDepartureTimeUtc = convertLocalTimeToUTC locationDepartureDepartue,
+      offlineDepartureArrivalTimeUtc = convertLocalTimeToUTC locationDepartureArrival,
       offlineDepartureNotes = locationDepartureNotes
     }
+
+organisationRow :: OfflineOrganisation -> (Int, String, Maybe String, Maybe String, Maybe String, Maybe String, Maybe String, Maybe String)
+organisationRow OfflineOrganisation {..} =
+  ( offlineOrganisationId,
+    offlineOrganisationName,
+    offlineOrganisationWebsite,
+    offlineOrganisationLocalNumber,
+    offlineOrganisationInternationalNumber,
+    offlineOrganisationEmail,
+    offlineOrganisationX,
+    offlineOrganisationFacebook
+  )
+
+serviceRow :: OfflineService -> (Int, String, String, Int, Bool)
+serviceRow OfflineService {..} =
+  ( offlineServiceId,
+    offlineServiceArea,
+    offlineServiceRoute,
+    offlineServiceOrganisationId,
+    offlineServiceScheduledDeparturesAvailable
+  )
+
+locationRow :: OfflineLocation -> (Int, String, Double, Double)
+locationRow OfflineLocation {..} =
+  ( offlineLocationId,
+    offlineLocationName,
+    scientificToDouble offlineLocationLatitude,
+    scientificToDouble offlineLocationLongitude
+  )
+
+serviceLocationRow :: OfflineServiceLocation -> (Int, Int, Int)
+serviceLocationRow OfflineServiceLocation {..} =
+  ( offlineServiceLocationServiceId,
+    offlineServiceLocationLocationId,
+    offlineServiceLocationDisplayOrder
+  )
+
+departureRow :: OfflineDeparture -> (Int, String, Int, Int, String, String, Maybe String)
+departureRow OfflineDeparture {..} =
+  ( offlineDepartureServiceId,
+    show offlineDepartureServiceDate,
+    offlineDepartureFromLocationId,
+    offlineDepartureToLocationId,
+    utcText offlineDepartureDepartureTimeUtc,
+    utcText offlineDepartureArrivalTimeUtc,
+    offlineDepartureNotes
+  )
 
 convertLocalTimeToUTC :: LocalTime -> UTCTime
 convertLocalTimeToUTC = convertScottishLocalTimeToUTC
@@ -572,20 +616,28 @@ getLatitude = coordinateLatitude
 getLongitude :: Coordinate -> Scientific
 getLongitude = coordinateLongitude
 
-readExisting :: FilePath -> IO (Maybe BL.ByteString)
-readExisting path = do
-  exists <- doesFileExist path
-  if exists then Just <$> BL.readFile path else pure Nothing
+scientificToDouble :: Scientific -> Double
+scientificToDouble = toRealFloat
+
+utcText :: UTCTime -> String
+utcText = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
 
 readExistingMetadata :: FilePath -> IO (Maybe OfflineSnapshotMetadata)
-readExistingMetadata path =
-  (>>= decode) <$> readExisting path
+readExistingMetadata path = do
+  exists <- doesFileExist path
+  if exists then decode <$> BL.readFile path else pure Nothing
 
 atomicWrite :: FilePath -> BL.ByteString -> IO ()
 atomicWrite path body = do
   let tempPath = path <> ".tmp"
-  withFile tempPath WriteMode $ \handle -> BL.hPut handle body
+  BL.writeFile tempPath body
   renameFile tempPath path
+
+removeIfExists :: FilePath -> IO ()
+removeIfExists path = do
+  exists <- doesFileExist path
+  when exists $
+    removeFile path
 
 snapshotHash :: BL.ByteString -> String
 snapshotHash body = "sha256-" <> show (Crypto.hashlazy body :: Crypto.Digest Crypto.SHA256)

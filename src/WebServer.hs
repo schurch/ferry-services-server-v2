@@ -50,6 +50,12 @@ import Data.Time
 import Data.Time.Calendar (Day)
 import Data.UUID (UUID, fromText)
 import qualified Database as DB
+import Database.SQLite.Simple
+  ( Only (Only),
+    close,
+    open,
+    query,
+  )
 import qualified Network.Wai
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.AddHeaders (addHeaders)
@@ -83,8 +89,7 @@ import Types.Api
 import Utility (convertScottishLocalTimeToUTC, stringToDay)
 import qualified Push
 import OfflineSnapshot
-  ( OfflineSnapshot,
-    OfflineSnapshotMetadata (offlineSnapshotMetadataEtag),
+  ( OfflineSnapshotMetadata (offlineSnapshotMetadataEtag),
     defaultSnapshotMetadataPath,
     defaultSnapshotPath,
   )
@@ -135,18 +140,23 @@ instance Accept JavaScript where
 instance MimeRender JavaScript BL.ByteString where
   mimeRender _ = id
 
-data SnapshotJSON
+data SnapshotSQLite
 
-instance Accept SnapshotJSON where
-  contentType _ = "application/json;charset=utf-8"
+instance Accept SnapshotSQLite where
+  contentType _ = "application/vnd.sqlite3"
 
 newtype SnapshotBody = SnapshotBody BL.ByteString
 
-instance MimeRender SnapshotJSON SnapshotBody where
+instance MimeRender SnapshotSQLite SnapshotBody where
   mimeRender _ (SnapshotBody body) = body
 
 instance OpenApi.ToSchema SnapshotBody where
-  declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy :: Proxy OfflineSnapshot)
+  declareNamedSchema _ =
+    pure $
+      OpenApi.NamedSchema (Just "SnapshotBody") $
+        mempty
+          & OpenApi.type_ ?~ OpenApi.OpenApiString
+          & OpenApi.format ?~ "binary"
 
 type API =
   DocumentationAPI :<|> AppAPI
@@ -171,7 +181,7 @@ type JsonAPI =
     :<|> Summary "Delete installation service" :> Description "Removes a service from one mobile app installation and returns the updated saved service list." :> "api" :> "installations" :> Capture "installationID" Text :> "services" :> Capture "serviceID" Int :> Delete '[JSON] [ServiceResponse]
     :<|> Summary "List vessels" :> Description "Returns recent vessel positions used by the live service UI." :> "api" :> "vessels" :> Get '[JSON] [VesselResponse]
     :<|> Summary "List timetable documents" :> Description "Returns current operator timetable documents. Pass serviceID to filter to documents linked to one service; omit it for the global timetable downloads screen. Clients should send If-None-Match with the stored ETag; unchanged lists return 304 Not Modified." :> "api" :> "timetable-documents" :> QueryParam "serviceID" Int :> Header "If-None-Match" String :> Get '[JSON] (Headers '[Header "Cache-Control" String, Header "ETag" String] [TimetableDocumentResponse])
-    :<|> Summary "Download offline snapshot" :> Description "Returns the generated offline timetable snapshot. Clients should send If-None-Match with the stored ETag; unchanged snapshots return 304 Not Modified. The response is CDN-cacheable and includes Cache-Control, ETag and Last-Modified headers." :> "api" :> "offline" :> "snapshot.json" :> Header "If-None-Match" String :> Get '[SnapshotJSON] (Headers '[Header "Cache-Control" String, Header "ETag" String, Header "Last-Modified" String] SnapshotBody)
+    :<|> Summary "Download offline SQLite snapshot" :> Description "Returns the generated offline timetable SQLite database. Clients should send If-None-Match with the stored ETag; unchanged snapshots return 304 Not Modified. The response is CDN-cacheable and includes Cache-Control, ETag and Last-Modified headers." :> "api" :> "offline" :> "snapshot.sqlite3" :> Header "If-None-Match" String :> Get '[SnapshotSQLite] (Headers '[Header "Cache-Control" String, Header "ETag" String, Header "Last-Modified" String] SnapshotBody)
 
 api :: Proxy API
 api = Proxy
@@ -268,7 +278,7 @@ operationIdFor method path =
         (("DELETE", "/api/installations/{installationID}/services/{serviceID}"), "deleteInstallationService"),
         (("GET", "/api/vessels"), "listVessels"),
         (("GET", "/api/timetable-documents"), "listTimetableDocuments"),
-        (("GET", "/api/offline/snapshot.json"), "getOfflineSnapshot")
+        (("GET", "/api/offline/snapshot.sqlite3"), "getOfflineSnapshot")
       ]
 
 normalizeParam :: OpenApi.Param -> OpenApi.Param
@@ -715,38 +725,52 @@ getOfflineSnapshot ::
   WebHandler (Headers '[Header "Cache-Control" String, Header "ETag" String, Header "Last-Modified" String] SnapshotBody)
 getOfflineSnapshot ifNoneMatch = do
   snapshotExists <- liftIO $ doesFileExist defaultSnapshotPath
-  metadataExists <- liftIO $ doesFileExist defaultSnapshotMetadataPath
   if not snapshotExists
     then throwError err404
-    else
-      if not metadataExists
-        then throwError err503
-        else do
-          metadataBody <- liftIO $ BL.readFile defaultSnapshotMetadataPath
-          metadata <-
-            maybe (throwError err503) pure $
-              decode metadataBody
-          modified <- liftIO $ getModificationTime defaultSnapshotPath
-          let cacheControl = "public, max-age=900, stale-while-revalidate=86400"
-              etag = offlineSnapshotMetadataEtag metadata
-              lastModified = formatHttpDate modified
-              responseHeaders =
-                [ ("Cache-Control", BSC.pack cacheControl),
-                  ("ETag", BSC.pack etag),
-                  ("Last-Modified", BSC.pack lastModified)
-                ]
-          case ifNoneMatch of
-            Just value | etagMatches etag value ->
-              throwError err304 {errHeaders = responseHeaders}
-            _ -> do
-              snapshotBody <- liftIO $ BL.readFile defaultSnapshotPath
-              pure $
-                addHeader cacheControl $
-                  addHeader etag $
-                    addHeader lastModified (SnapshotBody snapshotBody)
+    else do
+      maybeEtag <- liftIO readOfflineSnapshotETag
+      etag <- maybe (throwError err503) pure maybeEtag
+      modified <- liftIO $ getModificationTime defaultSnapshotPath
+      let cacheControl = "public, max-age=900, stale-while-revalidate=86400"
+          lastModified = formatHttpDate modified
+          responseHeaders =
+            [ ("Cache-Control", BSC.pack cacheControl),
+              ("ETag", BSC.pack etag),
+              ("Last-Modified", BSC.pack lastModified)
+            ]
+      case ifNoneMatch of
+        Just value | etagMatches etag value ->
+          throwError err304 {errHeaders = responseHeaders}
+        _ -> do
+          snapshotBody <- liftIO $ BL.readFile defaultSnapshotPath
+          pure $
+            addHeader cacheControl $
+              addHeader etag $
+                addHeader lastModified (SnapshotBody snapshotBody)
   where
     formatHttpDate =
       formatTime defaultTimeLocale "%a, %d %b %Y %H:%M:%S GMT"
+
+readOfflineSnapshotETag :: IO (Maybe String)
+readOfflineSnapshotETag = do
+  metadataExists <- doesFileExist defaultSnapshotMetadataPath
+  if metadataExists
+    then do
+      metadataBody <- BL.readFile defaultSnapshotMetadataPath
+      case decode metadataBody of
+        Just metadata -> pure $ Just $ offlineSnapshotMetadataEtag metadata
+        Nothing -> readOfflineSnapshotDatabaseETag
+    else readOfflineSnapshotDatabaseETag
+
+readOfflineSnapshotDatabaseETag :: IO (Maybe String)
+readOfflineSnapshotDatabaseETag = do
+  connection <- open defaultSnapshotPath
+  rows <- query connection "SELECT value FROM metadata WHERE key = ?" (Only ("data_version" :: String)) :: IO [Only String]
+  close connection
+  pure $
+    case rows of
+      [Only dataVersion] -> Just $ quoteETag dataVersion
+      _ -> Nothing
 
 responseHash :: [TimetableDocumentResponse] -> String
 responseHash response = "sha256-" <> show (Crypto.hashlazy (encode response) :: Crypto.Digest Crypto.SHA256)

@@ -139,16 +139,16 @@ spec = beforeAll_ setupIntegrationTests $ do
         request methodGet "/api/timetable-documents?serviceID=-1" [("If-None-Match", "W/\"sha256-4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"")] ""
           `shouldRespondWith` 304
 
-    describe "GET /api/offline/snapshot.json" $ before_ setupOfflineSnapshotFixture $ do
+    describe "GET /api/offline/snapshot.sqlite3" $ before_ setupOfflineSnapshotFixture $ do
       it "serves the generated offline snapshot with cache headers" $ do
-        get "/api/offline/snapshot.json" `shouldRespondWith` offlineSnapshot
+        get "/api/offline/snapshot.sqlite3" `shouldRespondWith` offlineSnapshot
 
       it "returns 304 when the client already has the current ETag" $ do
-        request methodGet "/api/offline/snapshot.json" [("If-None-Match", "\"sha256-test\"")] ""
+        request methodGet "/api/offline/snapshot.sqlite3" [("If-None-Match", "\"sha256-test\"")] ""
           `shouldRespondWith` 304
 
       it "returns 304 when Cloudflare has weakened the current ETag" $ do
-        request methodGet "/api/offline/snapshot.json" [("If-None-Match", "W/\"sha256-test\"")] ""
+        request methodGet "/api/offline/snapshot.sqlite3" [("If-None-Match", "W/\"sha256-test\"")] ""
           `shouldRespondWith` 304
 
 -- Response checks
@@ -216,7 +216,7 @@ offlineSnapshot =
 
 offlineSnapshotBody :: BL.ByteString
 offlineSnapshotBody =
-  "{\"schema_version\":1,\"data_version\":\"sha256-test\",\"generated_at\":\"2026-05-02T00:00:00Z\",\"valid_from\":\"2026-05-02\",\"valid_to\":\"2026-06-30\",\"services\":[],\"locations\":[],\"organisations\":[],\"timetable_documents\":[],\"departures\":[]}"
+  "SQLite snapshot fixture"
 
 offlineSnapshotMetadataBody :: BL.ByteString
 offlineSnapshotMetadataBody =
@@ -334,7 +334,7 @@ getDbConnectionString = do
 setupOfflineSnapshotFixture :: IO ()
 setupOfflineSnapshotFixture = do
   createDirectoryIfMissing True "offline"
-  BL.writeFile "offline/snapshot.json" offlineSnapshotBody
+  BL.writeFile "offline/snapshot.sqlite3" offlineSnapshotBody
   BL.writeFile "offline/snapshot.meta.json" offlineSnapshotMetadataBody
 
 openApiFormats :: OpenApi.OpenApi -> [Text]

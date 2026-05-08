@@ -119,6 +119,20 @@ Regenerate the offline snapshot with:
 make offline-snapshot-generator
 ```
 
+The snapshot generator writes a client-facing SQLite database at
+`offline/snapshot.sqlite3`. It contains compact tables plus query-friendly views:
+`client_services`, `client_service_locations`, and `client_departures`.
+
+Clients can query departures for a service/date with:
+
+```sql
+SELECT *
+FROM client_departures
+WHERE service_id = ?
+  AND service_date = ?
+ORDER BY departure_time_utc;
+```
+
 ## Docker Production
 
 Production uses a SQLite database stored on the host machine for easy access:
