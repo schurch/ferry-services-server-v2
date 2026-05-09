@@ -113,7 +113,7 @@ ingestLatestV2 = do
       removeFileIfExists zipFileName
       removeDirectoryIfExists extractDirectory
       createDirectoryIfMissing True extractDirectory
-      downloadFile appLogger ftpConnectionDetails zipFileName
+      downloadFile appLogger ftpConnectionDetails "S.zip" zipFileName
       withArchive zipFileName $ unpackInto extractDirectory
       runReaderT (ingestDirectoryV2 extractDirectory) env
 
@@ -230,9 +230,9 @@ ingestDirectoryV2 directory = do
     isTruthy (Just "YES") = True
     isTruthy _ = False
 
-downloadFile :: Logger -> FTPConnectionDetails -> FilePath -> IO ()
-downloadFile appLogger (FTPConnectionDetails ftpAddress ftpUsername ftpPassword) filePath = do
-  removeFileIfExists filePath
+downloadFile :: Logger -> FTPConnectionDetails -> FilePath -> FilePath -> IO ()
+downloadFile appLogger (FTPConnectionDetails ftpAddress ftpUsername ftpPassword) remoteFilePath localFilePath = do
+  removeFileIfExists localFilePath
   runTCPClient ftpAddress "21" $ \socketHandle -> do
     welcomeMessage <- recv socketHandle 1024
     logMessage appLogger Info $ "FTP: " <> C.unpack (headOrEmpty $ C.split '\r' welcomeMessage)
@@ -247,9 +247,9 @@ downloadFile appLogger (FTPConnectionDetails ftpAddress ftpUsername ftpPassword)
         result <-
           E.try $
             runTCPClientWithRetry appLogger host port $ \transferSocket ->
-              transferData filePath transferSocket
+              transferData localFilePath transferSocket
         putMVar transferResult (result :: Either E.SomeException ())
-    sendMessage appLogger ("RETR " <> C.pack filePath) socketHandle
+    sendMessage appLogger ("RETR " <> C.pack remoteFilePath) socketHandle
     result <- takeMVar transferResult
     _ <- E.try (sendMessage appLogger "QUIT" socketHandle) :: IO (Either E.SomeException C.ByteString)
     either E.throwIO return result
