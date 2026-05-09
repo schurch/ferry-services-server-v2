@@ -59,6 +59,7 @@ import System.Environment
   ( getEnv,
     lookupEnv,
   )
+import System.FilePath ((</>))
 import App.Env (Application, Env, connectionPool, logger)
 import App.Logger
   ( Level (Debug, Info),
@@ -101,11 +102,13 @@ ingestLatestV2 = do
       (downloadAndIngest appLogger ftpConnectionDetails env)
       cleanupDownload
   where
-    zipFileName = "S.zip"
-    extractDirectory = "S"
+    workingDirectory = "data" </> "transxchange-ingest"
+    zipFileName = workingDirectory </> "S.zip"
+    extractDirectory = workingDirectory </> "S"
 
     downloadAndIngest :: Logger -> FTPConnectionDetails -> Env -> IO Tx2IngestSummary
     downloadAndIngest appLogger ftpConnectionDetails env = do
+      createDirectoryIfMissing True workingDirectory
       removeFileIfExists zipFileName
       removeDirectoryIfExists extractDirectory
       createDirectoryIfMissing True extractDirectory
