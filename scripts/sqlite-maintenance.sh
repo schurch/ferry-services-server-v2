@@ -35,6 +35,7 @@ prepare_paths() {
 
 run_in_image() {
   docker run --rm \
+    -u "$(id -u):$(id -g)" \
     -v "${host_db_dir}:/opt/ferry-services/data" \
     "$IMAGE" \
     "$@"
@@ -74,6 +75,7 @@ backup_db() {
 
 run_in_image_with_backup() {
   docker run --rm \
+    -u "$(id -u):$(id -g)" \
     -v "${host_db_dir}:/opt/ferry-services/data" \
     -v "${host_backup_dir}:/opt/ferry-services/backups" \
     "$IMAGE" \
