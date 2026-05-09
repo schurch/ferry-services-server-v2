@@ -155,19 +155,26 @@ scrapeTimetableDocuments = do
                 normalizeDocumentLink (timetableDocumentSourcePageURL source) (timetableDocumentSourceTitlePrefix source)
                   <$> extractDocumentLinks page
         logInfoM $ "Found " <> show (length links) <> " timetable document links for source: " <> sourceLabel
-        forM links $ \DocumentLink {..} -> do
-          metadata <- fetchDocumentMetadata sourceLabel documentLinkURL
-          pure
-            ScrapedTimetableDocument
-              { scrapedTimetableDocumentOrganisationID = timetableDocumentSourceOrganisationID source,
-                scrapedTimetableDocumentServiceIDs = timetableDocumentSourceServiceIDs source,
-                scrapedTimetableDocumentTitle = documentLinkTitle,
-                scrapedTimetableDocumentSourceURL = documentLinkURL,
-                scrapedTimetableDocumentContentHash = documentMetadataContentHash metadata,
-                scrapedTimetableDocumentContentType = documentMetadataContentType metadata,
-                scrapedTimetableDocumentContentLength = documentMetadataContentLength metadata,
-                scrapedTimetableDocumentLastSeenAt = now
-              }
+        fmap catMaybes $
+          forM links $ \DocumentLink {..} -> do
+            metadata <- fetchDocumentMetadata sourceLabel documentLinkURL
+            if not (isPdfDocument metadata)
+              then do
+                logInfoM $ "Skipping non-PDF timetable document: " <> sourceLabel <> " - " <> documentLinkURL
+                pure Nothing
+              else
+                pure $
+                  Just
+                    ScrapedTimetableDocument
+                      { scrapedTimetableDocumentOrganisationID = timetableDocumentSourceOrganisationID source,
+                        scrapedTimetableDocumentServiceIDs = timetableDocumentSourceServiceIDs source,
+                        scrapedTimetableDocumentTitle = documentLinkTitle,
+                        scrapedTimetableDocumentSourceURL = canonicalDocumentURL documentLinkURL,
+                        scrapedTimetableDocumentContentHash = documentMetadataContentHash metadata,
+                        scrapedTimetableDocumentContentType = documentMetadataContentType metadata,
+                        scrapedTimetableDocumentContentLength = documentMetadataContentLength metadata,
+                        scrapedTimetableDocumentLastSeenAt = now
+                      }
   let documents = nubBy sameSourceURL $ calMacDocuments <> concat nestedDocuments
   logInfoM $ "Found " <> show (length documents) <> " unique timetable documents"
   pure documents
@@ -194,18 +201,23 @@ scrapeCalMacTimetableDocuments now = do
                 pure Nothing
               serviceIDs -> do
                 metadata <- fetchDocumentMetadata "CalMac GraphQL" pdfUrl
-                pure $
-                  Just
-                    ScrapedTimetableDocument
-                      { scrapedTimetableDocumentOrganisationID = 1,
-                        scrapedTimetableDocumentServiceIDs = serviceIDs,
-                        scrapedTimetableDocumentTitle = calMacTimetableDocumentTitle timetable,
-                        scrapedTimetableDocumentSourceURL = pdfUrl,
-                        scrapedTimetableDocumentContentHash = documentMetadataContentHash metadata,
-                        scrapedTimetableDocumentContentType = documentMetadataContentType metadata,
-                        scrapedTimetableDocumentContentLength = documentMetadataContentLength metadata,
-                        scrapedTimetableDocumentLastSeenAt = now
-                      }
+                if not (isPdfDocument metadata)
+                  then do
+                    logInfoM $ "Skipping non-PDF CalMac timetable document: " <> pdfUrl
+                    pure Nothing
+                  else
+                    pure $
+                      Just
+                        ScrapedTimetableDocument
+                          { scrapedTimetableDocumentOrganisationID = 1,
+                            scrapedTimetableDocumentServiceIDs = serviceIDs,
+                            scrapedTimetableDocumentTitle = calMacTimetableDocumentTitle timetable,
+                            scrapedTimetableDocumentSourceURL = canonicalDocumentURL pdfUrl,
+                            scrapedTimetableDocumentContentHash = documentMetadataContentHash metadata,
+                            scrapedTimetableDocumentContentType = documentMetadataContentType metadata,
+                            scrapedTimetableDocumentContentLength = documentMetadataContentLength metadata,
+                            scrapedTimetableDocumentLastSeenAt = now
+                          }
       logInfoM $ "Found " <> show (length documents) <> " CalMac timetable documents from GraphQL"
       pure documents
 
@@ -356,6 +368,11 @@ fetchDocumentMetadata sourceLabel url = do
       pure $ DocumentMetadata Nothing Nothing Nothing
     Right metadata -> pure metadata
 
+isPdfDocument :: DocumentMetadata -> Bool
+isPdfDocument DocumentMetadata {documentMetadataContentType = Just contentType} =
+  "application/pdf" `isInfixOf` lower contentType
+isPdfDocument _ = False
+
 httpRequest url =
   setRequestHeaders
     [ (hUserAgent, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"),
@@ -456,10 +473,27 @@ normalizeDocumentLink pageURL titlePrefix DocumentLink {..} =
       documentLinkURL = absoluteURL pageURL documentLinkURL
     }
 
+canonicalDocumentURL :: String -> String
+canonicalDocumentURL url
+  | "cdn.shopify.com" `isInfixOf` lower url = stripQueryString url
+  | otherwise = url
+  where
+    stripQueryString =
+      takeWhile (/= '?')
+
 filterTimetableLinks :: [DocumentLink] -> [DocumentLink]
 filterTimetableLinks =
   nubBy (\a b -> documentLinkURL a == documentLinkURL b)
-    . filter isTimetableDocumentLink
+    . filter isRelevantTimetableDocumentLink
+
+isRelevantTimetableDocumentLink :: DocumentLink -> Bool
+isRelevantTimetableDocumentLink link@DocumentLink {..} =
+  isTimetableDocumentLink link && not isIslanderFareSheet
+  where
+    combined = lower documentLinkURL <> " " <> lower documentLinkTitle
+    isIslanderFareSheet =
+      "islander fares" `isInfixOf` combined
+        || "fares-for-islanders" `isInfixOf` combined
 
 isTimetableDocumentLink :: DocumentLink -> Bool
 isTimetableDocumentLink DocumentLink {..} =

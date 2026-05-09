@@ -11,6 +11,7 @@ where
 
 import App.Env (Application)
 import Control.Monad (forM_, void)
+import Data.List (nub)
 import Data.Maybe (listToMaybe)
 import Database.Connection (withConnection)
 import Database.SQLite.Simple
@@ -85,7 +86,7 @@ getTimetableDocumentServiceLinks = withConnection $ \connection ->
     |]
 
 saveTimetableDocuments :: [ScrapedTimetableDocument] -> Application ()
-saveTimetableDocuments documents = withConnection $ \connection ->
+saveTimetableDocuments documents = withConnection $ \connection -> do
   forM_ documents $ \ScrapedTimetableDocument {..} -> do
     rows <-
       query
@@ -139,3 +140,34 @@ saveTimetableDocuments documents = withConnection $ \connection ->
               ON CONFLICT DO NOTHING
             |]
             [(documentID, serviceID) | serviceID <- scrapedTimetableDocumentServiceIDs]
+  forM_ scrapedOrganisationIDs $ \organisationID -> do
+    existingDocuments <-
+      query
+        connection
+        [sql|
+          SELECT timetable_document_id, source_url
+          FROM timetable_documents
+          WHERE organisation_id = ?
+        |]
+        (Only organisationID)
+    let currentSourceURLs =
+          [ scrapedTimetableDocumentSourceURL document
+            | document <- documents,
+              scrapedTimetableDocumentOrganisationID document == organisationID
+          ]
+        staleDocumentIDs =
+          [ documentID
+            | (documentID, sourceURL) <- existingDocuments,
+              sourceURL `notElem` currentSourceURLs
+          ]
+    void $
+      executeMany
+        connection
+        [sql|
+          DELETE FROM timetable_documents
+          WHERE timetable_document_id = ?
+        |]
+        (Only <$> (staleDocumentIDs :: [Int]))
+  where
+    scrapedOrganisationIDs =
+      nub $ scrapedTimetableDocumentOrganisationID <$> documents
