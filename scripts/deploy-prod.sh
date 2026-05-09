@@ -12,10 +12,13 @@ if [ ! -f "$maintenance_script" ]; then
 fi
 
 compose() {
-  if command -v docker-compose >/dev/null 2>&1; then
+  if docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+  elif command -v docker-compose >/dev/null 2>&1; then
     docker-compose "$@"
   else
-    docker compose "$@"
+    echo "docker compose or docker-compose is required" >&2
+    exit 1
   fi
 }
 
