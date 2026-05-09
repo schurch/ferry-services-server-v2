@@ -18,6 +18,7 @@ import Control.Concurrent
     newEmptyMVar,
     putMVar,
     takeMVar,
+    threadDelay,
   )
 import Control.Exception (finally)
 import qualified Control.Exception as E
@@ -62,7 +63,7 @@ import System.Environment
 import System.FilePath ((</>))
 import App.Env (Application, Env, connectionPool, logger)
 import App.Logger
-  ( Level (Debug, Info),
+  ( Level (Debug, Error, Info),
     Logger,
     logInfoM,
     logMessage,
@@ -239,12 +240,13 @@ downloadFile appLogger (FTPConnectionDetails ftpAddress ftpUsername ftpPassword)
     sendMessage appLogger ("PASS " <> C.pack ftpPassword) socketHandle
     passiveResponse <- sendMessage appLogger "PASV" socketHandle
     let (host, port) = extractAddressAndPort $ C.unpack passiveResponse
+    logMessage appLogger Info $ "FTP passive endpoint: " <> host <> ":" <> port
     transferResult <- newEmptyMVar
     _ <-
       forkIO $ do
         result <-
           E.try $
-            runTCPClient host port $ \transferSocket ->
+            runTCPClientWithRetry appLogger host port $ \transferSocket ->
               transferData filePath transferSocket
         putMVar transferResult (result :: Either E.SomeException ())
     sendMessage appLogger ("RETR " <> C.pack filePath) socketHandle
@@ -306,6 +308,36 @@ runTCPClient host port client = withSocketsDo $ do
 
     openSocket :: AddrInfo -> IO Socket
     openSocket addr = socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
+
+runTCPClientWithRetry :: Logger -> HostName -> ServiceName -> (Socket -> IO a) -> IO a
+runTCPClientWithRetry appLogger host port client =
+  attempt (1 :: Int)
+  where
+    maxAttempts = 3 :: Int
+
+    attempt attemptNumber = do
+      result <- E.try $ runTCPClient host port client
+      case result of
+        Right value -> pure value
+        Left err
+          | attemptNumber < maxAttempts -> do
+              logMessage
+                appLogger
+                Error
+                ( "FTP data connection attempt "
+                    <> show attemptNumber
+                    <> " failed for "
+                    <> host
+                    <> ":"
+                    <> port
+                    <> " with "
+                    <> show (err :: E.SomeException)
+                    <> "; retrying"
+                )
+              threadDelay (2 * 1000 * 1000)
+              attempt (attemptNumber + 1)
+          | otherwise ->
+              E.throwIO err
 
 headOrEmpty :: [C.ByteString] -> C.ByteString
 headOrEmpty [] = ""
